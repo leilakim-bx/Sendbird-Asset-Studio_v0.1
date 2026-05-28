@@ -73,12 +73,18 @@ function ProductCards({ msg }: { msg: ProductsMessage }) {
     <div className="grid grid-cols-2 gap-2 px-3">
       {msg.items.map((item, i) => (
         <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={item.img}
-            alt={item.name}
-            className="w-full h-24 object-cover"
-          />
+          {item.img ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.img}
+              alt={item.name}
+              className="w-full h-24 object-cover"
+            />
+          ) : (
+            <div className="w-full h-24 bg-gray-100 flex items-center justify-center">
+              <span className="text-[11px] text-gray-400 font-medium">Image</span>
+            </div>
+          )}
           <div className="p-2">
             <p className="text-[10px] font-medium text-gray-800 leading-tight line-clamp-2">
               {item.name}

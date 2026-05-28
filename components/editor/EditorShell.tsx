@@ -16,6 +16,7 @@ export function EditorShell({ template }: { template: Template }) {
   const {
     layout, exportSize, backgroundId, appName, messages,
     setMessages, setLayout, setBackgroundId, setAppName,
+    customBackgrounds,
   } = useEditorStore();
 
   // Seed default content on mount
@@ -33,8 +34,8 @@ export function EditorShell({ template }: { template: Template }) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const bg = getBackground(backgroundId);
-  const backgroundUrl = bg?.url ?? "/api/proxy-image?url=" + encodeURIComponent("https://picsum.photos/seed/default/1200/900");
+  const bg = getBackground(backgroundId) ?? customBackgrounds.find((b) => b.id === backgroundId);
+  const backgroundUrl = bg?.url ?? "/background/bg-100.png";
 
   const desktopSize = EXPORT_SIZES.desktop;
   const mobileSize  = EXPORT_SIZES.mobile;
@@ -82,7 +83,9 @@ export function EditorShell({ template }: { template: Template }) {
         {/* Left: Preview Canvas */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-studio-bg overflow-auto py-8">
         <p className="text-studio-muted text-xs uppercase tracking-wider">
-          Preview — {exportSize === "desktop" ? "Desktop 864×640" : "Mobile 430×540"}
+          Preview — {exportSize === "desktop"
+            ? `Desktop ${desktopSize.width}×${desktopSize.height}`
+            : `Mobile ${mobileSize.width}×${mobileSize.height}`}
         </p>
 
         {/* Visible preview (scaled) */}

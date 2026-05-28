@@ -33,7 +33,7 @@ export type Template = {
 // ── Export Sizes ──────────────────────────────────────────
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
-  desktop: { id: "desktop", label: "Desktop", width: 864, height: 640 },
+  desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
   mobile:  { id: "mobile",  label: "Mobile",  width: 430, height: 540 },
 };
 
@@ -49,7 +49,7 @@ export const TEMPLATES: Template[] = [
     defaultLayout: "split",
     defaultContent: {
       appName: "sendbird.ai",
-      backgroundId: "bg-1",
+      backgroundId: "bg-100",
       messages: [
         {
           id: "m1",
@@ -71,13 +71,13 @@ export const TEMPLATES: Template[] = [
           type: "products",
           items: [
             {
-              img: p("https://picsum.photos/seed/dress1/200/240"),
+              img: p("https://images.pexels.com/photos/8780372/pexels-photo-8780372.jpeg?auto=compress&cs=tinysrgb&h=350"),
               name: "Off Shoulder Lace Dress",
               sub: "$82.00",
               cta: "Add to Cart",
             },
             {
-              img: p("https://picsum.photos/seed/dress2/200/240"),
+              img: p("https://images.pexels.com/photos/28845496/pexels-photo-28845496.jpeg?auto=compress&cs=tinysrgb&h=350"),
               name: "Strapless Maxi Dress",
               sub: "$88.00",
               cta: "Add to Cart",

@@ -1,4 +1,4 @@
-export type BackgroundCategory = "lifestyle" | "fashion" | "business" | "nature";
+export type BackgroundCategory = "lifestyle" | "fashion" | "business" | "nature" | "custom";
 
 export type Background = {
   id: string;
@@ -7,46 +7,41 @@ export type Background = {
   category: BackgroundCategory;
 };
 
-/** Wrap an external image URL through our same-origin proxy */
-function p(url: string) {
-  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
-}
-
 export const BACKGROUNDS: Background[] = [
   {
-    id: "bg-1",
-    label: "Fashion Indoor",
-    url: p("https://picsum.photos/seed/fashion1/1200/900"),
-    category: "fashion",
-  },
-  {
-    id: "bg-2",
-    label: "Lifestyle Warm",
-    url: p("https://picsum.photos/seed/lifestyle2/1200/900"),
-    category: "lifestyle",
-  },
-  {
-    id: "bg-3",
-    label: "Nature Sky",
-    url: p("https://picsum.photos/seed/sky3/1200/900"),
+    id: "bg-100",
+    label: "Autumn Blur",
+    url: "/background/bg-100.png",
     category: "nature",
   },
   {
-    id: "bg-4",
-    label: "Business Clean",
-    url: p("https://picsum.photos/seed/business4/1200/900"),
-    category: "business",
-  },
-  {
-    id: "bg-5",
-    label: "Lifestyle Bright",
-    url: p("https://picsum.photos/seed/bright5/1200/900"),
+    id: "bg-200",
+    label: "Flower Abstract",
+    url: "/background/bg-200.png",
     category: "lifestyle",
   },
   {
-    id: "bg-6",
-    label: "Nature Soft",
-    url: p("https://picsum.photos/seed/nature6/1200/900"),
+    id: "bg-201",
+    label: "Daisy Sky",
+    url: "/background/bg-201.png",
+    category: "lifestyle",
+  },
+  {
+    id: "bg-202",
+    label: "Petal Soft",
+    url: "/background/bg-202.png",
+    category: "lifestyle",
+  },
+  {
+    id: "bg-203",
+    label: "White Bloom",
+    url: "/background/bg-203.png",
+    category: "lifestyle",
+  },
+  {
+    id: "bg-300",
+    label: "Bloom Haze",
+    url: "/background/bg-300.png",
     category: "nature",
   },
 ];

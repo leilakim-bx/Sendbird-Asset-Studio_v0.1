@@ -3,8 +3,44 @@ import { toPng } from "html-to-image";
 const SHARED_OPTIONS = {
   pixelRatio: 2,
   skipFonts: false,
-  cacheBust: true,
+  cacheBust: false, // we pre-inline images ourselves, so no need to bust
 };
+
+/**
+ * Fetch every <img> in the element and swap its src to a data-URI in-place,
+ * then return a restore function that puts the original srcs back.
+ *
+ * This ensures the captured pixels are byte-for-byte identical to what the
+ * browser already rendered — no re-fetching, no proxy round-trips, no CORS.
+ */
+async function inlineImages(element: HTMLElement): Promise<() => void> {
+  const imgs = Array.from(element.querySelectorAll<HTMLImageElement>("img"));
+  const restores: Array<() => void> = [];
+
+  await Promise.all(
+    imgs.map(async (img) => {
+      const src = img.src; // browser resolves to absolute URL
+      if (!src || src.startsWith("data:")) return;
+      try {
+        const res = await fetch(src, { credentials: "same-origin" });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        img.src = dataUrl;
+        restores.push(() => { img.src = src; });
+      } catch {
+        // keep original src — export may look wrong but won't crash
+      }
+    })
+  );
+
+  return () => restores.forEach((fn) => fn());
+}
 
 async function captureWithRetry(
   element: HTMLElement,
@@ -12,10 +48,15 @@ async function captureWithRetry(
   height: number,
 ): Promise<string> {
   const options = { ...SHARED_OPTIONS, width, height, style: { borderRadius: "0" } };
-  // First pass: warms html-to-image's internal image cache
-  try { await toPng(element, options); } catch { /* ignore first-pass errors */ }
-  // Second pass: actual capture with images now cached
-  return toPng(element, options);
+  const restore = await inlineImages(element);
+  try {
+    // Warm html-to-image's style / font cache
+    try { await toPng(element, options); } catch { /* ignore first-pass errors */ }
+    // Actual capture — all images are now data-URIs
+    return await toPng(element, options);
+  } finally {
+    restore();
+  }
 }
 
 export async function exportImage(
@@ -36,7 +77,7 @@ export async function exportBoth(
   mobileEl: HTMLElement,
   baseName = "sendbird-asset"
 ): Promise<void> {
-  await exportImage(desktopEl, 864, 640, `${baseName}-desktop.png`);
+  await exportImage(desktopEl, 866, 660, `${baseName}-desktop.png`);
   await new Promise((r) => setTimeout(r, 400));
   await exportImage(mobileEl, 430, 540, `${baseName}-mobile.png`);
 }
