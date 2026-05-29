@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TriangleAlert, ImageIcon } from "lucide-react";
 import { BACKGROUNDS, type Background } from "@/lib/backgrounds";
 
 type Props = {
@@ -140,9 +141,16 @@ export function BackgroundPickerModal({
             {uploadError ? (
               <span className="text-xs text-red-400 pl-1">{uploadError}</span>
             ) : (
-              <span className="text-[11px] text-studio-muted pl-1">
-                🔒 Designer access only · JPEG, PNG, WebP · max 5 MB
-              </span>
+              <div className="flex flex-col gap-0.5 pl-1">
+                <span className="flex items-center gap-1 text-[11px] text-studio-muted">
+                  <TriangleAlert size={11} className="shrink-0" />
+                  To add new backgrounds, please contact the design team
+                </span>
+                <span className="flex items-center gap-1 text-[11px] text-studio-muted">
+                  <ImageIcon size={11} className="shrink-0" />
+                  JPEG · PNG · WebP · max 5 MB
+                </span>
+              </div>
             )}
           </div>
         </div>

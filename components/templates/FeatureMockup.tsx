@@ -8,7 +8,6 @@ export type FeatureMockupProps = {
   backgroundUrl: string;
   appName: string;
   messages: ChatMessage[];
-  /** When used for actual PNG export, pass explicit px dimensions */
   width?: number;
   height?: number;
 };
@@ -20,47 +19,55 @@ const SIZES = {
   mobile:  { width: 430, height: 540 },
 };
 
-// ── Sub-components ────────────────────────────────────────
+// ── Chat bubble (unified user + bot) ─────────────────────
 
-function UserBubble({ msg }: { msg: TextMessage }) {
+function ChatBubble({ msg, appName }: { msg: TextMessage; appName: string }) {
+  const isUser = msg.role === "user";
   return (
-    <div className="flex flex-col items-end gap-1 px-3">
-      <div className="flex items-center gap-1.5">
-        {msg.avatar && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={msg.avatar} alt={msg.sender} className="w-5 h-5 rounded-full object-cover" />
+    <div style={{
+      margin: "0 14px",
+      borderRadius: 18,
+      padding: "10px 14px 12px",
+      background: "rgba(242,242,242,0.95)",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    }}>
+      {/* Avatar + name */}
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+        {isUser ? (
+          msg.avatar
+            ? /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={msg.avatar} alt={msg.sender}
+                style={{ width: 18, height: 18, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+            : <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#CBD5E1", flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#111", flexShrink: 0 }} />
         )}
-        <span className="text-[10px] text-gray-400">{msg.sender}</span>
+        <span style={{ fontSize: 10, fontWeight: 500, color: "#9CA3AF" }}>
+          {isUser ? msg.sender : appName}
+        </span>
       </div>
-      <div className="bg-white rounded-2xl rounded-tr-sm px-3 py-2 shadow-sm max-w-[80%]">
-        <p className="text-xs text-gray-800 leading-relaxed">{msg.text}</p>
-      </div>
-    </div>
-  );
-}
-
-function BotBubble({ msg, appName }: { msg: TextMessage; appName: string }) {
-  return (
-    <div className="flex flex-col items-start gap-1 px-3">
-      <div className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-gray-900 inline-block" />
-        <span className="text-[10px] text-gray-400">{appName}</span>
-      </div>
-      <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-2 shadow-sm max-w-[90%]">
-        <p className="text-xs text-gray-800 leading-relaxed">{msg.text}</p>
-      </div>
+      {/* Text */}
+      <p style={{ fontSize: 11, lineHeight: 1.55, color: "#1A1A1A", margin: 0 }}>
+        {msg.text}
+      </p>
     </div>
   );
 }
 
 function ActionButtons({ msg }: { msg: ActionsMessage }) {
   return (
-    <div className="flex flex-col gap-1.5 px-3">
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "0 14px" }}>
       {msg.buttons.map((btn, i) => (
-        <div
-          key={i}
-          className="bg-gray-100 rounded-full text-center text-xs py-2 px-4 text-gray-700"
-        >
+        <div key={i} style={{
+          borderRadius: 999,
+          padding: "7px 16px",
+          textAlign: "center",
+          fontSize: 10,
+          fontWeight: 500,
+          color: "#374151",
+          background: "rgba(242,242,242,0.95)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        }}>
           {btn}
         </div>
       ))}
@@ -70,29 +77,29 @@ function ActionButtons({ msg }: { msg: ActionsMessage }) {
 
 function ProductCards({ msg }: { msg: ProductsMessage }) {
   return (
-    <div className="grid grid-cols-2 gap-2 px-3">
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "0 14px" }}>
       {msg.items.map((item, i) => (
-        <div key={i} className="bg-white rounded-xl overflow-hidden shadow-sm">
-          {item.img ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.img}
-              alt={item.name}
-              className="w-full h-24 object-cover"
-            />
-          ) : (
-            <div className="w-full h-24 bg-gray-100 flex items-center justify-center">
-              <span className="text-[11px] text-gray-400 font-medium">Image</span>
-            </div>
-          )}
-          <div className="p-2">
-            <p className="text-[10px] font-medium text-gray-800 leading-tight line-clamp-2">
-              {item.name}
-            </p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{item.sub}</p>
-            <button className="mt-1.5 w-full border border-gray-300 rounded text-[10px] py-1 text-gray-700">
-              {item.cta}
-            </button>
+        <div key={i} style={{
+          borderRadius: 14,
+          overflow: "hidden",
+          background: "rgba(242,242,242,0.95)",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+        }}>
+          {item.img
+            ? /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={item.img} alt={item.name} style={{ width: "100%", height: 72, objectFit: "cover", display: "block" }} />
+            : <div style={{ width: "100%", height: 72, background: "#E5E7EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 9, color: "#9CA3AF" }}>Image</span>
+              </div>
+          }
+          <div style={{ padding: "7px 8px 8px" }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: "#111", lineHeight: 1.3, margin: "0 0 3px" }}>{item.name}</p>
+            <p style={{ fontSize: 9, color: "#6B7280", margin: "0 0 6px" }}>{item.sub}</p>
+            <div style={{
+              fontSize: 9, fontWeight: 500, color: "#374151",
+              border: "1px solid #D1D5DB", borderRadius: 4,
+              padding: "3px 0", textAlign: "center",
+            }}>{item.cta}</div>
           </div>
         </div>
       ))}
@@ -100,39 +107,59 @@ function ProductCards({ msg }: { msg: ProductsMessage }) {
   );
 }
 
-// ── Glass Mockup ──────────────────────────────────────────
+// ── Phone frame (matches the provided mockup design) ──────
 
-function GlassMockup({
+function PhoneFrame({
   appName,
   messages,
-  compact,
+  width,
 }: {
   appName: string;
   messages: ChatMessage[];
-  compact: boolean;
+  width: number;
 }) {
   return (
-    <div
-      className="bg-white/75 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden flex flex-col"
-      style={{ width: compact ? 270 : 320 }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200/60">
-        <span className="text-xs font-medium text-gray-700">{appName}</span>
-        <span className="text-gray-400 text-sm tracking-widest">···</span>
+    <div style={{
+      width,
+      borderRadius: 32,
+      overflow: "hidden",
+      background: "rgba(255,255,255,0.82)",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      boxShadow: "0 12px 48px rgba(0,0,0,0.14), 0 1px 0 rgba(255,255,255,0.7) inset",
+      display: "flex",
+      flexDirection: "column",
+    }}>
+      {/* Header — centered app name, dots on right */}
+      <div style={{
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "14px 16px 12px",
+        borderBottom: "1px solid rgba(209,213,219,0.45)",
+      }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#111", letterSpacing: "-0.01em" }}>
+          {appName}
+        </span>
+        <span style={{
+          position: "absolute",
+          right: 16,
+          fontSize: 14,
+          color: "#9CA3AF",
+          letterSpacing: "0.12em",
+          lineHeight: 1,
+        }}>
+          ···
+        </span>
       </div>
 
-      {/* Messages */}
-      <div className="flex flex-col gap-3 py-3 overflow-hidden">
+      {/* Message list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 0 14px" }}>
         {messages.map((msg) => {
-          if (msg.type === "text" && msg.role === "user")
-            return <UserBubble key={msg.id} msg={msg} />;
-          if (msg.type === "text" && msg.role === "bot")
-            return <BotBubble key={msg.id} msg={msg} appName={appName} />;
-          if (msg.type === "actions")
-            return <ActionButtons key={msg.id} msg={msg} />;
-          if (msg.type === "products")
-            return <ProductCards key={msg.id} msg={msg} />;
+          if (msg.type === "text")    return <ChatBubble    key={msg.id} msg={msg} appName={appName} />;
+          if (msg.type === "actions") return <ActionButtons key={msg.id} msg={msg} />;
+          if (msg.type === "products") return <ProductCards key={msg.id} msg={msg} />;
           return null;
         })}
       </div>
@@ -155,60 +182,62 @@ export function FeatureMockup({
   const canvasW = width  ?? size.width;
   const canvasH = height ?? size.height;
   const isMobile = exportSize === "mobile";
-  const compact  = isMobile || layout === "split";
+  const isCenter = layout === "center";
+
+  // Phone frame width: narrower when split, wider when center
+  const frameW = isMobile
+    ? Math.round(canvasW * 0.72)          // mobile canvas is already narrow
+    : isCenter
+      ? Math.round(canvasW * 0.38)        // desktop center
+      : Math.round(canvasW * 0.36);       // desktop split
+
+  const justifyContent = (!isMobile && !isCenter) ? "flex-start" : "center";
+  const paddingLeft    = (!isMobile && !isCenter) ? canvasW * 0.05 : 0;
 
   return (
-    <div
-      style={{ width: canvasW, height: canvasH, position: "relative", overflow: "hidden" }}
-    >
-      {/* Background layer */}
+    <div style={{ width: canvasW, height: canvasH, position: "relative", overflow: "hidden" }}>
+
+      {/* Background photo */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={backgroundUrl}
         alt=""
         style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
           objectFit: "cover",
-          objectPosition: layout === "split" && !isMobile ? "right center" : "center",
+          objectPosition: (!isMobile && !isCenter) ? "right center" : "center",
         }}
       />
 
-      {/* Slight gradient overlay for contrast */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            layout === "split" && !isMobile
-              ? "linear-gradient(to right, rgba(255,255,255,0.15) 0%, transparent 60%)"
-              : "rgba(255,255,255,0.05)",
-        }}
-      />
+      {/* Gradient veil */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: (!isMobile && !isCenter)
+          ? "linear-gradient(to right, rgba(255,255,255,0.15) 0%, transparent 55%)"
+          : "rgba(255,255,255,0.04)",
+      }} />
 
-      {/* Mockup layer */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent:
-            layout === "split" && !isMobile ? "flex-start" : "center",
-          padding:
-            layout === "split" && !isMobile
-              ? `${canvasH * 0.08}px 0 ${canvasH * 0.08}px ${canvasW * 0.04}px`
-              : `${canvasH * 0.06}px`,
-        }}
-      >
-        <GlassMockup
+      {/* Phone frame */}
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent,
+        paddingLeft,
+        padding: isMobile
+          ? `${canvasH * 0.05}px ${canvasW * 0.05}px`
+          : (!isCenter)
+            ? `${canvasH * 0.08}px 0 ${canvasH * 0.08}px ${paddingLeft}px`
+            : `${canvasH * 0.08}px`,
+      }}>
+        <PhoneFrame
           appName={appName}
           messages={messages}
-          compact={compact}
+          width={frameW}
         />
       </div>
+
     </div>
   );
 }

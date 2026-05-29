@@ -34,6 +34,25 @@ export type ProductsMessage = {
 
 export type ChatMessage = TextMessage | ActionsMessage | ProductsMessage;
 
+// ── Saved Asset ───────────────────────────────────────────
+
+export type SavedAsset = {
+  id: string;
+  templateId: string;
+  /** Display name shown in the library (derived from appName at save time) */
+  appName: string;
+  /** User-editable file name */
+  name: string;
+  /** Small JPEG data URL thumbnail (~20–50 KB) */
+  previewDataUrl: string;
+  savedAt: number;
+  /** Full editor snapshot — present for assets saved after v1.1 */
+  messages?: ChatMessage[];
+  backgroundId?: string;
+  layout?: "center" | "split";
+  exportSize?: "desktop" | "mobile";
+};
+
 // ── Editor State ──────────────────────────────────────────
 
 export type EditorState = {
@@ -46,6 +65,8 @@ export type EditorState = {
 
   /** Backgrounds uploaded by the designer — persisted to localStorage */
   customBackgrounds: Background[];
+  /** Saved assets shown in the Mobile Chat Finder library */
+  savedAssets: SavedAsset[];
 
   // Actions
   setTemplateId: (id: string) => void;
@@ -58,6 +79,12 @@ export type EditorState = {
   removeMessage: (id: string) => void;
   setMessages: (msgs: ChatMessage[]) => void;
   addCustomBackground: (bg: Background) => void;
+  saveAsset: (asset: SavedAsset) => void;
+  deleteSavedAsset: (id: string) => void;
+  renameSavedAsset: (id: string, name: string) => void;
+  /** Transient — set before navigating to editor to restore a saved asset */
+  pendingAssetRestore: SavedAsset | null;
+  setPendingAssetRestore: (asset: SavedAsset | null) => void;
 };
 
 // ── Store ─────────────────────────────────────────────────
@@ -66,12 +93,14 @@ export const useEditorStore = create<EditorState>()(
   persist(
     (set) => ({
       templateId:        "feature-mockup",
-      layout:            "split",
+      layout:            "center",
       exportSize:        "desktop",
       backgroundId:      "bg-1",
       appName:           "sendbird.ai",
       messages:          [],
-      customBackgrounds: [],
+      customBackgrounds:    [],
+      savedAssets:          [],
+      pendingAssetRestore:  null,
 
       setTemplateId:   (templateId)   => set({ templateId }),
       setLayout:       (layout)       => set({ layout }),
@@ -96,13 +125,27 @@ export const useEditorStore = create<EditorState>()(
 
       addCustomBackground: (bg) =>
         set((s) => ({ customBackgrounds: [...s.customBackgrounds, bg] })),
+
+      saveAsset: (asset) =>
+        set((s) => ({ savedAssets: [asset, ...s.savedAssets] })),
+
+      deleteSavedAsset: (id) =>
+        set((s) => ({ savedAssets: s.savedAssets.filter((a) => a.id !== id) })),
+
+      renameSavedAsset: (id, name) =>
+        set((s) => ({
+          savedAssets: s.savedAssets.map((a) => a.id === id ? { ...a, name } : a),
+        })),
+
+      setPendingAssetRestore: (pendingAssetRestore) => set({ pendingAssetRestore }),
     }),
     {
       name:    "sendbird-editor-v1",
       storage: createJSONStorage(() => localStorage),
-      // Only persist custom backgrounds — all other state is re-seeded
-      // from template defaults on mount (see EditorShell useEffect).
-      partialize: (state) => ({ customBackgrounds: state.customBackgrounds }),
+      partialize: (state) => ({
+        customBackgrounds: state.customBackgrounds,
+        savedAssets:       state.savedAssets,
+      }),
     },
   ),
 );

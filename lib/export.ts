@@ -1,4 +1,4 @@
-import { toPng } from "html-to-image";
+import { toPng, toJpeg } from "html-to-image";
 
 const SHARED_OPTIONS = {
   pixelRatio: 2,
@@ -70,6 +70,24 @@ export async function exportImage(
   link.download = filename;
   link.href = dataUrl;
   link.click();
+}
+
+/**
+ * Capture a small JPEG thumbnail of the element for library preview.
+ * Targets ~325 × 247 px at quality 0.75 — typically 20–50 KB as a data URL.
+ */
+export async function captureThumbnail(element: HTMLElement): Promise<string> {
+  const restore = await inlineImages(element);
+  try {
+    return await toJpeg(element, {
+      pixelRatio: 0.375,   // 866 * 0.375 ≈ 325 px wide
+      quality:    0.75,
+      cacheBust:  false,
+      skipFonts:  false,
+    });
+  } finally {
+    restore();
+  }
 }
 
 export async function exportBoth(

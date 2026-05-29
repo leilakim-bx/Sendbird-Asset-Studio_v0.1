@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { X, MessageSquare, GitBranch, LayoutDashboard } from "lucide-react";
+import { X, MessageSquare, GitBranch, LayoutDashboard, Sparkles, ImageIcon, Download, BookOpen } from "lucide-react";
+import { useEditorStore } from "@/lib/store";
 
 // ── Nav ───────────────────────────────────────────────────
 
@@ -14,26 +15,175 @@ const NAV_ITEMS = [
 ];
 
 const FINDER_ITEMS = [
-  { label: "Mobile Chat Finder", href: "/finder/mobile-chat" },
-  { label: "Diagram Finder",     href: "/finder/diagram" },
-  { label: "Dashboard Finder",   href: "/finder/dashboard" },
+  { label: "Chat UI Finder",     href: "/finder/mobile-chat", countKey: "mobile-chat" as const },
+  { label: "Diagram Finder",     href: "/finder/diagram",     countKey: null },
+  { label: "Dashboard Finder",   href: "/finder/dashboard",   countKey: null },
 ];
 
-function NavItem({ label, href }: { label: string; href: string }) {
+function NavItem({ label, href, badge }: { label: string; href: string; badge?: number }) {
   const pathname = usePathname();
   const active = pathname === href;
   return (
     <Link
       href={href}
       className={[
-        "block px-3 py-1.5 rounded-md text-sm transition-colors",
+        "flex items-center justify-between px-3 py-1.5 rounded-md text-sm transition-colors",
         active
           ? "text-studio-text bg-studio-hover"
           : "text-studio-muted hover:text-studio-text hover:bg-studio-hover",
       ].join(" ")}
     >
-      {label}
+      <span>{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="text-[10px] tabular-nums bg-studio-hover border border-studio-border text-studio-muted rounded-full px-1.5 py-0.5 leading-none">
+          {badge}
+        </span>
+      )}
     </Link>
+  );
+}
+
+// ── Guide Modal ───────────────────────────────────────────
+
+type GuideSection = {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  soon?: boolean;
+  steps?: { title: string; desc: string }[];
+  comingSoon?: boolean;
+};
+
+const GUIDE_SECTIONS: GuideSection[] = [
+  {
+    id: "getting-started",
+    label: "Getting started",
+    icon: BookOpen,
+    steps: [
+      {
+        title: "What is Asset Studio?",
+        desc: "A no-code tool for creating on-brand product marketing visuals. Pick a template, edit the content, and export a clean PNG — no design file needed.",
+      },
+      {
+        title: "What can I customize?",
+        desc: "App name, background image, layout (Split / Center), and the full chat conversation — messages, product cards, and action buttons.",
+      },
+      {
+        title: "Who do I contact?",
+        desc: "For new background images or template requests, reach out to the design team on Slack.",
+      },
+    ],
+  },
+  {
+    id: "mobile-chat",
+    label: "Chat UI",
+    icon: MessageSquare,
+    steps: [
+      {
+        title: "Pick or generate a scenario",
+        desc: "In the right panel, choose a preset (Hotel concierge, Order tracking, Agent handoff) or describe your own in the AI Generate box and press Enter.",
+      },
+      {
+        title: "Edit the messages",
+        desc: "Click any message to edit the text. Use the icons to toggle between User and delight.ai. Add product cards or action buttons at the bottom of the panel.",
+      },
+      {
+        title: "Choose a background & layout",
+        desc: "Select a background from the grid or open the picker with the + button. Switch between Split and Center layout to see what fits best.",
+      },
+      {
+        title: "Save or export",
+        desc: "Hit Save to add it to your library, or Export PNG to download. Desktop (4:3) and Mobile (4:5) are both available.",
+      },
+    ],
+  },
+  {
+    id: "diagram",
+    label: "Diagram",
+    icon: GitBranch,
+    soon: true,
+    comingSoon: true,
+  },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    soon: true,
+    comingSoon: true,
+  },
+];
+
+function GuideModal({ onClose }: { onClose: () => void }) {
+  const [active, setActive] = useState("getting-started");
+  const section = GUIDE_SECTIONS.find((s) => s.id === active)!;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-studio-sidebar border border-studio-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col" style={{ height: 480 }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 shrink-0">
+          <div>
+            <p className="text-studio-text font-semibold text-sm">Guides</p>
+            <p className="text-studio-muted text-xs mt-0.5">How to use Asset Studio.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-studio-muted hover:text-studio-text transition-colors p-1 rounded-md hover:bg-studio-hover"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Top tab bar */}
+        <div className="flex items-center gap-0.5 px-5 border-b border-studio-border shrink-0">
+          {GUIDE_SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setActive(s.id)}
+              className={[
+                "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors",
+                active === s.id
+                  ? "border-studio-text text-studio-text"
+                  : "border-transparent text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {s.label}
+              {s.soon && (
+                <span className="text-[9px] border border-studio-border rounded-full px-1.5 py-0.5 leading-none">
+                  Soon
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-5">
+          {section.comingSoon ? (
+            <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+              <section.icon size={24} className="text-studio-border" />
+              <p className="text-studio-text text-sm font-medium">{section.label}</p>
+              <p className="text-studio-muted text-xs">Guide coming soon.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {section.steps!.map((step, i) => (
+                <div key={i} className="bg-studio-hover rounded-xl p-4">
+                  <p className="text-studio-text text-xs font-semibold mb-1">{step.title}</p>
+                  <p className="text-studio-muted text-xs leading-relaxed">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </div>
+    </div>
   );
 }
 
@@ -145,6 +295,12 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
 
 export function Sidebar() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  // Hydration-safe count — show badge only after client mount
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const savedCount = useEditorStore((s) => s.savedAssets.length);
 
   return (
     <>
@@ -182,7 +338,12 @@ export function Sidebar() {
         {/* Finders */}
         <nav className="px-3 py-4 flex flex-col gap-0.5">
           {FINDER_ITEMS.map((item) => (
-            <NavItem key={item.href} {...item} />
+            <NavItem
+              key={item.href}
+              label={item.label}
+              href={item.href}
+              badge={mounted && item.countKey === "mobile-chat" ? savedCount : undefined}
+            />
           ))}
         </nav>
 
@@ -192,8 +353,9 @@ export function Sidebar() {
         <div className="px-4 py-5">
           <button
             onClick={() => setModalOpen(true)}
-            className="block w-full py-3 rounded-xl bg-studio-accent text-studio-accent-fg font-bold text-sm text-center hover:opacity-90 transition-opacity"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-studio-accent text-studio-accent-fg font-bold text-sm hover:opacity-90 transition-opacity"
           >
+            <span className="text-base leading-none">+</span>
             New Asset
           </button>
         </div>
@@ -203,16 +365,18 @@ export function Sidebar() {
 
         {/* Guides */}
         <div className="px-4 pb-6">
-          <Link
-            href="/guides"
-            className="block w-full py-2.5 rounded-xl border border-studio-border text-studio-muted text-sm text-center hover:text-studio-text hover:border-studio-muted transition-colors"
+          <button
+            onClick={() => setGuideOpen(true)}
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-studio-border text-studio-muted text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
           >
+            <BookOpen size={14} />
             Guides
-          </Link>
+          </button>
         </div>
       </aside>
 
-      {modalOpen && <NewAssetModal onClose={() => setModalOpen(false)} />}
+      {modalOpen  && <NewAssetModal  onClose={() => setModalOpen(false)} />}
+      {guideOpen  && <GuideModal     onClose={() => setGuideOpen(false)} />}
     </>
   );
 }

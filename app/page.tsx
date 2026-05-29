@@ -1,55 +1,77 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AssetLibrary } from "@/components/assets/AssetLibrary";
+
+// ── Template gallery ──────────────────────────────────────
+
 const TEMPLATES = [
   {
     id: "feature-mockup",
     title: "Feature Mockup",
-    description: "Floating glass chat UI with delight.ai-style atmospheric backgrounds",
+    preview: "/preview/Feature Mockup.png",
     ready: true,
   },
   {
     id: "overview-diagram",
     title: "Overview Diagram",
-    description: "Architecture overview diagram",
+    preview: "/preview/Overview Diagram.png",
     ready: false,
   },
   {
     id: "dashboard-snippet",
     title: "Dashboard Snippet",
-    description: "Dashboard UI snippet",
+    preview: "/preview/Dashboard Snippet.png",
     ready: false,
   },
 ];
 
-export default function Home() {
+function TemplateGallery() {
+  const router = useRouter();
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold text-studio-text mb-1">Home</h2>
-        <p className="text-sm text-studio-muted">Select a template to create your marketing asset.</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        {TEMPLATES.map((template) => (
-          <div
-            key={template.id}
-            className="rounded-xl border border-studio-border bg-studio-sidebar p-5 flex flex-col gap-3"
+    <div className="mb-8">
+      <div className="flex gap-4 overflow-x-auto pb-1 -mx-8 px-8">
+        {TEMPLATES.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => { if (t.ready) router.push(`/editor/${t.id}`); }}
+            className={[
+              "relative shrink-0 w-56 h-36 rounded-xl overflow-hidden group",
+              t.ready ? "cursor-pointer" : "cursor-default",
+            ].join(" ")}
           >
-            <div className="h-36 rounded-lg bg-studio-hover flex items-center justify-center">
-              <span className="text-studio-muted text-sm">Preview coming soon</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={t.preview} alt={t.title} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+            {t.ready && (
+              <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+            <div className="absolute bottom-0 inset-x-0 px-3 py-2.5 flex items-end justify-between">
+              <span className="text-white text-xs font-medium">{t.title}</span>
+              {!t.ready && (
+                <span className="text-[10px] text-white/60 border border-white/30 rounded-full px-2 py-0.5">
+                  Soon
+                </span>
+              )}
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-studio-text font-medium text-sm">{template.title}</p>
-                {!template.ready && (
-                  <span className="text-[11px] text-studio-muted border border-studio-border rounded-full px-2 py-0.5">
-                    Soon
-                  </span>
-                )}
-              </div>
-              <p className="text-studio-muted text-xs">{template.description}</p>
-            </div>
-          </div>
+          </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────
+
+export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  return (
+    <div className="p-8 flex flex-col h-full min-h-0">
+      <TemplateGallery />
+      <AssetLibrary title="My files" mounted={mounted} />
     </div>
   );
 }

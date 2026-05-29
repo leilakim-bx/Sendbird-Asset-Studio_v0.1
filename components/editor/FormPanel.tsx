@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { UserRound, Bot, Sparkles, GripVertical } from "lucide-react";
+import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, ProductsMessage } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
@@ -70,7 +72,7 @@ function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
           onClick={() => applyImage(name)}
           disabled={loading}
           title="Load a different image"
-          className="h-7 px-2.5 rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors text-xs shrink-0 disabled:opacity-50"
+          className="h-7 px-2.5 rounded-md bg-studio-hover text-studio-text hover:bg-studio-border transition-colors text-xs shrink-0 disabled:opacity-50"
         >
           ↺
         </button>
@@ -117,11 +119,67 @@ export function FormPanel() {
     exportSize, setExportSize,
     backgroundId, setBackgroundId,
     appName, setAppName,
-    messages, addMessage, updateMessage, removeMessage,
+    messages, addMessage, updateMessage, removeMessage, setMessages,
     customBackgrounds, addCustomBackground,
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
+
+  // ── Scenario ───────────────────────────────────────────
+  const [activeScenario, setActiveScenario] = useState<string | null>(null);
+  const [genPrompt,  setGenPrompt]  = useState("");
+  const [genLoading, setGenLoading] = useState(false);
+  const [genError,   setGenError]   = useState<string | null>(null);
+
+  function applyScenario(id: string) {
+    const s = SCENARIOS.find((s) => s.id === id);
+    if (!s) return;
+    setActiveScenario(id);
+    setMessages(s.messages);
+  }
+
+  async function handleGenerate() {
+    const prompt = genPrompt.trim();
+    if (!prompt || genLoading) return;
+    setGenLoading(true);
+    setGenError(null);
+    setActiveScenario(null);
+    try {
+      const res = await fetch("/api/generate-scenario", {
+        method:  "POST",
+        headers: { "content-type": "application/json" },
+        body:    JSON.stringify({ prompt }),
+      });
+      const data = await res.json() as { messages?: unknown[]; error?: string };
+      if (!res.ok) { setGenError(data.error ?? "Generation failed"); return; }
+      setMessages(data.messages as Parameters<typeof setMessages>[0]);
+    } catch {
+      setGenError("Network error — please try again");
+    } finally {
+      setGenLoading(false);
+    }
+  }
+
+  // ── Drag-to-reorder ────────────────────────────────────
+  const dragIndex    = useRef<number | null>(null);
+  const [dragOver,  setDragOver]  = useState<number | null>(null);
+
+  function handleDragStart(i: number) { dragIndex.current = i; }
+  function handleDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault();
+    if (dragIndex.current !== i) setDragOver(i);
+  }
+  function handleDrop(i: number) {
+    const from = dragIndex.current;
+    if (from === null || from === i) { setDragOver(null); return; }
+    const next = [...messages];
+    const [moved] = next.splice(from, 1);
+    next.splice(i, 0, moved);
+    setMessages(next);
+    dragIndex.current = null;
+    setDragOver(null);
+  }
+  function handleDragEnd() { dragIndex.current = null; setDragOver(null); }
 
   // ── Layout & Size ──────────────────────────────────────
 
@@ -157,30 +215,61 @@ export function FormPanel() {
   // ── Message item ───────────────────────────────────────
 
   function MessageItem({ msg, index }: { msg: ChatMessage; index: number }) {
+    const isOver = dragOver === index;
+
+    const dragHandleProps = {
+      draggable: true as const,
+      onDragStart: () => handleDragStart(index),
+      onDragOver:  (e: React.DragEvent) => handleDragOver(e, index),
+      onDrop:      () => handleDrop(index),
+      onDragEnd:   handleDragEnd,
+    };
+
+    const Grip = () => (
+      <GripVertical
+        size={13}
+        className="shrink-0 text-studio-muted cursor-grab active:cursor-grabbing"
+      />
+    );
+
+    const wrapCls = [
+      "bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
+      dragIndex.current === index ? "opacity-40" : "",
+      isOver ? "ring-1 ring-studio-accent" : "",
+    ].join(" ");
+
     if (msg.type === "text") {
       return (
-        <div className="bg-studio-hover rounded-lg p-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            {/* Pill toggle: User / Bot */}
-            <div className="flex items-center gap-0.5 bg-studio-bg border border-studio-border rounded-full p-0.5">
-              {(["user", "bot"] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => updateMessage(msg.id, { role: r })}
-                  className={[
-                    "px-3 py-0.5 rounded-full text-[11px] font-medium transition-colors",
-                    msg.role === r
-                      ? "bg-studio-sidebar text-studio-text"
-                      : "text-studio-muted hover:text-studio-text",
-                  ].join(" ")}
-                >
-                  {r === "user" ? "User" : "Bot"}
-                </button>
+        <div {...dragHandleProps} className={wrapCls}>
+          <div className="flex items-center justify-between gap-2">
+            <Grip />
+            {/* Icon toggle: User / Bot */}
+            <div className="flex items-center gap-0.5 bg-studio-bg border border-studio-border rounded-lg p-0.5">
+              {([
+                { role: "user" as const, Icon: UserRound, label: "User" },
+                { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
+              ]).map(({ role, Icon, label }) => (
+                <div key={role} className="relative group/tip">
+                  <button
+                    onClick={() => updateMessage(msg.id, { role })}
+                    className={[
+                      "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
+                      msg.role === role
+                        ? "bg-studio-sidebar text-studio-text"
+                        : "text-studio-muted hover:text-studio-text",
+                    ].join(" ")}
+                  >
+                    <Icon size={14} />
+                  </button>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                    {label}
+                  </span>
+                </div>
               ))}
             </div>
             <button
               onClick={() => removeMessage(msg.id)}
-              className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+              className="ml-auto text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
             >
               ✕
             </button>
@@ -204,9 +293,10 @@ export function FormPanel() {
 
     if (msg.type === "actions") {
       return (
-        <div className="bg-studio-hover rounded-lg p-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-studio-muted">Action Buttons</span>
+        <div {...dragHandleProps} className={wrapCls}>
+          <div className="flex items-center gap-2">
+            <Grip />
+            <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
             <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
           </div>
           {msg.buttons.map((btn, i) => (
@@ -228,9 +318,10 @@ export function FormPanel() {
 
     if (msg.type === "products") {
       return (
-        <div className="bg-studio-hover rounded-lg p-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-studio-muted">Product Cards</span>
+        <div {...dragHandleProps} className={wrapCls}>
+          <div className="flex items-center gap-2">
+            <Grip />
+            <span className="text-xs text-studio-muted flex-1">Product Cards</span>
             <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
           </div>
           {msg.items.map((item, i) => (
@@ -322,6 +413,62 @@ export function FormPanel() {
           onClose={() => setShowBgModal(false)}
         />
       )}
+
+      <Section title="Scenario">
+        {/* Preset list */}
+        <div className="flex flex-col gap-0.5 mb-3">
+          {SCENARIOS.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => applyScenario(s.id)}
+              className={[
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-full transition-colors",
+                activeScenario === s.id
+                  ? "bg-studio-hover"
+                  : "hover:bg-studio-hover/60",
+              ].join(" ")}
+            >
+              <span className={[
+                "w-2 h-2 rounded-full shrink-0 transition-colors",
+                activeScenario === s.id ? "bg-studio-accent" : "bg-studio-border",
+              ].join(" ")} />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-studio-text truncate">{s.title}</p>
+                <p className="text-[11px] text-studio-muted truncate">{s.subtitle}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* AI generate */}
+        <div className="border-t border-studio-border pt-3 flex flex-col gap-2">
+          <textarea
+            value={genPrompt}
+            onChange={(e) => setGenPrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+            placeholder={"Describe a scenario…\ne.g. Agent books hotel and flight at once"}
+            rows={2}
+            className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+          />
+          <button
+            onClick={handleGenerate}
+            disabled={genLoading || !genPrompt.trim()}
+            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-hover border border-studio-border text-studio-text text-xs font-medium hover:border-studio-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Sparkles size={12} />
+            {genLoading ? "Generating…" : "Generate with AI"}
+          </button>
+          {genError && (
+            <p className="text-xs text-red-400">{genError}</p>
+          )}
+          {!genError && !process.env.ANTHROPIC_API_KEY && (
+            <p className="text-[11px] text-studio-muted leading-relaxed">
+              Add <code className="text-studio-text">ANTHROPIC_API_KEY</code> to{" "}
+              <code className="text-studio-text">.env.local</code> to enable AI generation.
+            </p>
+          )}
+        </div>
+      </Section>
 
       <Section title="Messages">
         <div className="flex flex-col gap-2 mb-3">

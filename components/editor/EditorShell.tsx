@@ -8,24 +8,36 @@ import { useEditorStore } from "@/lib/store";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
-import { exportImage } from "@/lib/export";
+import { exportImage, captureThumbnail } from "@/lib/export";
+import type { SavedAsset } from "@/lib/store";
 import type { Template } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
 
 export function EditorShell({ template }: { template: Template }) {
   const {
     layout, exportSize, backgroundId, appName, messages,
-    setMessages, setLayout, setBackgroundId, setAppName,
-    customBackgrounds,
+    setMessages, setLayout, setBackgroundId, setAppName, setExportSize,
+    customBackgrounds, saveAsset,
+    pendingAssetRestore, setPendingAssetRestore,
   } = useEditorStore();
 
-  // Seed default content on mount
+  // Seed default content on mount — or restore a saved asset if one is pending
   useEffect(() => {
-    const d = template.defaultContent;
-    setMessages(d.messages);
-    setLayout(template.defaultLayout);
-    setBackgroundId(d.backgroundId);
-    setAppName(d.appName);
+    const pending = pendingAssetRestore;
+    if (pending && pending.templateId === template.id) {
+      setAppName(pending.appName);
+      if (pending.messages)    setMessages(pending.messages);
+      if (pending.backgroundId) setBackgroundId(pending.backgroundId);
+      if (pending.layout)      setLayout(pending.layout);
+      if (pending.exportSize)  setExportSize(pending.exportSize);
+      setPendingAssetRestore(null);
+    } else {
+      const d = template.defaultContent;
+      setMessages(d.messages);
+      setLayout(template.defaultLayout);
+      setBackgroundId(d.backgroundId);
+      setAppName(d.appName);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
 
@@ -33,6 +45,7 @@ export function EditorShell({ template }: { template: Template }) {
   const mobileRef  = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   const bg = getBackground(backgroundId) ?? customBackgrounds.find((b) => b.id === backgroundId);
   const backgroundUrl = bg?.url ?? "/background/bg-100.png";
@@ -57,6 +70,33 @@ export function EditorShell({ template }: { template: Template }) {
       setExportError(`Export failed — ${msg || "unknown error"}`);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!desktopRef.current || saveState !== "idle") return;
+    setSaveState("saving");
+    try {
+      const previewDataUrl = await captureThumbnail(desktopRef.current);
+      const now = Date.now();
+      const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const asset: SavedAsset = {
+        id:            `asset-${now}`,
+        templateId:    template.id,
+        appName,
+        name:          `${appName} · ${dateStr}`,
+        previewDataUrl,
+        savedAt:       now,
+        messages,
+        backgroundId,
+        layout,
+        exportSize,
+      };
+      saveAsset(asset);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("idle");
     }
   }
 
@@ -105,15 +145,24 @@ export function EditorShell({ template }: { template: Template }) {
           />
         </div>
 
-        {/* Export button */}
+        {/* Action buttons */}
         <div className="flex flex-col items-center gap-2">
-          <button
-            onClick={handleExport}
-            disabled={exporting}
-            className="bg-studio-accent text-studio-accent-fg font-semibold text-sm px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {exporting ? "Exporting…" : `Export ${exportSize === "desktop" ? "Desktop" : "Mobile"} PNG`}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saveState !== "idle"}
+              className="font-semibold text-sm px-5 py-2.5 rounded-xl border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : "Save"}
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="bg-studio-accent text-studio-accent-fg font-semibold text-sm px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? "Exporting…" : `Export ${exportSize === "desktop" ? "Desktop" : "Mobile"} PNG`}
+            </button>
+          </div>
           {exportError && (
             <p className="text-red-400 text-xs">{exportError}</p>
           )}

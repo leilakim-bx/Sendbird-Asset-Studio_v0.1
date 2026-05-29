@@ -46,7 +46,7 @@ export const TEMPLATES: Template[] = [
     description: "Glassmorphism chat UI over a lifestyle background",
     layouts: ["center", "split"],
     exportSizes: [EXPORT_SIZES.desktop, EXPORT_SIZES.mobile],
-    defaultLayout: "split",
+    defaultLayout: "center",
     defaultContent: {
       appName: "sendbird.ai",
       backgroundId: "bg-100",
