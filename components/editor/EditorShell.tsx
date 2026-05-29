@@ -19,6 +19,9 @@ export function EditorShell({ template }: { template: Template }) {
     setMessages, setLayout, setBackgroundId, setAppName, setExportSize,
     customBackgrounds, saveAsset,
     pendingAssetRestore, setPendingAssetRestore,
+    userName, userAvatarUrl,
+    shuffleUserProfile, setUserName,
+    migrationSkipCount, clearMigrationWarning,
   } = useEditorStore();
 
   // Seed default content on mount — or restore a saved asset if one is pending
@@ -26,10 +29,16 @@ export function EditorShell({ template }: { template: Template }) {
     const pending = pendingAssetRestore;
     if (pending && pending.templateId === template.id) {
       setAppName(pending.appName);
-      if (pending.messages)    setMessages(pending.messages);
+      if (pending.messages)     setMessages(pending.messages);
       if (pending.backgroundId) setBackgroundId(pending.backgroundId);
-      if (pending.layout)      setLayout(pending.layout);
-      if (pending.exportSize)  setExportSize(pending.exportSize);
+      if (pending.layout)       setLayout(pending.layout);
+      if (pending.exportSize)   setExportSize(pending.exportSize);
+      // Restore saved user profile (case D) — or randomise if not saved
+      if (pending.userName) {
+        setUserName(pending.userName);
+      } else {
+        shuffleUserProfile();
+      }
       setPendingAssetRestore(null);
     } else {
       const d = template.defaultContent;
@@ -37,6 +46,8 @@ export function EditorShell({ template }: { template: Template }) {
       setLayout(template.defaultLayout);
       setBackgroundId(d.backgroundId);
       setAppName(d.appName);
+      // Fresh session → new random user profile (case A)
+      shuffleUserProfile();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
@@ -46,6 +57,31 @@ export function EditorShell({ template }: { template: Template }) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [isOverflowing, setIsOverflowing] = useState(false);
+
+  // Tracks the last messages state that did NOT overflow, used for rollback
+  const lastSafeMessagesRef = useRef(messages);
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  function handleOverflowChange(overflowing: boolean) {
+    if (overflowing) {
+      const safe    = lastSafeMessagesRef.current;
+      const current = messagesRef.current;
+      if (current.length > safe.length) {
+        // A message was just added and caused overflow → silently roll back
+        setMessages(safe);
+        // isOverflowing stays false — rollback will resolve the overflow
+      } else {
+        // Overflow from another cause (e.g. canvas resize) → show warning
+        setIsOverflowing(true);
+      }
+    } else {
+      setIsOverflowing(false);
+      // Snapshot the current safe state
+      lastSafeMessagesRef.current = messagesRef.current;
+    }
+  }
 
   const bg = getBackground(backgroundId) ?? customBackgrounds.find((b) => b.id === backgroundId);
   const backgroundUrl = bg?.url ?? "/background/bg-100.png";
@@ -91,6 +127,8 @@ export function EditorShell({ template }: { template: Template }) {
         backgroundId,
         layout,
         exportSize,
+        userName,
+        userAvatarUrl,
       };
       saveAsset(asset);
       setSaveState("saved");
@@ -107,6 +145,21 @@ export function EditorShell({ template }: { template: Template }) {
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* Migration warning banner */}
+      {migrationSkipCount > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 shrink-0">
+          <p className="text-xs text-amber-700">
+            이전 형식의 저장된 에셋 {migrationSkipCount}개를 불러올 수 없었습니다.
+          </p>
+          <button
+            onClick={clearMigrationWarning}
+            className="text-amber-500 hover:text-amber-700 text-xs shrink-0 transition-colors"
+          >
+            닫기 ✕
+          </button>
+        </div>
+      )}
 
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-studio-border bg-studio-sidebar shrink-0">
@@ -142,6 +195,9 @@ export function EditorShell({ template }: { template: Template }) {
             backgroundUrl={backgroundUrl}
             appName={appName}
             messages={messages}
+            userName={userName}
+            userAvatarUrl={userAvatarUrl}
+            onOverflowChange={handleOverflowChange}
           />
         </div>
 
@@ -180,6 +236,8 @@ export function EditorShell({ template }: { template: Template }) {
               backgroundUrl={backgroundUrl}
               appName={appName}
               messages={messages}
+              userName={userName}
+              userAvatarUrl={userAvatarUrl}
               width={desktopSize.width}
               height={desktopSize.height}
             />
@@ -191,6 +249,8 @@ export function EditorShell({ template }: { template: Template }) {
               backgroundUrl={backgroundUrl}
               appName={appName}
               messages={messages}
+              userName={userName}
+              userAvatarUrl={userAvatarUrl}
               width={mobileSize.width}
               height={mobileSize.height}
             />
@@ -199,7 +259,7 @@ export function EditorShell({ template }: { template: Template }) {
       </div>
 
         {/* Right: Form Panel */}
-        <FormPanel />
+        <FormPanel isOverflowing={isOverflowing} />
       </div>
     </div>
   );

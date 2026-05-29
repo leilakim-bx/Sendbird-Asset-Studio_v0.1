@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UserRound, Bot, Sparkles, GripVertical } from "lucide-react";
+import { UserRound, Bot, Sparkles, GripVertical, Shuffle } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, ProductsMessage } from "@/lib/store";
+import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { Input } from "@/components/ui/input";
@@ -28,8 +28,8 @@ async function fetchProductImage(keyword: string): Promise<string> {
 // ── Product item row ──────────────────────────────────────
 
 type ProductItemRowProps = {
-  item: ProductsMessage["items"][number];
-  onUpdate: (patch: Partial<ProductsMessage["items"][number]>) => void;
+  item: ProductItem;
+  onUpdate: (patch: Partial<ProductItem>) => void;
 };
 
 function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
@@ -113,7 +113,7 @@ function Section({
 
 // ── Main ──────────────────────────────────────────────────
 
-export function FormPanel() {
+export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const {
     layout, setLayout,
     exportSize, setExportSize,
@@ -121,6 +121,7 @@ export function FormPanel() {
     appName, setAppName,
     messages, addMessage, updateMessage, removeMessage, setMessages,
     customBackgrounds, addCustomBackground,
+    userName, userAvatarUrl, setUserName, shuffleUserProfile,
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
@@ -238,7 +239,8 @@ export function FormPanel() {
       isOver ? "ring-1 ring-studio-accent" : "",
     ].join(" ");
 
-    if (msg.type === "text") {
+    if (msg.block.type === "text") {
+      const textBlock = msg.block as TextBlock;
       return (
         <div {...dragHandleProps} className={wrapCls}>
           <div className="flex items-center justify-between gap-2">
@@ -274,15 +276,9 @@ export function FormPanel() {
               ✕
             </button>
           </div>
-          <Input
-            value={msg.sender}
-            onChange={(e) => updateMessage(msg.id, { sender: e.target.value })}
-            placeholder="Sender name"
-            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
           <textarea
-            value={msg.text}
-            onChange={(e) => updateMessage(msg.id, { text: e.target.value })}
+            value={textBlock.text}
+            onChange={(e) => updateMessage(msg.id, { block: { type: "text", text: e.target.value } })}
             placeholder="Message text"
             rows={2}
             className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
@@ -291,7 +287,8 @@ export function FormPanel() {
       );
     }
 
-    if (msg.type === "actions") {
+    if (msg.block.type === "actions") {
+      const actionsBlock = msg.block as ActionsBlock;
       return (
         <div {...dragHandleProps} className={wrapCls}>
           <div className="flex items-center gap-2">
@@ -299,14 +296,14 @@ export function FormPanel() {
             <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
             <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
           </div>
-          {msg.buttons.map((btn, i) => (
+          {actionsBlock.buttons.map((btn, i) => (
             <Input
               key={i}
               value={btn}
               onChange={(e) => {
-                const buttons = [...msg.buttons];
+                const buttons = [...actionsBlock.buttons];
                 buttons[i] = e.target.value;
-                updateMessage(msg.id, { buttons });
+                updateMessage(msg.id, { block: { type: "actions", buttons } });
               }}
               placeholder={`Button ${i + 1}`}
               className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
@@ -316,7 +313,8 @@ export function FormPanel() {
       );
     }
 
-    if (msg.type === "products") {
+    if (msg.block.type === "products") {
+      const productsBlock = msg.block as ProductsBlock;
       return (
         <div {...dragHandleProps} className={wrapCls}>
           <div className="flex items-center gap-2">
@@ -324,14 +322,14 @@ export function FormPanel() {
             <span className="text-xs text-studio-muted flex-1">Product Cards</span>
             <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
           </div>
-          {msg.items.map((item, i) => (
+          {productsBlock.items.map((item, i) => (
             <div key={i} className="border-t border-studio-border pt-2">
               <ProductItemRow
                 item={item}
                 onUpdate={(patch) => {
-                  const items = [...msg.items];
+                  const items = [...productsBlock.items];
                   items[i] = { ...items[i], ...patch };
-                  updateMessage(msg.id, { items });
+                  updateMessage(msg.id, { block: { type: "products", items } });
                 }}
               />
             </div>
@@ -470,6 +468,41 @@ export function FormPanel() {
         </div>
       </Section>
 
+      <Section title="User Profile">
+        <div className="flex items-center gap-2">
+          {/* Avatar preview */}
+          {userAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={userAvatarUrl}
+              alt={userName}
+              className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
+          )}
+          {/* Name input */}
+          <Input
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="User name"
+            className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+          {/* Shuffle button */}
+          <div className="relative group/tip shrink-0">
+            <button
+              onClick={shuffleUserProfile}
+              className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+            >
+              <Shuffle size={13} />
+            </button>
+            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+              Shuffle name &amp; avatar
+            </span>
+          </div>
+        </div>
+      </Section>
+
       <Section title="Messages">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
@@ -477,13 +510,21 @@ export function FormPanel() {
           ))}
         </div>
 
+        {isOverflowing && (
+          <p className="flex items-center gap-1.5 text-xs text-red-500 mb-1">
+            <span className="shrink-0">⚠</span>
+            Frame is full — remove a message to add more.
+          </p>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover"
+            disabled={isOverflowing}
+            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={() =>
-              addMessage({ id: uid(), type: "text", role: "user", sender: "User", text: "" })
+              addMessage({ id: uid(), role: "user", sender: userName || "User", block: { type: "text", text: "" } })
             }
           >
             + Add Text Message
@@ -491,9 +532,10 @@ export function FormPanel() {
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover"
+            disabled={isOverflowing}
+            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={() =>
-              addMessage({ id: uid(), type: "actions", buttons: ["Option A", "Option B"] })
+              addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } })
             }
           >
             + Add Action Buttons
@@ -501,15 +543,20 @@ export function FormPanel() {
           <Button
             variant="outline"
             size="sm"
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover"
+            disabled={isOverflowing}
+            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
             onClick={() =>
               addMessage({
                 id: uid(),
-                type: "products",
-                items: [
-                  { img: "", name: "Product A", sub: "$0.00", cta: "View" },
-                  { img: "", name: "Product B", sub: "$0.00", cta: "View" },
-                ],
+                role: "bot",
+                sender: "bot",
+                block: {
+                  type: "products",
+                  items: [
+                    { img: "", name: "Product A", sub: "$0.00", cta: "View" },
+                    { img: "", name: "Product B", sub: "$0.00", cta: "View" },
+                  ],
+                },
               })
             }
           >

@@ -34,7 +34,7 @@ export type Template = {
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
   desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
-  mobile:  { id: "mobile",  label: "Mobile",  width: 430, height: 540 },
+  mobile:  { id: "mobile",  label: "Mobile",  width: 430, height: 660 },
 };
 
 // ── Templates ─────────────────────────────────────────────
@@ -53,36 +53,44 @@ export const TEMPLATES: Template[] = [
       messages: [
         {
           id: "m1",
-          type: "text",
           role: "user",
           sender: "Taylor",
-          text: "I need something for a summer wedding",
           avatar: p("https://i.pravatar.cc/48?img=47"),
+          block: {
+            type: "text",
+            text: "I need something for a summer wedding",
+          },
         },
         {
           id: "m2",
-          type: "text",
           role: "bot",
           sender: "sendbird.ai",
-          text: "Let's start with a dress. You like light tones—here are similar options.",
+          block: {
+            type: "text",
+            text: "Let's start with a dress. You like light tones—here are similar options.",
+          },
         },
         {
           id: "m3",
-          type: "products",
-          items: [
-            {
-              img: p("https://images.pexels.com/photos/8780372/pexels-photo-8780372.jpeg?auto=compress&cs=tinysrgb&h=350"),
-              name: "Off Shoulder Lace Dress",
-              sub: "$82.00",
-              cta: "Add to Cart",
-            },
-            {
-              img: p("https://images.pexels.com/photos/28845496/pexels-photo-28845496.jpeg?auto=compress&cs=tinysrgb&h=350"),
-              name: "Strapless Maxi Dress",
-              sub: "$88.00",
-              cta: "Add to Cart",
-            },
-          ],
+          role: "bot",
+          sender: "bot",
+          block: {
+            type: "products",
+            items: [
+              {
+                img: p("https://images.pexels.com/photos/8780372/pexels-photo-8780372.jpeg?auto=compress&cs=tinysrgb&h=350"),
+                name: "Off Shoulder Lace Dress",
+                sub: "$82.00",
+                cta: "Add to Cart",
+              },
+              {
+                img: p("https://images.pexels.com/photos/28845496/pexels-photo-28845496.jpeg?auto=compress&cs=tinysrgb&h=350"),
+                name: "Strapless Maxi Dress",
+                sub: "$88.00",
+                cta: "Add to Cart",
+              },
+            ],
+          },
         },
       ],
     },
