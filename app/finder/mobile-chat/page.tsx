@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useEditorStore } from "@/lib/store";
 import type { SavedAsset } from "@/lib/store";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 function shortDate(ts: number): string {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -40,7 +41,7 @@ function EditableName({ value, onSave }: { value: string; onSave: (v: string) =>
   );
 }
 
-function AssetCard({ asset, onDelete, onRename }: { asset: SavedAsset; onDelete: () => void; onRename: (v: string) => void }) {
+function AssetCard({ asset, onDelete, onRename, onEdit }: { asset: SavedAsset; onDelete: () => void; onRename: (v: string) => void; onEdit: () => void }) {
   const [hover, setHover] = useState(false);
 
   return (
@@ -58,13 +59,22 @@ function AssetCard({ asset, onDelete, onRename }: { asset: SavedAsset; onDelete:
           className="w-full h-full object-cover"
         />
         {hover && (
-          <button
-            onClick={onDelete}
-            title="Delete"
-            className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
-          >
-            <Trash2 size={13} className="text-white" />
-          </button>
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <button
+              onClick={onEdit}
+              title="Open in editor"
+              className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+            >
+              <Pencil size={13} className="text-white" />
+            </button>
+            <button
+              onClick={onDelete}
+              title="Delete"
+              className="w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+            >
+              <Trash2 size={13} className="text-white" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -94,7 +104,13 @@ export default function ChatUIFinderPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const { savedAssets, deleteSavedAsset, renameSavedAsset } = useEditorStore();
+  const router = useRouter();
+  const { savedAssets, deleteSavedAsset, renameSavedAsset, setPendingAssetRestore } = useEditorStore();
+
+  function handleEdit(asset: SavedAsset) {
+    setPendingAssetRestore(asset);
+    router.push(`/editor/${asset.templateId}`);
+  }
 
   return (
     <div className="p-8">
@@ -110,6 +126,7 @@ export default function ChatUIFinderPage() {
               asset={asset}
               onDelete={() => deleteSavedAsset(asset.id)}
               onRename={(v) => renameSavedAsset(asset.id, v)}
+              onEdit={() => handleEdit(asset)}
             />
           ))}
         </div>

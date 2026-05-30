@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Home } from "lucide-react";
+import { BookOpen, Home } from "lucide-react";
+import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
+import { SCENARIOS } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
@@ -42,7 +44,8 @@ export function EditorShell({ template }: { template: Template }) {
       setPendingAssetRestore(null);
     } else {
       const d = template.defaultContent;
-      setMessages(d.messages);
+      // Fresh session → load the first scenario as default (hotel concierge)
+      setMessages(SCENARIOS[0].messages);
       setLayout(template.defaultLayout);
       setBackgroundId(d.backgroundId);
       setAppName(d.appName);
@@ -54,6 +57,7 @@ export function EditorShell({ template }: { template: Template }) {
 
   const desktopRef = useRef<HTMLDivElement>(null);
   const mobileRef  = useRef<HTMLDivElement>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -68,12 +72,19 @@ export function EditorShell({ template }: { template: Template }) {
     if (overflowing) {
       const safe    = lastSafeMessagesRef.current;
       const current = messagesRef.current;
-      if (current.length > safe.length) {
-        // A message was just added and caused overflow → silently roll back
+      // Only roll back when exactly ONE message was appended at the end
+      // (i.e. the user clicked "Add Text/Action/Product").
+      // Scenario switches replace ALL messages at once — those must NOT roll back,
+      // they should just show the overflow warning.
+      const isOneAppend =
+        current.length === safe.length + 1 &&
+        safe.every((m, i) => m.id === current[i].id);
+      if (isOneAppend) {
+        // A single message was added and caused overflow → silently roll back
         setMessages(safe);
         // isOverflowing stays false — rollback will resolve the overflow
       } else {
-        // Overflow from another cause (e.g. canvas resize) → show warning
+        // Overflow from another cause (resize, scenario switch, content change)
         setIsOverflowing(true);
       }
     } else {
@@ -97,7 +108,8 @@ export function EditorShell({ template }: { template: Template }) {
     setExportError(null);
     try {
       const { width, height } = isDesktop ? desktopSize : mobileSize;
-      await exportImage(ref, width, height, `sendbird-asset-${exportSize}.png`);
+      // 모바일은 가변 높이 — html-to-image가 실제 렌더 높이 기준으로 캡처
+      await exportImage(ref, width, isDesktop ? height : undefined, `sendbird-asset-${exportSize}.png`);
     } catch (err) {
       const msg = err instanceof Error
         ? err.message
@@ -169,6 +181,15 @@ export function EditorShell({ template }: { template: Template }) {
         </Link>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
+        <div className="ml-auto">
+          <button
+            onClick={() => setGuideOpen(true)}
+            title="Open guide"
+            className="p-1.5 rounded-md text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+          >
+            <BookOpen size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Editor body */}
@@ -242,6 +263,7 @@ export function EditorShell({ template }: { template: Template }) {
               height={desktopSize.height}
             />
           </div>
+          {/* height 미전달 → 가변 높이, min 385px */}
           <div ref={mobileRef}>
             <FeatureMockup
               layout={layout}
@@ -252,7 +274,6 @@ export function EditorShell({ template }: { template: Template }) {
               userName={userName}
               userAvatarUrl={userAvatarUrl}
               width={mobileSize.width}
-              height={mobileSize.height}
             />
           </div>
         </div>
@@ -261,6 +282,10 @@ export function EditorShell({ template }: { template: Template }) {
         {/* Right: Form Panel */}
         <FormPanel isOverflowing={isOverflowing} />
       </div>
+
+      {guideOpen && (
+        <GuideModal onClose={() => setGuideOpen(false)} initialSection="mobile-chat" />
+      )}
     </div>
   );
 }

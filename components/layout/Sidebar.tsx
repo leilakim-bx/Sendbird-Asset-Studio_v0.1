@@ -113,8 +113,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
   },
 ];
 
-function GuideModal({ onClose }: { onClose: () => void }) {
-  const [active, setActive] = useState("getting-started");
+export function GuideModal({ onClose, initialSection = "getting-started" }: { onClose: () => void; initialSection?: string }) {
+  const [active, setActive] = useState(initialSection);
   const section = GUIDE_SECTIONS.find((s) => s.id === active)!;
 
   return (

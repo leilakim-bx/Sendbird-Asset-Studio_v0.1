@@ -232,7 +232,7 @@ export const useEditorStore = create<EditorState>()(
       layout:            "center",
       exportSize:        "desktop",
       backgroundId:      "bg-1",
-      appName:           "sendbird.ai",
+      appName:           "delight.ai",
       messages:          [],
       customBackgrounds: [],
       savedAssets:       [],

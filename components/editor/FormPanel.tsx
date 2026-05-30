@@ -1,14 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback, memo } from "react";
 import { UserRound, Bot, Sparkles, GripVertical, Shuffle } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem } from "@/lib/store";
+import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 let idCounter = 100;
@@ -111,6 +110,189 @@ function Section({
   );
 }
 
+// ── Message item ───────────────────────────────────────────
+// Defined at MODULE LEVEL — required for React.memo to work correctly.
+// If defined inside FormPanel, the function reference changes every parent
+// render, causing React to unmount/remount the component and lose local state.
+
+type MessageItemProps = {
+  msg: ChatMessage;
+  index: number;
+  isDragOver: boolean;
+  dragIndexRef: React.MutableRefObject<number | null>;
+  onDragStart: (i: number) => void;
+  onDragOverItem: (e: React.DragEvent, i: number) => void;
+  onDrop: (i: number) => void;
+  onDragEnd: () => void;
+  onUpdate: (id: string, patch: MessagePatch) => void;
+  onRemove: (id: string) => void;
+};
+
+const MessageItem = memo(function MessageItem({
+  msg,
+  index,
+  isDragOver,
+  dragIndexRef,
+  onDragStart,
+  onDragOverItem,
+  onDrop,
+  onDragEnd,
+  onUpdate,
+  onRemove,
+}: MessageItemProps) {
+  // ── Local text state with 300 ms debounce ──────────────
+  // Keeps every keystroke instant: local state updates immediately,
+  // the Zustand store is only mutated 300 ms after the user stops typing.
+  const storeText = msg.block?.type === "text" ? (msg.block as TextBlock).text : "";
+  const [localText, setLocalText] = useState(storeText);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const committedRef = useRef(storeText); // last value we wrote to the store
+
+  // Sync when the store text changes from an EXTERNAL source
+  // (scenario switch, AI generate) — but NOT after our own debounce commit.
+  useEffect(() => {
+    if (storeText !== committedRef.current) {
+      setLocalText(storeText);
+      committedRef.current = storeText;
+    }
+  }, [storeText]);
+
+  // Flush & clean up on unmount
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
+
+  function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const v = e.target.value;
+    setLocalText(v);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      committedRef.current = v;
+      onUpdate(msg.id, { block: { type: "text", text: v } });
+    }, 300);
+  }
+
+  // ── Shared drag / style ────────────────────────────────
+  const wrapCls = [
+    "bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
+    dragIndexRef.current === index ? "opacity-40" : "",
+    isDragOver ? "ring-1 ring-studio-accent" : "",
+  ].join(" ");
+
+  const dragProps = {
+    draggable: true as const,
+    onDragStart: () => onDragStart(index),
+    onDragOver:  (e: React.DragEvent) => onDragOverItem(e, index),
+    onDrop:      () => onDrop(index),
+    onDragEnd,
+  };
+
+  const Grip = () => (
+    <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab active:cursor-grabbing" />
+  );
+
+  // ── Text message ───────────────────────────────────────
+  if (msg.block.type === "text") {
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center justify-between gap-2">
+          <Grip />
+          {/* Icon toggle: User / Bot */}
+          <div className="flex items-center gap-0.5 bg-studio-bg border border-studio-border rounded-lg p-0.5">
+            {([
+              { role: "user" as const, Icon: UserRound, label: "User" },
+              { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
+            ]).map(({ role, Icon, label }) => (
+              <div key={role} className="relative group/tip">
+                <button
+                  onClick={() => onUpdate(msg.id, { role })}
+                  className={[
+                    "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
+                    msg.role === role
+                      ? "bg-studio-sidebar text-studio-text"
+                      : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  <Icon size={14} />
+                </button>
+                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => onRemove(msg.id)}
+            className="ml-auto text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+        <textarea
+          value={localText}
+          onChange={handleTextChange}
+          placeholder="Message text"
+          rows={2}
+          className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+        />
+      </div>
+    );
+  }
+
+  // ── Action buttons ─────────────────────────────────────
+  if (msg.block.type === "actions") {
+    const actionsBlock = msg.block as ActionsBlock;
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center gap-2">
+          <Grip />
+          <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
+          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
+        </div>
+        {actionsBlock.buttons.map((btn, i) => (
+          <Input
+            key={i}
+            value={btn}
+            onChange={(e) => {
+              const buttons = [...actionsBlock.buttons];
+              buttons[i] = e.target.value;
+              onUpdate(msg.id, { block: { type: "actions", buttons } });
+            }}
+            placeholder={`Button ${i + 1}`}
+            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // ── Product cards ──────────────────────────────────────
+  if (msg.block.type === "products") {
+    const productsBlock = msg.block as ProductsBlock;
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center gap-2">
+          <Grip />
+          <span className="text-xs text-studio-muted flex-1">Product Cards</span>
+          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
+        </div>
+        {productsBlock.items.map((item, i) => (
+          <div key={i} className="border-t border-studio-border pt-2">
+            <ProductItemRow
+              item={item}
+              onUpdate={(patch) => {
+                const items = [...productsBlock.items];
+                items[i] = { ...items[i], ...patch };
+                onUpdate(msg.id, { block: { type: "products", items } });
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+});
+
 // ── Main ──────────────────────────────────────────────────
 
 export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
@@ -127,7 +309,8 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const [showBgModal, setShowBgModal] = useState(false);
 
   // ── Scenario ───────────────────────────────────────────
-  const [activeScenario, setActiveScenario] = useState<string | null>(null);
+  // Default: first scenario pre-selected (matches EditorShell's seed on fresh load)
+  const [activeScenario, setActiveScenario] = useState<string | null>(SCENARIOS[0].id);
   const [genPrompt,  setGenPrompt]  = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
@@ -162,25 +345,38 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   }
 
   // ── Drag-to-reorder ────────────────────────────────────
-  const dragIndex    = useRef<number | null>(null);
-  const [dragOver,  setDragOver]  = useState<number | null>(null);
+  const dragIndex = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
-  function handleDragStart(i: number) { dragIndex.current = i; }
-  function handleDragOver(e: React.DragEvent, i: number) {
+  // Keep a stable ref to messages so handleDrop doesn't need it as a dep.
+  // This avoids recreating the callback whenever messages change.
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  const handleDragStart = useCallback((i: number) => {
+    dragIndex.current = i;
+  }, []);
+
+  const handleDragOverItem = useCallback((e: React.DragEvent, i: number) => {
     e.preventDefault();
     if (dragIndex.current !== i) setDragOver(i);
-  }
-  function handleDrop(i: number) {
+  }, []);
+
+  const handleDrop = useCallback((i: number) => {
     const from = dragIndex.current;
     if (from === null || from === i) { setDragOver(null); return; }
-    const next = [...messages];
+    const next = [...messagesRef.current];
     const [moved] = next.splice(from, 1);
     next.splice(i, 0, moved);
     setMessages(next);
     dragIndex.current = null;
     setDragOver(null);
-  }
-  function handleDragEnd() { dragIndex.current = null; setDragOver(null); }
+  }, [setMessages]);
+
+  const handleDragEnd = useCallback(() => {
+    dragIndex.current = null;
+    setDragOver(null);
+  }, []);
 
   // ── Layout & Size ──────────────────────────────────────
 
@@ -211,134 +407,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         ))}
       </div>
     );
-  }
-
-  // ── Message item ───────────────────────────────────────
-
-  function MessageItem({ msg, index }: { msg: ChatMessage; index: number }) {
-    const isOver = dragOver === index;
-
-    const dragHandleProps = {
-      draggable: true as const,
-      onDragStart: () => handleDragStart(index),
-      onDragOver:  (e: React.DragEvent) => handleDragOver(e, index),
-      onDrop:      () => handleDrop(index),
-      onDragEnd:   handleDragEnd,
-    };
-
-    const Grip = () => (
-      <GripVertical
-        size={13}
-        className="shrink-0 text-studio-muted cursor-grab active:cursor-grabbing"
-      />
-    );
-
-    const wrapCls = [
-      "bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
-      dragIndex.current === index ? "opacity-40" : "",
-      isOver ? "ring-1 ring-studio-accent" : "",
-    ].join(" ");
-
-    if (msg.block.type === "text") {
-      const textBlock = msg.block as TextBlock;
-      return (
-        <div {...dragHandleProps} className={wrapCls}>
-          <div className="flex items-center justify-between gap-2">
-            <Grip />
-            {/* Icon toggle: User / Bot */}
-            <div className="flex items-center gap-0.5 bg-studio-bg border border-studio-border rounded-lg p-0.5">
-              {([
-                { role: "user" as const, Icon: UserRound, label: "User" },
-                { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
-              ]).map(({ role, Icon, label }) => (
-                <div key={role} className="relative group/tip">
-                  <button
-                    onClick={() => updateMessage(msg.id, { role })}
-                    className={[
-                      "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
-                      msg.role === role
-                        ? "bg-studio-sidebar text-studio-text"
-                        : "text-studio-muted hover:text-studio-text",
-                    ].join(" ")}
-                  >
-                    <Icon size={14} />
-                  </button>
-                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                    {label}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => removeMessage(msg.id)}
-              className="ml-auto text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-          <textarea
-            value={textBlock.text}
-            onChange={(e) => updateMessage(msg.id, { block: { type: "text", text: e.target.value } })}
-            placeholder="Message text"
-            rows={2}
-            className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
-          />
-        </div>
-      );
-    }
-
-    if (msg.block.type === "actions") {
-      const actionsBlock = msg.block as ActionsBlock;
-      return (
-        <div {...dragHandleProps} className={wrapCls}>
-          <div className="flex items-center gap-2">
-            <Grip />
-            <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
-            <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-          </div>
-          {actionsBlock.buttons.map((btn, i) => (
-            <Input
-              key={i}
-              value={btn}
-              onChange={(e) => {
-                const buttons = [...actionsBlock.buttons];
-                buttons[i] = e.target.value;
-                updateMessage(msg.id, { block: { type: "actions", buttons } });
-              }}
-              placeholder={`Button ${i + 1}`}
-              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-            />
-          ))}
-        </div>
-      );
-    }
-
-    if (msg.block.type === "products") {
-      const productsBlock = msg.block as ProductsBlock;
-      return (
-        <div {...dragHandleProps} className={wrapCls}>
-          <div className="flex items-center gap-2">
-            <Grip />
-            <span className="text-xs text-studio-muted flex-1">Product Cards</span>
-            <button onClick={() => removeMessage(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-          </div>
-          {productsBlock.items.map((item, i) => (
-            <div key={i} className="border-t border-studio-border pt-2">
-              <ProductItemRow
-                item={item}
-                onUpdate={(patch) => {
-                  const items = [...productsBlock.items];
-                  items[i] = { ...items[i], ...patch };
-                  updateMessage(msg.id, { block: { type: "products", items } });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    return null;
   }
 
   // ── Render ─────────────────────────────────────────────
@@ -459,12 +527,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           {genError && (
             <p className="text-xs text-red-400">{genError}</p>
           )}
-          {!genError && !process.env.ANTHROPIC_API_KEY && (
-            <p className="text-[11px] text-studio-muted leading-relaxed">
-              Add <code className="text-studio-text">ANTHROPIC_API_KEY</code> to{" "}
-              <code className="text-studio-text">.env.local</code> to enable AI generation.
-            </p>
-          )}
         </div>
       </Section>
 
@@ -506,7 +568,19 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       <Section title="Messages">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
-            <MessageItem key={msg.id} msg={msg} index={i} />
+            <MessageItem
+              key={msg.id}
+              msg={msg}
+              index={i}
+              isDragOver={dragOver === i}
+              dragIndexRef={dragIndex}
+              onDragStart={handleDragStart}
+              onDragOverItem={handleDragOverItem}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              onUpdate={updateMessage}
+              onRemove={removeMessage}
+            />
           ))}
         </div>
 
@@ -564,6 +638,11 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           </Button>
         </div>
       </Section>
+
+      {/* Bottom hint */}
+      <p className="text-[11px] text-studio-muted leading-relaxed pb-2">
+        Messages that exceed the frame height won&apos;t be added to the preview.
+      </p>
 
     </div>
   );

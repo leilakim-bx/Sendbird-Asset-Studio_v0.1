@@ -34,7 +34,7 @@ export type Template = {
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
   desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
-  mobile:  { id: "mobile",  label: "Mobile",  width: 430, height: 660 },
+  mobile:  { id: "mobile",  label: "Mobile",  width: 344, height: 385 },
 };
 
 // ── Templates ─────────────────────────────────────────────
@@ -48,7 +48,7 @@ export const TEMPLATES: Template[] = [
     exportSizes: [EXPORT_SIZES.desktop, EXPORT_SIZES.mobile],
     defaultLayout: "center",
     defaultContent: {
-      appName: "sendbird.ai",
+      appName: "delight.ai",
       backgroundId: "bg-100",
       messages: [
         {

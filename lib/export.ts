@@ -45,9 +45,14 @@ async function inlineImages(element: HTMLElement): Promise<() => void> {
 async function captureWithRetry(
   element: HTMLElement,
   width: number,
-  height: number,
+  height?: number,
 ): Promise<string> {
-  const options = { ...SHARED_OPTIONS, width, height, style: { borderRadius: "0" } };
+  const options = {
+    ...SHARED_OPTIONS,
+    width,
+    ...(height !== undefined ? { height } : {}),
+    style: { borderRadius: "0" },
+  };
   const restore = await inlineImages(element);
   try {
     // Warm html-to-image's style / font cache
@@ -62,7 +67,7 @@ async function captureWithRetry(
 export async function exportImage(
   element: HTMLElement,
   width: number,
-  height: number,
+  height: number | undefined,
   filename: string
 ): Promise<void> {
   const dataUrl = await captureWithRetry(element, width, height);
