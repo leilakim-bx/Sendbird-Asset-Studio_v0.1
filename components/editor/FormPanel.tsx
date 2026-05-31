@@ -378,10 +378,9 @@ const MessageItem = memo(function MessageItem({
   // ── Status pill ────────────────────────────────────────
   if (msg.block.type === "status") {
     const statusBlock = msg.block as StatusBlock;
-    const VARIANTS: StatusBlock["variant"][] = ["success", "info", "warning"];
+    const VARIANTS: StatusBlock["variant"][] = ["success", "warning"];
     const VARIANT_LABEL: Record<StatusBlock["variant"], string> = {
       success: "✓ Success",
-      info:    "i Info",
       warning: "! Warning",
     };
 

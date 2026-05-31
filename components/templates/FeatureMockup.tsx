@@ -275,15 +275,14 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale }: { msg: ChatM
 // ── StatusPill ────────────────────────────────────────────
 
 const STATUS_PILL_STYLES = {
-  success: { bg: "#111827", icon: "✓", iconColor: "#4ADE80" },
-  info:    { bg: "#1E3A5F", icon: "i", iconColor: "#60A5FA" },
-  warning: { bg: "#2D1A00", icon: "!", iconColor: "#FBBF24" },
+  success: { bg: "#F2FF66", icon: "✓", iconColor: "#111111", textColor: "#111111" },
+  warning: { bg: "#2D1A00", icon: "!", iconColor: "#FBBF24", textColor: "#F9FAFB" },
 } as const;
 
 const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; scale: number }) {
   const { label, variant } = msg.block as StatusBlock;
   const fs = Math.min(1, scale);
-  const { bg, icon, iconColor } = STATUS_PILL_STYLES[variant];
+  const { bg, icon, iconColor, textColor } = STATUS_PILL_STYLES[variant];
 
   return (
     <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
@@ -308,7 +307,7 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
           </span>
         </div>
         {/* Label */}
-        <span style={{ fontSize: 12 * fs, color: "#F9FAFB", fontWeight: 500, whiteSpace: "nowrap" }}>
+        <span style={{ fontSize: 12 * fs, color: textColor, fontWeight: 500, whiteSpace: "nowrap" }}>
           {label}
         </span>
       </div>

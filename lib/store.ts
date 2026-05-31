@@ -19,7 +19,7 @@ export type ChecklistBlock = { type: "checklist"; items: ChecklistItem[] };
 export type StatusBlock = {
   type: "status";
   label: string;
-  variant: "success" | "info" | "warning";
+  variant: "success" | "warning";
 };
 
 export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock;
