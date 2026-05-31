@@ -4,11 +4,14 @@ import { useRef, useState, useEffect, useCallback, memo } from "react";
 import { UserRound, Bot, Sparkles, GripVertical, Shuffle } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem } from "@/lib/store";
+import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 let idCounter = 100;
 const uid = () => `m${++idCounter}`;
@@ -290,6 +293,133 @@ const MessageItem = memo(function MessageItem({
     );
   }
 
+  // ── Checklist ──────────────────────────────────────────
+  if (msg.block.type === "checklist") {
+    const checklistBlock = msg.block as ChecklistBlock;
+    const CYCLE: Record<ChecklistItem["status"], ChecklistItem["status"]> = {
+      pending: "in-progress",
+      "in-progress": "done",
+      done: "pending",
+    };
+    const STATUS_ICON: Record<ChecklistItem["status"], string> = {
+      pending: "○",
+      "in-progress": "◑",
+      done: "●",
+    };
+    const STATUS_COLOR: Record<ChecklistItem["status"], string> = {
+      pending: "text-studio-muted",
+      "in-progress": "text-amber-400",
+      done: "text-studio-text",
+    };
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center gap-2">
+          <Grip />
+          <span className="text-xs text-studio-muted flex-1">Checklist</span>
+          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {checklistBlock.items.map((item, i) => (
+            <div key={item.id} className="flex items-center gap-1.5">
+              {/* Status toggle */}
+              <button
+                title={item.status}
+                onClick={() => {
+                  const items = checklistBlock.items.map((it, idx) =>
+                    idx === i ? { ...it, status: CYCLE[it.status] } : it
+                  );
+                  onUpdate(msg.id, { block: { type: "checklist", items } });
+                }}
+                className={`shrink-0 w-5 h-5 flex items-center justify-center text-sm leading-none transition-colors ${STATUS_COLOR[item.status]}`}
+              >
+                {STATUS_ICON[item.status]}
+              </button>
+              {/* Label */}
+              <Input
+                value={item.label}
+                onChange={(e) => {
+                  const items = checklistBlock.items.map((it, idx) =>
+                    idx === i ? { ...it, label: e.target.value } : it
+                  );
+                  onUpdate(msg.id, { block: { type: "checklist", items } });
+                }}
+                placeholder="Item label"
+                className="flex-1 h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+              />
+              {/* Remove item */}
+              <button
+                onClick={() => {
+                  const items = checklistBlock.items.filter((_, idx) => idx !== i);
+                  onUpdate(msg.id, { block: { type: "checklist", items } });
+                }}
+                className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+              >✕</button>
+            </div>
+          ))}
+        </div>
+        {/* Add item */}
+        <button
+          onClick={() => {
+            const items = [
+              ...checklistBlock.items,
+              { id: uid(), label: "", status: "pending" as const },
+            ];
+            onUpdate(msg.id, { block: { type: "checklist", items } });
+          }}
+          className="text-[11px] text-studio-muted hover:text-studio-text transition-colors text-left"
+        >
+          + Add item
+        </button>
+      </div>
+    );
+  }
+
+  // ── Status pill ────────────────────────────────────────
+  if (msg.block.type === "status") {
+    const statusBlock = msg.block as StatusBlock;
+    const VARIANTS: StatusBlock["variant"][] = ["success", "info", "warning"];
+    const VARIANT_LABEL: Record<StatusBlock["variant"], string> = {
+      success: "✓ Success",
+      info:    "i Info",
+      warning: "! Warning",
+    };
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center gap-2">
+          <Grip />
+          <span className="text-xs text-studio-muted flex-1">Status</span>
+          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
+        </div>
+        {/* Label input */}
+        <Input
+          value={statusBlock.label}
+          onChange={(e) => onUpdate(msg.id, { block: { ...statusBlock, label: e.target.value } })}
+          placeholder="Status label"
+          className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+        />
+        {/* Variant selector */}
+        <div className="flex gap-1">
+          {VARIANTS.map((v) => (
+            <button
+              key={v}
+              onClick={() => onUpdate(msg.id, { block: { ...statusBlock, variant: v } })}
+              className={[
+                "flex-1 h-6 rounded-md text-[10px] font-medium transition-colors",
+                statusBlock.variant === v
+                  ? "bg-studio-accent text-studio-accent-fg"
+                  : "bg-studio-hover text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {VARIANT_LABEL[v]}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return null;
 });
 
@@ -310,7 +440,8 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   // ── Scenario ───────────────────────────────────────────
   // Default: first scenario pre-selected (matches EditorShell's seed on fresh load)
-  const [activeScenario, setActiveScenario] = useState<string | null>(SCENARIOS[0].id);
+  const [activeScenario,    setActiveScenario]    = useState<string | null>(SCENARIOS[0].id);
+  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
   const [genPrompt,  setGenPrompt]  = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
@@ -320,6 +451,15 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     if (!s) return;
     setActiveScenario(id);
     setMessages(s.messages);
+  }
+
+  /** 드롭다운 변경 시 — 메시지가 있으면 confirm, 없으면 즉시 적용 */
+  function handleScenarioChange(id: string) {
+    if (messages.length > 0) {
+      setPendingScenarioId(id);
+    } else {
+      applyScenario(id);
+    }
   }
 
   async function handleGenerate() {
@@ -481,33 +621,44 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       )}
 
       <Section title="Scenario">
-        {/* Preset list */}
-        <div className="flex flex-col gap-0.5 mb-3">
-          {SCENARIOS.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => applyScenario(s.id)}
-              className={[
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-full transition-colors",
-                activeScenario === s.id
-                  ? "bg-studio-hover"
-                  : "hover:bg-studio-hover/60",
-              ].join(" ")}
-            >
-              <span className={[
-                "w-2 h-2 rounded-full shrink-0 transition-colors",
-                activeScenario === s.id ? "bg-studio-accent" : "bg-studio-border",
-              ].join(" ")} />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-studio-text truncate">{s.title}</p>
-                <p className="text-[11px] text-studio-muted truncate">{s.subtitle}</p>
-              </div>
-            </button>
-          ))}
+        {/* Dropdown */}
+        <Select
+          value={activeScenario ?? ""}
+          onValueChange={(val) => handleScenarioChange(String(val))}
+        >
+          <SelectTrigger className="w-full h-8 border-studio-border bg-studio-hover text-studio-text text-xs rounded-lg">
+            <span className="flex-1 text-left truncate">
+              {SCENARIOS.find((s) => s.id === activeScenario)?.name ?? "Select a scenario"}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            {SCENARIOS.map((s) => (
+              <SelectItem key={s.id} value={s.id} className="text-xs">
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Tagline */}
+        {activeScenario && (() => {
+          const s = SCENARIOS.find((s) => s.id === activeScenario);
+          return s ? (
+            <p className="text-[11px] text-studio-muted mt-1.5 leading-relaxed">
+              &ldquo;{s.tagline}&rdquo;
+            </p>
+          ) : null;
+        })()}
+
+        {/* ─── or ─── */}
+        <div className="flex items-center gap-2 my-3">
+          <div className="flex-1 h-px bg-studio-border" />
+          <span className="text-[10px] text-studio-muted uppercase tracking-widest">or</span>
+          <div className="flex-1 h-px bg-studio-border" />
         </div>
 
         {/* AI generate */}
-        <div className="border-t border-studio-border pt-3 flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <textarea
             value={genPrompt}
             onChange={(e) => setGenPrompt(e.target.value)}
@@ -636,6 +787,45 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           >
             + Add Product Cards
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isOverflowing}
+            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={() =>
+              addMessage({
+                id: uid(),
+                role: "bot",
+                sender: "bot",
+                block: {
+                  type: "checklist",
+                  items: [
+                    { id: uid(), label: "Task one", status: "done" },
+                    { id: uid(), label: "Task two", status: "in-progress" },
+                    { id: uid(), label: "Task three", status: "pending" },
+                  ],
+                },
+              })
+            }
+          >
+            + Add Checklist
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isOverflowing}
+            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={() =>
+              addMessage({
+                id: uid(),
+                role: "bot",
+                sender: "bot",
+                block: { type: "status", label: "Status label", variant: "success" },
+              })
+            }
+          >
+            + Add Status
+          </Button>
         </div>
       </Section>
 
@@ -643,6 +833,37 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       <p className="text-[11px] text-studio-muted leading-relaxed pb-2">
         Messages that exceed the frame height won&apos;t be added to the preview.
       </p>
+
+      {/* Scenario switch confirm modal */}
+      {pendingScenarioId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-studio-sidebar border border-studio-border rounded-2xl p-5 w-64 shadow-xl flex flex-col gap-3">
+            <div>
+              <p className="text-sm font-semibold text-studio-text mb-1">Replace current messages?</p>
+              <p className="text-xs text-studio-muted">
+                Switching to &ldquo;{SCENARIOS.find((s) => s.id === pendingScenarioId)?.name}&rdquo; will overwrite your current messages.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPendingScenarioId(null)}
+                className="flex-1 h-8 rounded-lg border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  applyScenario(pendingScenarioId);
+                  setPendingScenarioId(null);
+                }}
+                className="flex-1 h-8 rounded-lg bg-studio-accent text-studio-accent-fg text-xs font-semibold hover:opacity-90 transition-opacity"
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

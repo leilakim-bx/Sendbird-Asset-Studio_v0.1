@@ -9,7 +9,20 @@ export type TextBlock    = { type: "text";     text: string };
 export type ActionsBlock = { type: "actions";  buttons: string[] };
 export type ProductsBlock = { type: "products"; items: ProductItem[] };
 
-export type Block = TextBlock | ActionsBlock | ProductsBlock;
+export type ChecklistItem = {
+  id: string;
+  label: string;
+  status: "done" | "in-progress" | "pending";
+};
+export type ChecklistBlock = { type: "checklist"; items: ChecklistItem[] };
+
+export type StatusBlock = {
+  type: "status";
+  label: string;
+  variant: "success" | "info" | "warning";
+};
+
+export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock;
 
 // ── Product item ──────────────────────────────────────────
 

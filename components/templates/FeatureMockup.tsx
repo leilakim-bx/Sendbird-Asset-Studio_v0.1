@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, memo } from "react";
-import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock } from "@/lib/store";
+import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ChecklistBlock, StatusBlock } from "@/lib/store";
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -165,16 +165,16 @@ const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessa
           {item.img
             ? /* eslint-disable-next-line @next/next/no-img-element */
               <img src={item.img} alt={item.name}
-                style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", display: "block" }} />
+                style={{ width: "100%", aspectRatio: "2/1", objectFit: "cover", display: "block" }} />
             : <div style={{
-                width: "100%", aspectRatio: "3/2",
+                width: "100%", aspectRatio: "2/1",
                 background: "#E5E7EB",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
               </div>
           }
-          <div style={{ padding: `${Math.round(8 * scale)}px ${Math.round(10 * scale)}px ${Math.round(10 * scale)}px` }}>
+          <div style={{ padding: `6px ${Math.round(10 * scale)}px 6px` }}>
             <p style={{
               fontSize: 14 * fs, fontWeight: 700, color: "#111",
               lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
@@ -182,18 +182,136 @@ const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessa
             }}>{item.name}</p>
             <p style={{
               fontSize: 12 * fs, color: "#6B7280",
-              margin: `0 0 ${Math.round(8 * scale)}px`,
+              margin: "0 0 4px",
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>{item.sub}</p>
-            {/* View Details — gray fill, no border */}
+            {/* CTA — gray fill, no border */}
             <div style={{
               fontSize: 13 * fs, fontWeight: 600, color: "#374151",
               background: "#F3F4F6", borderRadius: 8,
-              padding: `${Math.round(6 * scale)}px 0`, textAlign: "center",
+              padding: "4px 0", textAlign: "center",
             }}>{item.cta}</div>
           </div>
         </div>
       ))}
+    </div>
+  );
+});
+
+// ── ChecklistItems ────────────────────────────────────────
+
+const ChecklistItems = memo(function ChecklistItems({ msg, scale }: { msg: ChatMessage; scale: number }) {
+  const { items } = msg.block as ChecklistBlock;
+  const fs = Math.min(1, scale);
+  const sz = Math.round(16 * scale);   // icon circle size
+  const gap = Math.round(8 * scale);
+
+  return (
+    <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
+      <div style={{
+        borderRadius: Math.round(18 * scale),
+        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
+        background: "#ffffff",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap }}>
+          {items.map((item) => (
+            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: Math.round(8 * scale) }}>
+
+              {/* Status icon */}
+              {item.status === "done" && (
+                <div style={{
+                  width: sz, height: sz, borderRadius: "50%",
+                  background: "#111", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {/* white checkmark */}
+                  <svg width={Math.round(9 * scale)} height={Math.round(9 * scale)} viewBox="0 0 9 7" fill="none">
+                    <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              )}
+              {item.status === "in-progress" && (
+                <div style={{
+                  width: sz, height: sz, borderRadius: "50%",
+                  border: `${Math.max(1, Math.round(1.5 * scale))}px dashed #9CA3AF`,
+                  flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {/* partial arc suggests motion */}
+                  <div style={{
+                    width: Math.round(6 * scale), height: Math.round(6 * scale),
+                    borderRadius: "50%",
+                    border: `${Math.max(1, Math.round(1.5 * scale))}px solid transparent`,
+                    borderTopColor: "#9CA3AF",
+                  }} />
+                </div>
+              )}
+              {item.status === "pending" && (
+                <div style={{
+                  width: sz, height: sz, borderRadius: "50%",
+                  border: `${Math.max(1, Math.round(1.5 * scale))}px solid #D1D5DB`,
+                  flexShrink: 0,
+                }} />
+              )}
+
+              {/* Label */}
+              <span style={{
+                fontSize: 13 * fs,
+                color: item.status === "done" ? "#9CA3AF" : "#1a1a1a",
+                textDecoration: item.status === "done" ? "line-through" : "none",
+                lineHeight: 1.35,
+              }}>
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ── StatusPill ────────────────────────────────────────────
+
+const STATUS_PILL_STYLES = {
+  success: { bg: "#111827", icon: "✓", iconColor: "#4ADE80" },
+  info:    { bg: "#1E3A5F", icon: "i", iconColor: "#60A5FA" },
+  warning: { bg: "#2D1A00", icon: "!", iconColor: "#FBBF24" },
+} as const;
+
+const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; scale: number }) {
+  const { label, variant } = msg.block as StatusBlock;
+  const fs = Math.min(1, scale);
+  const { bg, icon, iconColor } = STATUS_PILL_STYLES[variant];
+
+  return (
+    <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
+      <div style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: Math.round(6 * scale),
+        background: bg,
+        borderRadius: 999,
+        padding: `${Math.round(7 * scale)}px ${Math.round(14 * scale)}px`,
+      }}>
+        {/* Icon badge */}
+        <div style={{
+          width: Math.round(14 * scale), height: Math.round(14 * scale),
+          borderRadius: "50%",
+          border: `1px solid ${iconColor}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 9 * fs, color: iconColor, lineHeight: 1, fontWeight: 700 }}>
+            {icon}
+          </span>
+        </div>
+        {/* Label */}
+        <span style={{ fontSize: 12 * fs, color: "#F9FAFB", fontWeight: 500, whiteSpace: "nowrap" }}>
+          {label}
+        </span>
+      </div>
     </div>
   );
 });
@@ -232,7 +350,8 @@ const PhoneFrame = memo(function PhoneFrame({
     const el = frameRef.current;
     if (!el) return;
     const check = () => {
-      const overflows = el.scrollHeight > el.clientHeight + 1;
+      // 12px 여백이 사라지기 직전에 감지 — strict (+ 여유 없음)
+      const overflows = el.scrollHeight > el.clientHeight;
       onOverflowChangeRef.current?.(overflows);
     };
     check();
@@ -288,7 +407,8 @@ const PhoneFrame = memo(function PhoneFrame({
       )}
 
       {/* Message list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(14 * scale)}px 0 ${Math.round(16 * scale)}px` }}>
+      {/* padding-bottom 12px 고정: scale에 무관하게 항상 12px 여백 보장 */}
+      <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale), padding: `${Math.round(14 * scale)}px 0 12px` }}>
         {messages.map((msg, idx) => {
           // Guard: localStorage에 저장된 구버전 메시지 등 block 없는 항목 방어
           if (!msg?.block) return null;
@@ -309,8 +429,10 @@ const PhoneFrame = memo(function PhoneFrame({
                 : undefined;
             return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} inlineButtons={inlineButtons} />;
           }
-          if (type === "actions")  return <ActionButtons key={msg.id} msg={msg} scale={scale} appName={appName} />;
-          if (type === "products") return <ProductCards  key={msg.id} msg={msg} scale={scale} />;
+          if (type === "actions")   return <ActionButtons  key={msg.id} msg={msg} scale={scale} appName={appName} />;
+          if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} />;
+          if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} />;
+          if (type === "status")    return <StatusPill     key={msg.id} msg={msg} scale={scale} />;
           return null;
         })}
       </div>
