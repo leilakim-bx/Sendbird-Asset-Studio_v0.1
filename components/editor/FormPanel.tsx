@@ -80,7 +80,7 @@ function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
             value={imageQuery}
             onChange={(e) => setImageQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
-            placeholder="Search image…"
+            placeholder="e.g. white sneakers, linen coat"
             className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
           />
         </div>
