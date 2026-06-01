@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw } from "lucide-react";
+import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw, ChevronDown } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Menu } from "@base-ui/react/menu";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -777,91 +778,49 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           </p>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Add message dropdown */}
+        <Menu.Root>
+          <Menu.Trigger
             disabled={isOverflowing}
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={() =>
-              addMessage({ id: uid(), role: "user", sender: userName || "User", block: { type: "text", text: "" } })
-            }
+            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            + Add Text Message
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isOverflowing}
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={() =>
-              addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } })
-            }
-          >
-            + Add Action Buttons
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isOverflowing}
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={() =>
-              addMessage({
-                id: uid(),
-                role: "bot",
-                sender: "bot",
-                block: {
-                  type: "products",
-                  items: [
-                    { img: "", name: "Product A", sub: "$0.00", cta: "View" },
-                    { img: "", name: "Product B", sub: "$0.00", cta: "View" },
-                  ],
-                },
-              })
-            }
-          >
-            + Add Product Cards
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isOverflowing}
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={() =>
-              addMessage({
-                id: uid(),
-                role: "bot",
-                sender: "bot",
-                block: {
-                  type: "checklist",
-                  items: [
-                    { id: uid(), label: "Task one", status: "done" },
-                    { id: uid(), label: "Task two", status: "in-progress" },
+            + Add message
+            <ChevronDown size={11} />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner side="top" align="center" sideOffset={6}>
+              <Menu.Popup className="z-50 min-w-[180px] rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+                {([
+                  { icon: "💬", label: "Text message",    add: () => {
+                    const lastRole = messages.at(-1)?.role ?? "bot";
+                    const role = lastRole === "bot" ? "user" : "bot";
+                    addMessage({ id: uid(), role, sender: role === "user" ? (userName || "User") : "bot", block: { type: "text", text: "" } });
+                  }},
+                  { icon: "🛍️", label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
+                    { img: "", name: "Product A", sub: "$0.00", cta: "Buy now", imageQuery: "" },
+                    { img: "", name: "Product B", sub: "$0.00", cta: "Buy now", imageQuery: "" },
+                  ]}})},
+                  { icon: "🎯", label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
+                  { icon: "✅", label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
+                    { id: uid(), label: "Task one",   status: "done" },
+                    { id: uid(), label: "Task two",   status: "in-progress" },
                     { id: uid(), label: "Task three", status: "pending" },
-                  ],
-                },
-              })
-            }
-          >
-            + Add Checklist
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isOverflowing}
-            className="w-full text-xs border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={() =>
-              addMessage({
-                id: uid(),
-                role: "bot",
-                sender: "bot",
-                block: { type: "status", label: "Status label", variant: "success" },
-              })
-            }
-          >
-            + Add Status
-          </Button>
-        </div>
+                  ]}})},
+                  { icon: "🏷️", label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
+                ] as const).map(({ icon, label, add }) => (
+                  <Menu.Item
+                    key={label}
+                    onClick={add}
+                    className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-studio-text hover:bg-studio-hover cursor-default outline-none"
+                  >
+                    <span className="text-sm leading-none">{icon}</span>
+                    {label}
+                  </Menu.Item>
+                ))}
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </Section>
 
       {/* Bottom hint */}
