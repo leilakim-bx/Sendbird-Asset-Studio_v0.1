@@ -126,6 +126,11 @@ export type EditorState = {
   setUserName: (name: string) => void;
   shuffleUserProfile: () => void;
 
+  // ── Active scenario (non-persisted) ─────────────────────
+  /** FormPanel에서 선택된 시나리오 ID — export 파일명에 사용 */
+  activeScenarioId: string | null;
+  setActiveScenarioId: (id: string | null) => void;
+
   // ── Migration warning (non-persisted) ───────────────────
   /** 마이그레이션 중 skip된 에셋 수. >0 이면 앱 진입 시 토스트 표시 */
   migrationSkipCount: number;
@@ -256,6 +261,10 @@ export const useEditorStore = create<EditorState>()(
       userName:        "",
       userAvatarUrl:   "",
       userProfileSeed: 0,
+
+      // Active scenario — transient, never persisted
+      activeScenarioId:    "memory-recall",
+      setActiveScenarioId: (id) => set({ activeScenarioId: id }),
 
       // Migration warning — set by onRehydrateStorage, never persisted
       migrationSkipCount:    0,

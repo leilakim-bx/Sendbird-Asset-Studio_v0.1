@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Home } from "lucide-react";
+import { BookOpen, Home, ChevronDown, ImageDown, Clipboard } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
 import { SCENARIOS } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
-import { exportImage, captureThumbnail } from "@/lib/export";
+import { exportImage, exportSvgToClipboard, captureThumbnail } from "@/lib/export";
 import type { SavedAsset } from "@/lib/store";
 import type { Template } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
@@ -24,6 +25,7 @@ export function EditorShell({ template }: { template: Template }) {
     userName, userAvatarUrl,
     shuffleUserProfile, setUserName,
     migrationSkipCount, clearMigrationWarning,
+    activeScenarioId,
   } = useEditorStore();
 
   // Seed default content on mount — or restore a saved asset if one is pending
@@ -61,6 +63,8 @@ export function EditorShell({ template }: { template: Template }) {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   // Tracks the last messages state that did NOT overflow, used for rollback
@@ -100,6 +104,18 @@ export function EditorShell({ template }: { template: Template }) {
   const desktopSize = EXPORT_SIZES.desktop;
   const mobileSize  = EXPORT_SIZES.mobile;
 
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToastMsg(null), 3000);
+  }
+
+  function exportFilename(ext: string) {
+    const scenarioSlug = activeScenarioId
+      ?? appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return `${scenarioSlug}-${exportSize}.${ext}`;
+  }
+
   async function handleExport() {
     const isDesktop = exportSize === "desktop";
     const ref = isDesktop ? desktopRef.current : mobileRef.current;
@@ -108,14 +124,34 @@ export function EditorShell({ template }: { template: Template }) {
     setExportError(null);
     try {
       const { width, height } = isDesktop ? desktopSize : mobileSize;
-      // 모바일은 가변 높이 — html-to-image가 실제 렌더 높이 기준으로 캡처
-      await exportImage(ref, width, isDesktop ? height : undefined, `sendbird-asset-${exportSize}.png`);
+      await exportImage(ref, width, isDesktop ? height : undefined, exportFilename("png"));
     } catch (err) {
       const msg = err instanceof Error
         ? err.message
         : (err as { message?: string })?.message ?? String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleCopyFigma() {
+    const isDesktop = exportSize === "desktop";
+    const ref = isDesktop ? desktopRef.current : mobileRef.current;
+    if (!ref) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const { width, height } = isDesktop ? desktopSize : mobileSize;
+      await exportSvgToClipboard(ref, width, isDesktop ? height : undefined);
+      showToast("SVG copied. Paste with Cmd+V in Figma.");
+    } catch (err) {
+      const msg = err instanceof Error
+        ? err.message
+        : (err as { message?: string })?.message ?? String(err);
+      console.error("Copy for Figma failed:", err);
+      setExportError(`Copy failed — ${msg || "unknown error"}`);
     } finally {
       setExporting(false);
     }
@@ -232,18 +268,53 @@ export function EditorShell({ template }: { template: Template }) {
             >
               {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : "Save"}
             </button>
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="bg-studio-accent text-studio-accent-fg font-semibold text-sm px-6 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {exporting ? "Exporting…" : `Export ${exportSize === "desktop" ? "Desktop" : "Mobile"} PNG`}
-            </button>
+
+            {/* Export dropdown */}
+            <Menu.Root>
+              <Menu.Trigger
+                disabled={exporting}
+                className="flex items-center gap-2 bg-studio-accent text-studio-accent-fg font-semibold text-sm px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exporting ? "Exporting…" : "Export"}
+                <ChevronDown size={14} />
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Positioner side="top" align="end" sideOffset={8}>
+                  <Menu.Popup className="z-50 min-w-[220px] rounded-xl bg-studio-sidebar border border-studio-border shadow-xl py-1.5 outline-none">
+                    {/* PNG */}
+                    <Menu.Item
+                      onClick={handleExport}
+                      className="flex items-center gap-3 px-3 py-2 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                    >
+                      <ImageDown size={15} className="shrink-0 text-studio-muted" />
+                      <span className="flex-1">PNG</span>
+                      <span className="text-[11px] text-studio-muted">.png · @2x</span>
+                    </Menu.Item>
+                    {/* Copy for Figma */}
+                    <Menu.Item
+                      onClick={handleCopyFigma}
+                      className="flex items-center gap-3 px-3 py-2 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                    >
+                      <Clipboard size={15} className="shrink-0 text-studio-muted" />
+                      <span className="flex-1">Copy for Figma</span>
+                      <span className="text-[11px] text-studio-muted">SVG · clipboard</span>
+                    </Menu.Item>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.Root>
           </div>
           {exportError && (
             <p className="text-red-400 text-xs">{exportError}</p>
           )}
         </div>
+
+        {/* Toast */}
+        {toastMsg && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl bg-studio-sidebar border border-studio-border shadow-xl text-sm text-studio-text pointer-events-none">
+            {toastMsg}
+          </div>
+        )}
 
         {/* Hidden full-size export targets — positioned off-screen, NOT sr-only */}
         <div

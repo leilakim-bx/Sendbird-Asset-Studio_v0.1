@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, memo } from "react";
-import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ChecklistBlock, StatusBlock } from "@/lib/store";
+import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock } from "@/lib/store";
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ const ChatBubble = memo(function ChatBubble({
   userName,
   userAvatarUrl,
   scale,
+  br = 18,
   inlineButtons,
 }: {
   msg: ChatMessage;   // caller guarantees block.type === "text"
@@ -41,6 +42,8 @@ const ChatBubble = memo(function ChatBubble({
   userName?: string;
   userAvatarUrl?: string;
   scale: number;
+  /** bubble border-radius factor (default 18; pass 14 for mobile) */
+  br?: number;
   inlineButtons?: string[];  // bot 버블에 합쳐질 action buttons
 }) {
   const isUser = msg.role === "user";
@@ -61,7 +64,7 @@ const ChatBubble = memo(function ChatBubble({
       <div style={{
         // 버튼 포함 시 전체 너비 사용, 텍스트만이면 75% 캡
         ...(inlineButtons ? { width: "100%" } : { maxWidth: "75%" }),
-        borderRadius: Math.round(18 * scale),
+        borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
@@ -107,7 +110,7 @@ const ChatBubble = memo(function ChatBubble({
 
 // ── ActionButtons ─────────────────────────────────────────
 
-const ActionButtons = memo(function ActionButtons({ msg, scale, appName }: { msg: ChatMessage; scale: number; appName: string }) {
+const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18 }: { msg: ChatMessage; scale: number; appName: string; br?: number }) {
   const { buttons } = msg.block as ActionsBlock;
   const fs = Math.min(1, scale);
   return (
@@ -118,7 +121,7 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName }: { msg
     }}>
       <div style={{
         width: "100%",
-        borderRadius: Math.round(18 * scale),
+        borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(12 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
@@ -150,49 +153,91 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName }: { msg
 
 // ── ProductCards ──────────────────────────────────────────
 
-const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessage; scale: number }) {
-  const { items } = msg.block as ProductsBlock;
+/** Single product card (shared by grid + carousel layouts) */
+function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: number; cardWidth?: number }) {
   const fs = Math.min(1, scale);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: Math.round(8 * scale), padding: `0 ${Math.round(16 * scale)}px` }}>
-      {items.map((item, i) => (
-        <div key={i} style={{
-          borderRadius: 12,
-          overflow: "hidden",
-          background: "#ffffff",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-        }}>
-          {item.img
-            ? /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={item.img} alt={item.name}
-                style={{ width: "100%", aspectRatio: "2/1", objectFit: "cover", display: "block" }} />
-            : <div style={{
-                width: "100%", aspectRatio: "2/1",
-                background: "#E5E7EB",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
-              </div>
-          }
-          <div style={{ padding: `6px ${Math.round(10 * scale)}px 6px` }}>
-            <p style={{
-              fontSize: 14 * fs, fontWeight: 700, color: "#111",
-              lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>{item.name}</p>
-            <p style={{
-              fontSize: 12 * fs, color: "#6B7280",
-              margin: "0 0 4px",
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>{item.sub}</p>
-            {/* CTA — gray fill, no border */}
-            <div style={{
-              fontSize: 13 * fs, fontWeight: 600, color: "#374151",
-              background: "#F3F4F6", borderRadius: 8,
-              padding: "4px 0", textAlign: "center",
-            }}>{item.cta}</div>
+    <div style={{
+      borderRadius: 12,
+      overflow: "hidden",
+      background: "#ffffff",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      flexShrink: 0,
+      ...(cardWidth ? { width: cardWidth } : {}),
+    }}>
+      {item.img
+        ? /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={item.img} alt={item.name}
+            style={{ width: "100%", aspectRatio: "2/1", objectFit: "cover", display: "block" }} />
+        : <div style={{
+            width: "100%", aspectRatio: "2/1",
+            background: "#E5E7EB",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
           </div>
+      }
+      <div style={{ padding: `6px ${Math.round(10 * scale)}px 8px` }}>
+        <p style={{
+          fontSize: 14 * fs, fontWeight: 700, color: "#111",
+          lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{item.name}</p>
+        <p style={{
+          fontSize: 12 * fs, color: "#6B7280",
+          margin: "0 0 4px",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{item.sub}</p>
+        {/* CTA — gray fill, no border */}
+        <div style={{
+          fontSize: 13 * fs, fontWeight: 600, color: "#374151",
+          background: "#F3F4F6", borderRadius: 8,
+          padding: "6px 0", textAlign: "center",
+        }}>{item.cta}</div>
+      </div>
+    </div>
+  );
+}
+
+const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessage; scale: number }) {
+  const { items } = msg.block as ProductsBlock;
+  const px = Math.round(16 * scale);
+  const gap = Math.round(8 * scale);
+
+  // ── 3+ items → horizontal carousel ──────────────────────
+  if (items.length >= 3) {
+    // Each card is ~55% of container width so the next card peeks
+    const cardW = Math.round(130 * scale);
+    const bubblePad = Math.round(14 * scale);
+    return (
+      // Outer wrapper carries the left offset — padding on overflow-x containers
+      // is unreliable across browsers, so we separate layout from scroll.
+      <div style={{ paddingLeft: bubblePad }}>
+        <div style={{
+          display: "flex",
+          flexDirection: "row",
+          gap,
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        }}>
+          {items.map((item, i) => (
+            <div key={i} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
+              <ProductCard item={item} scale={scale} cardWidth={cardW} />
+            </div>
+          ))}
         </div>
+      </div>
+    );
+  }
+
+  // ── 1–2 items → 2-column grid ───────────────────────────
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap, padding: `0 ${px}px` }}>
+      {items.map((item, i) => (
+        <ProductCard key={i} item={item} scale={scale} />
       ))}
     </div>
   );
@@ -200,7 +245,7 @@ const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessa
 
 // ── ChecklistItems ────────────────────────────────────────
 
-const ChecklistItems = memo(function ChecklistItems({ msg, scale }: { msg: ChatMessage; scale: number }) {
+const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { msg: ChatMessage; scale: number; br?: number }) {
   const { items } = msg.block as ChecklistBlock;
   const fs = Math.min(1, scale);
   const sz = Math.round(16 * scale);   // icon circle size
@@ -209,7 +254,7 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale }: { msg: ChatM
   return (
     <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
       <div style={{
-        borderRadius: Math.round(18 * scale),
+        borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
@@ -232,20 +277,17 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale }: { msg: ChatM
                 </div>
               )}
               {item.status === "in-progress" && (
-                <div style={{
-                  width: sz, height: sz, borderRadius: "50%",
-                  border: `${Math.max(1, Math.round(1.5 * scale))}px dashed #9CA3AF`,
-                  flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {/* partial arc suggests motion */}
-                  <div style={{
-                    width: Math.round(6 * scale), height: Math.round(6 * scale),
-                    borderRadius: "50%",
-                    border: `${Math.max(1, Math.round(1.5 * scale))}px solid transparent`,
-                    borderTopColor: "#9CA3AF",
-                  }} />
-                </div>
+                <svg width={sz} height={sz} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+                  {/* 3/4 arc loading ring — gap at top-right */}
+                  <circle
+                    cx="8" cy="8" r="6"
+                    stroke="#1a1a1a"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeDasharray={`${2 * Math.PI * 6 * 0.78} ${2 * Math.PI * 6 * 0.22}`}
+                    strokeDashoffset={2 * Math.PI * 6 * 0.06}
+                  />
+                </svg>
               )}
               {item.status === "pending" && (
                 <div style={{
@@ -339,6 +381,10 @@ const PhoneFrame = memo(function PhoneFrame({
   const scale = maxHeight !== undefined
     ? Math.min(1.08, width / 329, maxHeight / 500)
     : Math.min(1.08, width / 329);
+  // 모바일(가변 높이)은 살짝 작은 r값 사용
+  const isMobileFrame = maxHeight === undefined;
+  const bubbleR = isMobileFrame ? 14 : 18;
+  const frameR  = isMobileFrame ? 26 : 32;
 
   const frameRef = useRef<HTMLDivElement>(null);
   // Keep a ref to the callback so the effect never needs to re-run for it.
@@ -368,7 +414,7 @@ const PhoneFrame = memo(function PhoneFrame({
       style={{
         width,
         ...(maxHeight !== undefined ? { maxHeight, overflow: "hidden" } : {}),
-        borderRadius: 32,
+        borderRadius: frameR,
         background: "rgba(255,255,255,0.25)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
@@ -426,11 +472,11 @@ const PhoneFrame = memo(function PhoneFrame({
               msg.role === "bot" && next?.block?.type === "actions"
                 ? (next.block as ActionsBlock).buttons
                 : undefined;
-            return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} inlineButtons={inlineButtons} />;
+            return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} br={bubbleR} inlineButtons={inlineButtons} />;
           }
-          if (type === "actions")   return <ActionButtons  key={msg.id} msg={msg} scale={scale} appName={appName} />;
+          if (type === "actions")   return <ActionButtons  key={msg.id} msg={msg} scale={scale} appName={appName} br={bubbleR} />;
           if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} />;
-          if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} />;
+          if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "status")    return <StatusPill     key={msg.id} msg={msg} scale={scale} />;
           return null;
         })}

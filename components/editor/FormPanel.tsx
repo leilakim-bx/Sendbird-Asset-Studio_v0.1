@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw, ChevronDown } from "lucide-react";
+import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw, ChevronDown, Copy, Trash2 } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
@@ -29,15 +29,23 @@ async function fetchProductImage(keyword: string): Promise<string> {
 
 // ── Product item row ──────────────────────────────────────
 
+const SectionLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <p className="text-[10px] font-semibold text-studio-muted uppercase tracking-wider mb-1">
+    {children}{required && <span className="text-red-400 ml-0.5">*</span>}
+  </p>
+);
+
 type ProductItemRowProps = {
   item: ProductItem;
+  index: number;
   onUpdate: (patch: Partial<ProductItem>) => void;
+  onRemove: () => void;
+  onDuplicate: () => void;
 };
 
-function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
+function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: ProductItemRowProps) {
   const [loading, setLoading] = useState(false);
-  // imageQuery is stored in the item; fall back to name for legacy cards
-  const [imageQuery, setImageQuery] = useState(item.imageQuery ?? item.name);
+  const [imageQuery, setImageQuery] = useState(item.imageQuery || item.name);
 
   async function applyImage() {
     const q = imageQuery.trim();
@@ -53,72 +61,102 @@ function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* 1. Product name */}
-      <Input
-        value={item.name}
-        onChange={(e) => onUpdate({ name: e.target.value })}
-        placeholder="Product name"
-        className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-      />
-
-      {/* 2. Image preview */}
-      {item.img ? (
-        <div className="w-20 h-20 rounded-md overflow-hidden bg-studio-sidebar border border-studio-border shrink-0">
-          <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-        </div>
-      ) : (
-        <div className="w-20 h-20 rounded-md bg-studio-sidebar border border-studio-border flex items-center justify-center shrink-0">
-          <span className="text-[10px] text-studio-muted">No image</span>
-        </div>
-      )}
-
-      {/* 3. Image search query + retry */}
-      <div className="flex gap-1 items-center">
-        <div className="relative flex-1">
-          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
-          <Input
-            value={imageQuery}
-            onChange={(e) => setImageQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
-            placeholder="e.g. white sneakers, linen coat"
-            className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
-        </div>
-        <button
-          onClick={applyImage}
-          disabled={loading}
-          title="Try another image"
-          className="h-7 w-7 flex items-center justify-center rounded-md bg-studio-hover text-studio-muted hover:text-studio-text hover:bg-studio-border transition-colors shrink-0 disabled:opacity-50"
-        >
-          <RotateCcw size={11} />
+    <div className="bg-studio-bg border border-studio-border rounded-lg overflow-hidden">
+      {/* Card header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-studio-border">
+        <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab" />
+        <span className="text-xs font-medium text-studio-text flex-1">Product {index + 1}</span>
+        <button onClick={onDuplicate} title="Duplicate" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors">
+          <Copy size={12} />
+        </button>
+        <button onClick={onRemove} title="Delete" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-red-400 hover:bg-studio-hover transition-colors">
+          <Trash2 size={12} />
         </button>
       </div>
 
-      {/* 4. Apply Image */}
-      <button
-        onClick={applyImage}
-        disabled={loading}
-        className="w-full h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
-      >
-        {loading ? "Loading…" : "Apply Image"}
-      </button>
+      <div className="flex flex-col gap-3 p-3">
+        {/* IMAGE section */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <SectionLabel>Image</SectionLabel>
+            <button onClick={applyImage} disabled={loading} title="Try another image"
+              className="flex items-center justify-center w-5 h-5 rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50">
+              <RotateCcw size={11} />
+            </button>
+          </div>
+          <div className="flex items-start gap-3">
+            {/* Thumbnail */}
+            {item.img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.img} alt={item.name}
+                className="w-16 h-16 rounded-md object-cover border border-studio-border shrink-0" />
+            ) : (
+              <div className="w-16 h-16 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center shrink-0">
+                <Search size={16} className="text-studio-muted opacity-40" />
+              </div>
+            )}
+            {/* Query + remove */}
+            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+              <div className="relative">
+                <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
+                <Input
+                  value={imageQuery}
+                  onChange={(e) => setImageQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
+                  placeholder="e.g. white sneakers"
+                  className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                />
+              </div>
+              <button
+                onClick={applyImage}
+                disabled={loading}
+                className="w-full h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
+              >
+                {loading ? "Loading…" : "Apply Image"}
+              </button>
+              {item.img && (
+                <button onClick={() => onUpdate({ img: "" })}
+                  className="text-[11px] text-studio-muted hover:text-red-400 transition-colors text-left">
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
-      {/* 5. Price */}
-      <Input
-        value={item.sub}
-        onChange={(e) => onUpdate({ sub: e.target.value })}
-        placeholder="$0.00"
-        className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-      />
+        {/* TITLE section */}
+        <div>
+          <SectionLabel>Title</SectionLabel>
+          <Input
+            value={item.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            placeholder="Product name"
+            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+        </div>
 
-      {/* 6. CTA label */}
-      <Input
-        value={item.cta}
-        onChange={(e) => onUpdate({ cta: e.target.value })}
-        placeholder="Buy now"
-        className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-      />
+        {/* PRICE + BUTTON LABEL side by side */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <SectionLabel>Price</SectionLabel>
+            <Input
+              value={item.sub}
+              onChange={(e) => onUpdate({ sub: e.target.value })}
+              placeholder="$0.00"
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+          <div>
+            <SectionLabel>Button label</SectionLabel>
+            <Input
+              value={item.cta}
+              onChange={(e) => onUpdate({ cta: e.target.value })}
+              placeholder="Buy now"
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -304,26 +342,61 @@ const MessageItem = memo(function MessageItem({
   // ── Product cards ──────────────────────────────────────
   if (msg.block.type === "products") {
     const productsBlock = msg.block as ProductsBlock;
+    const count = productsBlock.items.length;
     return (
       <div {...dragProps} className={wrapCls}>
+        {/* Block header */}
         <div className="flex items-center gap-1.5">
           <Grip />
           <Bot size={13} className="shrink-0 text-studio-muted" />
           <span className="text-xs text-studio-muted flex-1">Product Cards</span>
+          {/* Count badge */}
+          <span className="text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
+            {count}
+          </span>
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
-        {productsBlock.items.map((item, i) => (
-          <div key={i} className="border-t border-studio-border pt-2">
+
+        {/* Per-card rows */}
+        <div className="flex flex-col gap-3 mt-2">
+          {productsBlock.items.map((item, i) => (
             <ProductItemRow
+              key={item.imageQuery ? `${item.imageQuery}-${i}` : i}
               item={item}
+              index={i}
               onUpdate={(patch) => {
                 const items = [...productsBlock.items];
                 items[i] = { ...items[i], ...patch };
                 onUpdate(msg.id, { block: { type: "products", items } });
               }}
+              onRemove={() => {
+                const items = productsBlock.items.filter((_, idx) => idx !== i);
+                onUpdate(msg.id, { block: { type: "products", items } });
+              }}
+              onDuplicate={() => {
+                const items = [...productsBlock.items];
+                items.splice(i + 1, 0, { ...item });
+                onUpdate(msg.id, { block: { type: "products", items } });
+              }}
             />
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Add product button — 3개 이상이면 비활성화 (캐러셀 max) */}
+        <button
+          disabled={count >= 3}
+          title={count >= 3 ? "Max 3 cards supported" : undefined}
+          onClick={() => {
+            const items = [
+              ...productsBlock.items,
+              { img: "", name: "Product", sub: "$0.00", cta: "Buy now", imageQuery: "" },
+            ];
+            onUpdate(msg.id, { block: { type: "products", items } });
+          }}
+          className="mt-2 w-full h-7 rounded-md border border-dashed border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-studio-muted disabled:hover:border-studio-border"
+        >
+          + Add product
+        </button>
       </div>
     );
   }
@@ -470,6 +543,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     messages, addMessage, updateMessage, removeMessage, setMessages,
     customBackgrounds, addCustomBackground,
     userName, userAvatarUrl, setUserName, shuffleUserProfile,
+    setActiveScenarioId,
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
@@ -482,12 +556,45 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
 
+  /** product cards 중 imageQuery 있고 img 없는 항목 자동 fetch */
+  function autoFetchImages(msgs: ChatMessage[]) {
+    msgs.forEach((msg) => {
+      if (msg.block.type !== "products") return;
+      const items = (msg.block as ProductsBlock).items;
+      items.forEach((item, i) => {
+        if (!item.imageQuery || item.img) return;
+        fetchProductImage(item.imageQuery).then((img) => {
+          if (!img) return;
+          // fetch 완료 시 최신 상태 기준으로 업데이트
+          const state = useEditorStore.getState();
+          const cur = state.messages.find((m) => m.id === msg.id);
+          if (!cur || cur.block.type !== "products") return;
+          const curItems = (cur.block as ProductsBlock).items;
+          state.updateMessage(msg.id, {
+            block: { type: "products", items: curItems.map((it, idx) => idx === i ? { ...it, img } : it) },
+          });
+        });
+      });
+    });
+  }
+
   function applyScenario(id: string) {
     const s = SCENARIOS.find((s) => s.id === id);
     if (!s) return;
     setActiveScenario(id);
+    setActiveScenarioId(id);
     setMessages(s.messages);
+    autoFetchImages(s.messages);
   }
+
+  // 초기 로드 시 기본 시나리오(Memory Recall) 이미지 자동 fetch
+  const didInitFetch = useRef(false);
+  useEffect(() => {
+    if (didInitFetch.current) return;
+    didInitFetch.current = true;
+    autoFetchImages(messages);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** 드롭다운 변경 시 — 메시지가 있으면 confirm, 없으면 즉시 적용 */
   function handleScenarioChange(id: string) {
@@ -504,6 +611,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     setGenLoading(true);
     setGenError(null);
     setActiveScenario(null);
+    setActiveScenarioId(null);
     try {
       const res = await fetch("/api/generate-scenario", {
         method:  "POST",
@@ -585,23 +693,49 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     );
   }
 
+  // ── Panel resize ───────────────────────────────────────
+
+  const [panelWidth, setPanelWidth] = useState(288); // 기본 w-72
+  const MIN_PANEL_W = 240;
+  const MAX_PANEL_W = 520;
+
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+    function onMove(ev: MouseEvent) {
+      // 패널이 오른쪽에 있으므로 왼쪽으로 드래그할수록 넓어짐
+      const delta = startX - ev.clientX;
+      setPanelWidth(Math.min(MAX_PANEL_W, Math.max(MIN_PANEL_W, startW + delta)));
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   // ── Render ─────────────────────────────────────────────
 
   return (
-    <div className="w-72 shrink-0 h-full overflow-y-auto bg-studio-sidebar border-r border-studio-border p-5">
+    <div
+      style={{ width: panelWidth }}
+      className="relative shrink-0 h-full overflow-y-auto bg-studio-sidebar border-l border-studio-border"
+    >
+      {/* Resize handle — left edge */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        title="Drag to resize panel"
+      />
 
-      <Section title="Layout">
-        <ToggleGroup
-          value={layout}
-          options={[{ value: "split", label: "Split" }, { value: "center", label: "Center" }]}
-          onChange={setLayout}
-        />
-      </Section>
+      <div className="p-5">
 
       <Section title="Export Size">
         <ToggleGroup
           value={exportSize}
-          options={[{ value: "desktop", label: "Desktop 4:3" }, { value: "mobile", label: "Mobile 4:5" }]}
+          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
           onChange={setExportSize}
         />
       </Section>
@@ -646,6 +780,14 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       </Section>
 
+      <Section title="Layout">
+        <ToggleGroup
+          value={layout}
+          options={[{ value: "split", label: "Split" }, { value: "center", label: "Center" }]}
+          onChange={setLayout}
+        />
+      </Section>
+
       {showBgModal && (
         <BackgroundPickerModal
           currentId={backgroundId}
@@ -667,9 +809,13 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               {SCENARIOS.find((s) => s.id === activeScenario)?.name ?? "Select a scenario"}
             </span>
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-studio-sidebar border border-studio-border shadow-lg rounded-lg py-1">
             {SCENARIOS.map((s) => (
-              <SelectItem key={s.id} value={s.id} className="text-xs">
+              <SelectItem
+                key={s.id}
+                value={s.id}
+                className="text-xs text-studio-text rounded-none px-3 py-1.5 cursor-default [&[data-highlighted]]:bg-studio-hover [&[data-highlighted]]:text-white focus:bg-transparent"
+              >
                 {s.name}
               </SelectItem>
             ))}
@@ -859,6 +1005,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       )}
 
+      </div> {/* /p-5 */}
     </div>
   );
 }

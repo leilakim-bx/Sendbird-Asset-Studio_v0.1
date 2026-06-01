@@ -1,4 +1,4 @@
-import { toPng, toJpeg } from "html-to-image";
+import { toPng, toJpeg, toSvg } from "html-to-image";
 
 const SHARED_OPTIONS = {
   pixelRatio: 2,
@@ -75,6 +75,43 @@ export async function exportImage(
   link.download = filename;
   link.href = dataUrl;
   link.click();
+}
+
+/**
+ * Capture an SVG of the element and copy it as plain text to the clipboard.
+ * Figma recognises SVG text pasted via Cmd+V and imports it as a vector layer.
+ */
+export async function exportSvgToClipboard(
+  element: HTMLElement,
+  width: number,
+  height?: number,
+): Promise<void> {
+  const options = {
+    ...SHARED_OPTIONS,
+    width,
+    ...(height !== undefined ? { height } : {}),
+    style: { borderRadius: "0" },
+  };
+  const restore = await inlineImages(element);
+  try {
+    // Warm cache first (same pattern as PNG export)
+    try { await toSvg(element, options); } catch { /* ignore */ }
+    const svgString = await toSvg(element, options);
+
+    // navigator.clipboard.writeText() loses the user-gesture context after
+    // the async toSvg() call and throws NotAllowedError in most browsers.
+    // execCommand('copy') via a hidden textarea works without that constraint.
+    const textarea = document.createElement("textarea");
+    textarea.value = svgString;
+    textarea.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  } finally {
+    restore();
+  }
 }
 
 /**
