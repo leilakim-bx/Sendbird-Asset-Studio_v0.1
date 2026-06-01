@@ -195,35 +195,34 @@ const MessageItem = memo(function MessageItem({
   if (msg.block.type === "text") {
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
           <Grip />
-          {/* Icon toggle: User / Bot */}
-          <div className="flex items-center gap-0.5 bg-studio-bg border border-studio-border rounded-lg p-0.5">
-            {([
-              { role: "user" as const, Icon: UserRound, label: "User" },
-              { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
-            ]).map(({ role, Icon, label }) => (
-              <div key={role} className="relative group/tip">
-                <button
-                  onClick={() => onUpdate(msg.id, { role })}
-                  className={[
-                    "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
-                    msg.role === role
-                      ? "bg-studio-sidebar text-studio-text"
-                      : "text-studio-muted hover:text-studio-text",
-                  ].join(" ")}
-                >
-                  <Icon size={14} />
-                </button>
-                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
+          {/* Sender toggle: User / Bot */}
+          {([
+            { role: "user" as const, Icon: UserRound, label: "User" },
+            { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
+          ]).map(({ role, Icon, label }) => (
+            <div key={role} className="relative group/tip">
+              <button
+                onClick={() => onUpdate(msg.id, { role })}
+                className={[
+                  "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
+                  msg.role === role
+                    ? "bg-studio-sidebar text-studio-text"
+                    : "text-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                <Icon size={13} />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                {label}
+              </span>
+            </div>
+          ))}
+          <span className="text-xs text-studio-muted flex-1">Text</span>
           <button
             onClick={() => onRemove(msg.id)}
-            className="ml-auto text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+            className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
           >
             ✕
           </button>
@@ -244,8 +243,9 @@ const MessageItem = memo(function MessageItem({
     const actionsBlock = msg.block as ActionsBlock;
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Grip />
+          <Bot size={13} className="shrink-0 text-studio-muted" />
           <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
@@ -271,8 +271,9 @@ const MessageItem = memo(function MessageItem({
     const productsBlock = msg.block as ProductsBlock;
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Grip />
+          <Bot size={13} className="shrink-0 text-studio-muted" />
           <span className="text-xs text-studio-muted flex-1">Product Cards</span>
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
@@ -313,8 +314,9 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Grip />
+          <Bot size={13} className="shrink-0 text-studio-muted" />
           <span className="text-xs text-studio-muted flex-1">Checklist</span>
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
@@ -385,8 +387,9 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Grip />
+          <Bot size={13} className="shrink-0 text-studio-muted" />
           <span className="text-xs text-studio-muted flex-1">Status</span>
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
@@ -662,7 +665,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             onChange={(e) => setGenPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
             placeholder={"Describe a scenario…\ne.g. Agent books hotel and flight at once"}
-            rows={2}
+            rows={4}
             className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
           />
           <button
