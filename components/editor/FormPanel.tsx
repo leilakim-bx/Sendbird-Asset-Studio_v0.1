@@ -115,7 +115,7 @@ function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
       <Input
         value={item.cta}
         onChange={(e) => onUpdate({ cta: e.target.value })}
-        placeholder="View"
+        placeholder="Buy now"
         className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
       />
     </div>

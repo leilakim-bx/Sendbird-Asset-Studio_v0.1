@@ -36,8 +36,8 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Pegasus 41",  sub: "$130", cta: "View", imageQuery: "running shoes" },
-            { img: "", name: "Vomero 17",   sub: "$150", cta: "View", imageQuery: "running shoes" },
+            { img: "", name: "Pegasus 41",  sub: "$130", cta: "Buy now", imageQuery: "running shoes" },
+            { img: "", name: "Vomero 17",   sub: "$150", cta: "Buy now", imageQuery: "running shoes" },
           ],
         },
       },
@@ -192,8 +192,8 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Linen Coat",    sub: "$189", cta: "View", imageQuery: "linen coat" },
-            { img: "", name: "Oversized Tee", sub: "$54",  cta: "View", imageQuery: "oversized t-shirt" },
+            { img: "", name: "Linen Coat",    sub: "$189", cta: "Buy now", imageQuery: "linen coat" },
+            { img: "", name: "Oversized Tee", sub: "$54",  cta: "Buy now", imageQuery: "oversized t-shirt" },
           ],
         },
       },
