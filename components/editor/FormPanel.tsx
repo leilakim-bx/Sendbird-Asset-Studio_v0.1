@@ -13,8 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-let idCounter = 100;
-const uid = () => `m${++idCounter}`;
+const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /** Search Pexels for a product photo matching the keyword.
  *  Returns a proxy-wrapped image URL, or empty string on failure. */
