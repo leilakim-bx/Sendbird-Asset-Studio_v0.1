@@ -16,6 +16,15 @@ import { Menu } from "@base-ui/react/menu";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+const SCENARIO_PLACEHOLDERS = [
+  "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly",
+  "e.g. Agent checks flight prices and books the cheapest option",
+  "e.g. User asks for today's weather, AI replies with outfit suggestion",
+  "e.g. AI greets new user, asks 3 questions, then shows a personalized plan",
+  "e.g. Support agent detects an issue and proactively offers a refund",
+  "e.g. AI recommends a product, user taps to buy in one step",
+];
+
 /** Search Pexels for a product photo matching the keyword.
  *  Returns a proxy-wrapped image URL, or empty string on failure. */
 async function fetchProductImage(keyword: string): Promise<string> {
@@ -556,6 +565,22 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
 
+  // ── Rotating placeholder ───────────────────────────────
+  const [phIdx,     setPhIdx]     = useState(0);
+  const [phOpacity, setPhOpacity] = useState(1);
+  const [phFocused, setPhFocused] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhOpacity(0);
+      setTimeout(() => {
+        setPhIdx((i) => (i + 1) % SCENARIO_PLACEHOLDERS.length);
+        setPhOpacity(1);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
   /** product cards 중 imageQuery 있고 img 없는 항목 자동 fetch */
   function autoFetchImages(msgs: ChatMessage[]) {
     msgs.forEach((msg) => {
@@ -841,14 +866,27 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
         {/* AI generate */}
         <div className="flex flex-col gap-2">
-          <textarea
-            value={genPrompt}
-            onChange={(e) => setGenPrompt(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-            placeholder={"Describe a scenario…\ne.g. Agent books hotel and flight at once"}
-            rows={4}
-            className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
-          />
+          <div className="relative">
+            <textarea
+              value={genPrompt}
+              onChange={(e) => setGenPrompt(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+              onFocus={() => setPhFocused(true)}
+              onBlur={() => setPhFocused(false)}
+              placeholder=""
+              rows={4}
+              className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+            />
+            {/* Rotating placeholder overlay — hidden when typing or focused */}
+            {!genPrompt && !phFocused && (
+              <p
+                style={{ opacity: phOpacity, transition: "opacity 300ms" }}
+                className="absolute inset-0 px-3 py-2 text-xs text-studio-muted pointer-events-none leading-relaxed"
+              >
+                {SCENARIO_PLACEHOLDERS[phIdx]}
+              </p>
+            )}
+          </div>
           <button
             onClick={handleGenerate}
             disabled={genLoading || !genPrompt.trim()}

@@ -140,16 +140,16 @@ export function GuideModal({ onClose, initialSection = "getting-started" }: { on
         </div>
 
         {/* Top tab bar */}
-        <div className="flex items-center gap-0.5 px-5 border-b border-studio-border shrink-0">
+        <div className="flex items-center gap-1 px-5 pb-4 shrink-0">
           {GUIDE_SECTIONS.map((s) => (
             <button
               key={s.id}
               onClick={() => setActive(s.id)}
               className={[
-                "flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors",
+                "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors",
                 active === s.id
-                  ? "border-studio-text text-studio-text"
-                  : "border-transparent text-studio-muted hover:text-studio-text",
+                  ? "bg-studio-hover text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
               ].join(" ")}
             >
               {s.label}
