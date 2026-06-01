@@ -31,6 +31,7 @@ export type ProductItem = {
   name: string;
   sub: string;
   cta: string;
+  imageQuery?: string; // Pexels search term (separate from display name)
 };
 
 // ── Unified message types ─────────────────────────────────

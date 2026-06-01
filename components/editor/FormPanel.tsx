@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Shuffle } from "lucide-react";
+import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
@@ -34,16 +34,17 @@ type ProductItemRowProps = {
 };
 
 function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
-  const [name, setName] = useState(item.name);
   const [loading, setLoading] = useState(false);
+  // imageQuery is stored in the item; fall back to name for legacy cards
+  const [imageQuery, setImageQuery] = useState(item.imageQuery ?? item.name);
 
-  async function applyImage(value: string) {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    onUpdate({ name: trimmed });
+  async function applyImage() {
+    const q = imageQuery.trim();
+    if (!q) return;
+    onUpdate({ imageQuery: q });
     setLoading(true);
     try {
-      const img = await fetchProductImage(trimmed);
+      const img = await fetchProductImage(q);
       if (img) onUpdate({ img });
     } finally {
       setLoading(false);
@@ -52,36 +53,69 @@ function ProductItemRow({ item, onUpdate }: ProductItemRowProps) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* Name input */}
+      {/* 1. Product name */}
       <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") applyImage(name); }}
+        value={item.name}
+        onChange={(e) => onUpdate({ name: e.target.value })}
         placeholder="Product name"
         className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
       />
-      {/* Apply + Refresh */}
-      <div className="flex gap-1">
+
+      {/* 2. Image preview */}
+      {item.img ? (
+        <div className="w-20 h-20 rounded-md overflow-hidden bg-studio-sidebar border border-studio-border shrink-0">
+          <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+        </div>
+      ) : (
+        <div className="w-20 h-20 rounded-md bg-studio-sidebar border border-studio-border flex items-center justify-center shrink-0">
+          <span className="text-[10px] text-studio-muted">No image</span>
+        </div>
+      )}
+
+      {/* 3. Image search query + retry */}
+      <div className="flex gap-1 items-center">
+        <div className="relative flex-1">
+          <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
+          <Input
+            value={imageQuery}
+            onChange={(e) => setImageQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
+            placeholder="Search image…"
+            className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+        </div>
         <button
-          onClick={() => applyImage(name)}
+          onClick={applyImage}
           disabled={loading}
-          className="flex-1 h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
+          title="Try another image"
+          className="h-7 w-7 flex items-center justify-center rounded-md bg-studio-hover text-studio-muted hover:text-studio-text hover:bg-studio-border transition-colors shrink-0 disabled:opacity-50"
         >
-          {loading ? "Loading…" : "Apply Image"}
-        </button>
-        <button
-          onClick={() => applyImage(name)}
-          disabled={loading}
-          title="Load a different image"
-          className="h-7 px-2.5 rounded-md bg-studio-hover text-studio-text hover:bg-studio-border transition-colors text-xs shrink-0 disabled:opacity-50"
-        >
-          ↺
+          <RotateCcw size={11} />
         </button>
       </div>
+
+      {/* 4. Apply Image */}
+      <button
+        onClick={applyImage}
+        disabled={loading}
+        className="w-full h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
+      >
+        {loading ? "Loading…" : "Apply Image"}
+      </button>
+
+      {/* 5. Price */}
       <Input
         value={item.sub}
         onChange={(e) => onUpdate({ sub: e.target.value })}
-        placeholder="Price or subtitle"
+        placeholder="$0.00"
+        className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+      />
+
+      {/* 6. CTA label */}
+      <Input
+        value={item.cta}
+        onChange={(e) => onUpdate({ cta: e.target.value })}
+        placeholder="View"
         className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
       />
     </div>

@@ -4,6 +4,8 @@ export type Scenario = {
   id: string;
   name: string;
   tagline: string;
+  /** Default Pexels search term for product card images in this scenario */
+  imageCategory?: string;
   messages: ChatMessage[];
 };
 
@@ -13,6 +15,7 @@ export const SCENARIOS: Scenario[] = [
     id: "memory-recall",
     name: "Memory Recall",
     tagline: "AI that remembers",
+    imageCategory: "running shoes",
     messages: [
       {
         id: "s1-1",
@@ -33,8 +36,8 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Pegasus 41",  sub: "$130", cta: "View" },
-            { img: "", name: "Vomero 17",   sub: "$150", cta: "View" },
+            { img: "", name: "Pegasus 41",  sub: "$130", cta: "View", imageQuery: "running shoes" },
+            { img: "", name: "Vomero 17",   sub: "$150", cta: "View", imageQuery: "running shoes" },
           ],
         },
       },
@@ -168,6 +171,7 @@ export const SCENARIOS: Scenario[] = [
     id: "personalization",
     name: "Personalization",
     tagline: "Knows your taste",
+    imageCategory: "fashion clothing",
     messages: [
       {
         id: "s6-1",
@@ -188,8 +192,8 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Linen Coat",     sub: "$189", cta: "View" },
-            { img: "", name: "Oversized Tee",  sub: "$54",  cta: "View" },
+            { img: "", name: "Linen Coat",    sub: "$189", cta: "View", imageQuery: "linen coat" },
+            { img: "", name: "Oversized Tee", sub: "$54",  cta: "View", imageQuery: "oversized t-shirt" },
           ],
         },
       },
