@@ -746,16 +746,16 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   return (
     <div
       style={{ width: panelWidth }}
-      className="relative shrink-0 h-full overflow-y-auto bg-studio-sidebar border-l border-studio-border"
+      className="relative shrink-0 h-full flex flex-col bg-studio-sidebar border-l border-studio-border"
     >
-      {/* Resize handle — left edge */}
+      {/* Resize handle — left edge (outside scroll container so h-full is always full panel height) */}
       <div
         onMouseDown={handleResizeStart}
         className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
         title="Drag to resize panel"
       />
 
-      <div className="p-5">
+      <div className="flex-1 overflow-y-auto p-5">
 
       <Section title="Export Size">
         <ToggleGroup
