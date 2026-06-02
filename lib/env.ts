@@ -22,14 +22,8 @@ const _base  = baseSchema.parse(process.env);
 const isProd = _base.NODE_ENV === "production";
 const hasR2  = Boolean(process.env.R2_ACCOUNT_ID);
 
-// 프로덕션에서 R2 없으면 서버 시작 즉시 중단
-if (isProd && !hasR2) {
-  throw new Error(
-    "[env] R2 환경변수가 production에 필요합니다.\n" +
-    "누락: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, " +
-    "R2_BUCKET_NAME, R2_PUBLIC_URL",
-  );
-}
+// R2는 선택사항 — 없으면 /public/background filesystem fallback 사용
+// (Phase 1 마이그레이션 전까지 R2 없이도 동작)
 
 // 개발 환경: R2 없으면 null → filesystem fallback
 // R2 변수가 있는데 형식이 틀렸으면 여기서 throw
