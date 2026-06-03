@@ -10,7 +10,7 @@ const TEMPLATES = [
   {
     id: "feature-mockup",
     title: "Feature Mockup",
-    preview: "/preview/Feature Mockup.png",
+    preview: "/preview/mobile_mockup.png",
     ready: true,
   },
   {
