@@ -16,13 +16,13 @@ const TEMPLATES = [
   {
     id: "overview-diagram",
     title: "Overview Diagram",
-    preview: "/preview/Overview Diagram.png",
+    preview: "/preview/diagram.png",
     ready: false,
   },
   {
     id: "dashboard-snippet",
     title: "Dashboard Snippet",
-    preview: "/preview/Dashboard Snippet.png",
+    preview: "/preview/snippet.png",
     ready: false,
   },
 ];
