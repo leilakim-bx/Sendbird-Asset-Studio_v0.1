@@ -3,8 +3,8 @@ import "./globals.css";
 import { LayoutShell } from "@/components/layout/LayoutShell";
 
 export const metadata: Metadata = {
-  title: "Sendbird Asset Studio",
-  description: "Generate product marketing images based on Sendbird design system",
+  title: "Delight.ai Asset Studio",
+  description: "Generate product marketing images based on Delight.ai design system",
 };
 
 export default function RootLayout({

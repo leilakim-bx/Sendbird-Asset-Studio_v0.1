@@ -310,14 +310,14 @@ export function Sidebar() {
           <div className="flex items-center gap-3">
             <Image
               src="/Logo_Das.svg"
-              alt="Sendbird Asset Studio"
+              alt="Delight.ai Asset Studio"
               width={36}
               height={36}
               className="shrink-0"
             />
             <div className="min-w-0">
-              <p className="text-studio-text font-semibold text-sm leading-tight truncate">
-                Sendbird Asset Studio
+              <p className="text-studio-text font-semibold text-[15px] leading-tight truncate">
+                Delight.ai Asset Studio
               </p>
               <p className="text-studio-muted text-xs mt-0.5">v1.0.0</p>
             </div>
