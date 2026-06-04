@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "sendbird-asset-studio",
+      "name": "delight-ai-asset-studio",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "autoPort": true
