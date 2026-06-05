@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "gen:avatars": "node scripts/gen-avatars.mjs",
+    "predev": "node scripts/gen-avatars.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/gen-avatars.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
