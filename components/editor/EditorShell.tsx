@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Home, ChevronDown, ImageDown, Clipboard } from "lucide-react";
+import { BookOpen, Home, ChevronDown, ImageDown, Clipboard, Blocks } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
@@ -26,6 +26,7 @@ export function EditorShell({ template }: { template: Template }) {
     shuffleUserProfile, setUserName,
     migrationSkipCount, clearMigrationWarning,
     activeScenarioId,
+    setCanvasIsFull,
   } = useEditorStore();
 
   // Seed default content on mount — or restore a saved asset if one is pending
@@ -98,8 +99,12 @@ export function EditorShell({ template }: { template: Template }) {
     }
   }
 
+  function handleCapacityChange(isFull: boolean) {
+    setCanvasIsFull(isFull);
+  }
+
   const bg = getBackground(backgroundId) ?? customBackgrounds.find((b) => b.id === backgroundId);
-  const backgroundUrl = bg?.url ?? "/background/bg-100.png";
+  const backgroundUrl = bg?.url ?? "/background/bg-200.png";
 
   const desktopSize = EXPORT_SIZES.desktop;
   const mobileSize  = EXPORT_SIZES.mobile;
@@ -255,6 +260,7 @@ export function EditorShell({ template }: { template: Template }) {
             userName={userName}
             userAvatarUrl={userAvatarUrl}
             onOverflowChange={handleOverflowChange}
+            onCapacityChange={handleCapacityChange}
           />
         </div>
 
@@ -280,24 +286,43 @@ export function EditorShell({ template }: { template: Template }) {
               </Menu.Trigger>
               <Menu.Portal>
                 <Menu.Positioner side="top" align="end" sideOffset={8}>
-                  <Menu.Popup className="z-50 min-w-[220px] rounded-xl bg-studio-sidebar border border-studio-border shadow-xl py-1.5 outline-none">
+                  <Menu.Popup className="z-50 min-w-[220px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-2 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
                     {/* PNG */}
                     <Menu.Item
                       onClick={handleExport}
-                      className="flex items-center gap-3 px-3 py-2 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                     >
-                      <ImageDown size={15} className="shrink-0 text-studio-muted" />
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <ImageDown size={16} className="text-studio-text" />
+                      </span>
                       <span className="flex-1">PNG</span>
                       <span className="text-[11px] text-studio-muted">.png · @2x</span>
                     </Menu.Item>
-                    {/* Copy for Figma */}
+                    {/* Copy for Figma — coming soon */}
                     <Menu.Item
-                      onClick={handleCopyFigma}
-                      className="flex items-center gap-3 px-3 py-2 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      disabled
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text outline-none rounded-lg mx-1 opacity-50 cursor-not-allowed data-[disabled]:pointer-events-none"
                     >
-                      <Clipboard size={15} className="shrink-0 text-studio-muted" />
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <Clipboard size={16} className="text-studio-text" />
+                      </span>
                       <span className="flex-1">Copy for Figma</span>
-                      <span className="text-[11px] text-studio-muted">SVG · clipboard</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
+                        Soon
+                      </span>
+                    </Menu.Item>
+                    {/* Export to AI page builder — coming soon */}
+                    <Menu.Item
+                      disabled
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text outline-none rounded-lg mx-1 opacity-50 cursor-not-allowed data-[disabled]:pointer-events-none"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <Blocks size={16} className="text-studio-text" />
+                      </span>
+                      <span className="flex-1">Export to AI page builder</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
+                        Soon
+                      </span>
                     </Menu.Item>
                   </Menu.Popup>
                 </Menu.Positioner>

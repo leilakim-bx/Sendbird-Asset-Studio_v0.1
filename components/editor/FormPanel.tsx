@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw, ChevronDown, Copy, Trash2 } from "lucide-react";
+import { UserRound, Bot, Sparkles, GripVertical, Search, RotateCcw, ChevronDown, Copy, Trash2, MessageSquare, ShoppingBag, MousePointerClick, ListChecks, Tag, AudioLines, Circle } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
+import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { Input } from "@/components/ui/input";
@@ -119,7 +119,7 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
               <button
                 onClick={applyImage}
                 disabled={loading}
-                className="w-full h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
+                className="w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 transition-colors text-[11px] font-semibold disabled:opacity-50"
               >
                 {loading ? "Loading…" : "Apply Image"}
               </button>
@@ -161,6 +161,7 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
               value={item.cta}
               onChange={(e) => onUpdate({ cta: e.target.value })}
               placeholder="Buy now"
+              maxLength={15}
               className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
             />
           </div>
@@ -224,11 +225,15 @@ const MessageItem = memo(function MessageItem({
   onUpdate,
   onRemove,
 }: MessageItemProps) {
+  const canvasIsFull = useEditorStore((s) => s.canvasIsFull);
   // ── Local text state with 300 ms debounce ──────────────
   // Keeps every keystroke instant: local state updates immediately,
   // the Zustand store is only mutated 300 ms after the user stops typing.
   const storeText = msg.block?.type === "text" ? (msg.block as TextBlock).text : "";
   const [localText, setLocalText] = useState(storeText);
+  // 버블 너비(~264px)에서 15px 폰트 기준 약 33자/줄로 추정
+  const estimatedLines = localText.split("\n").reduce((acc, line) => acc + Math.max(1, Math.ceil((line.length || 1) / 33)), 0);
+  const isOverMaxLines = estimatedLines > 7;
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const committedRef = useRef(storeText); // last value we wrote to the store
 
@@ -279,6 +284,7 @@ const MessageItem = memo(function MessageItem({
       <div {...dragProps} className={wrapCls}>
         <div className="flex items-center gap-1.5">
           <Grip />
+          <span className="text-xs text-studio-muted">Text</span>
           {/* Sender toggle: User / Bot */}
           {([
             { role: "user" as const, Icon: UserRound, label: "User" },
@@ -290,7 +296,7 @@ const MessageItem = memo(function MessageItem({
                 className={[
                   "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
                   msg.role === role
-                    ? "bg-studio-sidebar text-studio-text"
+                    ? "bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30"
                     : "text-studio-muted hover:text-studio-text",
                 ].join(" ")}
               >
@@ -301,7 +307,7 @@ const MessageItem = memo(function MessageItem({
               </span>
             </div>
           ))}
-          <span className="text-xs text-studio-muted flex-1">Text</span>
+          <div className="flex-1" />
           <button
             onClick={() => onRemove(msg.id)}
             className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
@@ -316,6 +322,11 @@ const MessageItem = memo(function MessageItem({
           rows={2}
           className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
         />
+        {isOverMaxLines && (
+          <p className="text-[10px] text-red-400 leading-none">
+            Text exceeds 7-line limit and will be clipped
+          </p>
+        )}
       </div>
     );
   }
@@ -327,10 +338,18 @@ const MessageItem = memo(function MessageItem({
       <div {...dragProps} className={wrapCls}>
         <div className="flex items-center gap-1.5">
           <Grip />
+          <span className="text-xs text-studio-muted">Action Buttons</span>
           <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
+          <div className="flex-1" />
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
+        <textarea
+          value={actionsBlock.text ?? ""}
+          onChange={(e) => onUpdate(msg.id, { block: { ...actionsBlock, text: e.target.value } })}
+          placeholder="Message text"
+          rows={2}
+          className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+        />
         {actionsBlock.buttons.map((btn, i) => (
           <Input
             key={i}
@@ -338,7 +357,7 @@ const MessageItem = memo(function MessageItem({
             onChange={(e) => {
               const buttons = [...actionsBlock.buttons];
               buttons[i] = e.target.value;
-              onUpdate(msg.id, { block: { type: "actions", buttons } });
+              onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
             }}
             placeholder={`Button ${i + 1}`}
             className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
@@ -357,8 +376,9 @@ const MessageItem = memo(function MessageItem({
         {/* Block header */}
         <div className="flex items-center gap-1.5">
           <Grip />
+          <span className="text-xs text-studio-muted">Product Cards</span>
           <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Product Cards</span>
+          <div className="flex-1" />
           {/* Count badge */}
           <span className="text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
             {count}
@@ -393,7 +413,7 @@ const MessageItem = memo(function MessageItem({
 
         {/* Add product button — 3개 이상이면 비활성화 (캐러셀 max) */}
         <button
-          disabled={count >= 3}
+          disabled={count >= 3 || canvasIsFull}
           title={count >= 3 ? "Max 3 cards supported" : undefined}
           onClick={() => {
             const items = [
@@ -406,6 +426,11 @@ const MessageItem = memo(function MessageItem({
         >
           + Add product
         </button>
+        {canvasIsFull && count < 3 && (
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1">
+            ⚠️ Max items — Remove an item to add more
+          </p>
+        )}
       </div>
     );
   }
@@ -433,8 +458,9 @@ const MessageItem = memo(function MessageItem({
       <div {...dragProps} className={wrapCls}>
         <div className="flex items-center gap-1.5">
           <Grip />
+          <span className="text-xs text-studio-muted">Checklist</span>
           <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Checklist</span>
+          <div className="flex-1" />
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -478,6 +504,7 @@ const MessageItem = memo(function MessageItem({
         </div>
         {/* Add item */}
         <button
+          disabled={canvasIsFull}
           onClick={() => {
             const items = [
               ...checklistBlock.items,
@@ -485,10 +512,15 @@ const MessageItem = memo(function MessageItem({
             ];
             onUpdate(msg.id, { block: { type: "checklist", items } });
           }}
-          className="text-[11px] text-studio-muted hover:text-studio-text transition-colors text-left"
+          className="text-[11px] text-studio-muted hover:text-studio-text transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-studio-muted"
         >
           + Add item
         </button>
+        {canvasIsFull && (
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1">
+            ⚠️ Max items — Remove an item to add more
+          </p>
+        )}
       </div>
     );
   }
@@ -498,16 +530,17 @@ const MessageItem = memo(function MessageItem({
     const statusBlock = msg.block as StatusBlock;
     const VARIANTS: StatusBlock["variant"][] = ["success", "warning"];
     const VARIANT_LABEL: Record<StatusBlock["variant"], string> = {
-      success: "✓ Success",
-      warning: "! Warning",
+      success: "Success",
+      warning: "Warning",
     };
 
     return (
       <div {...dragProps} className={wrapCls}>
         <div className="flex items-center gap-1.5">
           <Grip />
+          <span className="text-xs text-studio-muted">Status</span>
           <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Status</span>
+          <div className="flex-1" />
           <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
         </div>
         {/* Label input */}
@@ -526,7 +559,7 @@ const MessageItem = memo(function MessageItem({
               className={[
                 "flex-1 h-6 rounded-md text-[10px] font-medium transition-colors",
                 statusBlock.variant === v
-                  ? "bg-studio-accent text-studio-accent-fg"
+                  ? "bg-studio-muted/20 text-studio-text"
                   : "bg-studio-hover text-studio-muted hover:text-studio-text",
               ].join(" ")}
             >
@@ -538,12 +571,87 @@ const MessageItem = memo(function MessageItem({
     );
   }
 
+  // ── Voice card ─────────────────────────────────────────
+  if (msg.block.type === "voice") {
+    const voiceBlock = msg.block as VoiceBlock;
+    const STYLE_OPTIONS: { style: VoiceBlock["style"]; Icon: typeof Circle; label: string }[] = [
+      { style: "quote",  Icon: Circle,     label: "Spotlight" },
+      { style: "player", Icon: AudioLines, label: "Player bar" },
+    ];
+    const patch = (p: Partial<VoiceBlock>) => onUpdate(msg.id, { block: { ...voiceBlock, ...p } });
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <div className="flex items-center gap-1.5">
+          <Grip />
+          <span className="text-xs text-studio-muted">Voice</span>
+          <Bot size={13} className="shrink-0 text-studio-muted" />
+          {/* Style toggle */}
+          {STYLE_OPTIONS.map(({ style, Icon, label }) => (
+            <div key={style} className="relative group/tip">
+              <button
+                onClick={() => patch({ style })}
+                className={[
+                  "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
+                  voiceBlock.style === style
+                    ? "bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30"
+                    : "text-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                <Icon size={13} />
+              </button>
+              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                {label}
+              </span>
+            </div>
+          ))}
+          <div className="flex-1" />
+          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
+        </div>
+
+        {/* Transcript */}
+        <textarea
+          value={voiceBlock.transcript}
+          onChange={(e) => patch({ transcript: e.target.value })}
+          placeholder="Spoken line / transcript"
+          rows={3}
+          className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+        />
+
+        {/* Style-specific field */}
+        {voiceBlock.style === "quote" ? (
+          <div>
+            <SectionLabel>Caption</SectionLabel>
+            <Input
+              value={voiceBlock.caption ?? ""}
+              onChange={(e) => patch({ caption: e.target.value })}
+              placeholder="Order notification"
+              maxLength={43}
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+        ) : (
+          <div>
+            <SectionLabel>Eyebrow</SectionLabel>
+            <Input
+              value={voiceBlock.eyebrow ?? ""}
+              onChange={(e) => patch({ eyebrow: e.target.value })}
+              placeholder="Voice AI agents:"
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return null;
 });
 
 // ── Main ──────────────────────────────────────────────────
 
 export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const {
     layout, setLayout,
     exportSize, setExportSize,
@@ -553,6 +661,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     customBackgrounds, addCustomBackground,
     userName, userAvatarUrl, setUserName, shuffleUserProfile,
     setActiveScenarioId,
+    canvasIsFull,
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
@@ -695,25 +804,42 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     onChange,
   }: {
     value: T;
-    options: { value: T; label: string }[];
+    options: { value: T; label: string; tooltip?: string }[];
     onChange: (v: T) => void;
   }) {
     return (
       <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={[
-              "flex-1 text-xs py-1.5 rounded-md transition-colors",
-              value === opt.value
-                ? "bg-studio-sidebar text-studio-text"
-                : "text-studio-muted hover:text-studio-text",
-            ].join(" ")}
-          >
-            {opt.label}
-          </button>
-        ))}
+        {options.map((opt, i) => {
+          const isFirst = i === 0;
+          const isLast  = i === options.length - 1;
+          return (
+            <div key={opt.value} className="relative flex-1 group/tip">
+              <button
+                onClick={() => onChange(opt.value)}
+                className={[
+                  "w-full text-xs py-1.5 rounded-md transition-colors",
+                  value === opt.value
+                    ? "bg-studio-sidebar text-studio-text"
+                    : "text-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                {opt.label}
+              </button>
+              {opt.tooltip && (
+                <span
+                  className={[
+                    "pointer-events-none absolute bottom-full mb-1.5 z-20 w-44 px-2 py-1 rounded-md",
+                    "bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug text-center",
+                    "opacity-0 group-hover/tip:opacity-100 transition-opacity",
+                    isFirst ? "left-0" : isLast ? "right-0" : "left-1/2 -translate-x-1/2",
+                  ].join(" ")}
+                >
+                  {opt.tooltip}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -780,14 +906,14 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           <button
             onClick={() => setShowBgModal(true)}
             title="Browse or upload backgrounds"
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold text-studio-muted hover:text-studio-text hover:bg-studio-hover border border-studio-border transition-colors leading-none"
+            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold bg-studio-accent text-studio-accent-fg hover:opacity-90 transition-opacity leading-none"
           >
             +
           </button>
         }
       >
         <div className="grid grid-cols-3 gap-2">
-          {[...BACKGROUNDS, ...customBackgrounds].map((bg) => (
+          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
             <button
               key={bg.id}
               onClick={() => setBackgroundId(bg.id)}
@@ -808,7 +934,10 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       <Section title="Layout">
         <ToggleGroup
           value={layout}
-          options={[{ value: "split", label: "Split" }, { value: "center", label: "Center" }]}
+          options={[
+            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
+            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
+          ]}
           onChange={setLayout}
         />
       </Section>
@@ -839,7 +968,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               <SelectItem
                 key={s.id}
                 value={s.id}
-                className="text-xs text-studio-text rounded-none px-3 py-1.5 cursor-default [&[data-highlighted]]:bg-studio-hover [&[data-highlighted]]:text-white focus:bg-transparent"
+                className="text-xs text-studio-text rounded-none px-3 py-1.5 cursor-default focus:bg-studio-hover focus:text-white! focus:**:text-white! data-[highlighted]:bg-studio-hover data-[highlighted]:text-white! data-[highlighted]:**:text-white!"
               >
                 {s.name}
               </SelectItem>
@@ -875,7 +1004,8 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               onBlur={() => setPhFocused(false)}
               placeholder=""
               rows={4}
-              className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+              disabled
+              className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent opacity-50 cursor-not-allowed"
             />
             {/* Rotating placeholder overlay — hidden when typing or focused */}
             {!genPrompt && !phFocused && (
@@ -887,13 +1017,17 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               </p>
             )}
           </div>
+          {/* Generate with AI — coming soon */}
           <button
             onClick={handleGenerate}
-            disabled={genLoading || !genPrompt.trim()}
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-hover border border-studio-border text-studio-text text-xs font-medium hover:border-studio-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled
+            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-hover border border-studio-border text-studio-text text-xs font-medium opacity-50 cursor-not-allowed transition-colors"
           >
             <Sparkles size={12} />
             {genLoading ? "Generating…" : "Generate with AI"}
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
+              Soon
+            </span>
           </button>
           {genError && (
             <p className="text-xs text-red-400">{genError}</p>
@@ -904,12 +1038,15 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       <Section title="User Profile">
         <div className="flex items-center gap-2">
           {/* Avatar preview */}
-          {userAvatarUrl ? (
+          {userAvatarUrl && !avatarLoadError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              key={userAvatarUrl}
               src={userAvatarUrl}
               alt={userName}
               className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
+              onError={() => setAvatarLoadError(true)}
+              onLoad={() => setAvatarLoadError(false)}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
@@ -927,7 +1064,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               onClick={shuffleUserProfile}
               className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
             >
-              <Shuffle size={13} />
+              <RotateCcw size={13} />
             </button>
             <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
               Shuffle name &amp; avatar
@@ -965,39 +1102,46 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         {/* Add message dropdown */}
         <Menu.Root>
           <Menu.Trigger
-            disabled={isOverflowing}
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={isOverflowing || canvasIsFull}
+            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-accent text-studio-accent-fg font-semibold text-xs hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             + Add message
             <ChevronDown size={11} />
           </Menu.Trigger>
+          {canvasIsFull && (
+            <p className="text-[10px] text-red-400 leading-none flex items-center gap-1 mt-1">
+              ⚠️ Canvas is full — Remove or shorten a message to add more
+            </p>
+          )}
           <Menu.Portal>
             <Menu.Positioner side="top" align="center" sideOffset={6}>
-              <Menu.Popup className="z-50 min-w-[180px] rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+              <Menu.Popup className="z-50 min-w-[220px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-2 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
                 {([
-                  { icon: "💬", label: "Text message",    add: () => {
+                  { Icon: MessageSquare,     label: "Text message",    add: () => {
                     const lastRole = messages.at(-1)?.role ?? "bot";
                     const role = lastRole === "bot" ? "user" : "bot";
                     addMessage({ id: uid(), role, sender: role === "user" ? (userName || "User") : "bot", block: { type: "text", text: "" } });
                   }},
-                  { icon: "🛍️", label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
+                  { Icon: ShoppingBag,       label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
                     { img: "", name: "Product A", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                     { img: "", name: "Product B", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                   ]}})},
-                  { icon: "🎯", label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
-                  { icon: "✅", label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
+                  { Icon: MousePointerClick, label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
+                  { Icon: ListChecks,        label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
                     { id: uid(), label: "Task one",   status: "done" },
                     { id: uid(), label: "Task two",   status: "in-progress" },
                     { id: uid(), label: "Task three", status: "pending" },
                   ]}})},
-                  { icon: "🏷️", label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
-                ] as const).map(({ icon, label, add }) => (
+                  { Icon: Tag,               label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
+                ] as const).map(({ Icon, label, add }) => (
                   <Menu.Item
                     key={label}
                     onClick={add}
-                    className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-studio-text hover:bg-studio-hover cursor-default outline-none"
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none mx-1 rounded-lg"
                   >
-                    <span className="text-sm leading-none">{icon}</span>
+                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                      <Icon size={16} className="text-studio-text" />
+                    </span>
                     {label}
                   </Menu.Item>
                 ))}

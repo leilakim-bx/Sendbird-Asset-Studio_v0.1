@@ -9,19 +9,19 @@ import { AssetLibrary } from "@/components/assets/AssetLibrary";
 const TEMPLATES = [
   {
     id: "feature-mockup",
-    title: "Feature Mockup",
+    title: "Chat conversation",
     preview: "/preview/mobile_mockup.png",
     ready: true,
   },
   {
-    id: "overview-diagram",
-    title: "Overview Diagram",
+    id: "infographic",
+    title: "Infographic",
     preview: "/preview/diagram.png",
     ready: false,
   },
   {
-    id: "dashboard-snippet",
-    title: "Dashboard Snippet",
+    id: "product-ui",
+    title: "Product UI",
     preview: "/preview/snippet.png",
     ready: false,
   },

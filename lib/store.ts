@@ -6,7 +6,7 @@ import { getRandomUserProfile, getAvatarForName } from "@/lib/avatar";
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
 export type TextBlock    = { type: "text";     text: string };
-export type ActionsBlock = { type: "actions";  buttons: string[] };
+export type ActionsBlock = { type: "actions";  buttons: string[]; text?: string };
 export type ProductsBlock = { type: "products"; items: ProductItem[] };
 
 export type ChecklistItem = {
@@ -22,7 +22,19 @@ export type StatusBlock = {
   variant: "success" | "warning";
 };
 
-export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock;
+export type VoiceBlock = {
+  type: "voice";
+  /** Visual layout of the voice card */
+  style: "quote" | "player";
+  /** The spoken line / transcript */
+  transcript: string;
+  /** Small caption under the transcript (quote style) */
+  caption?: string;
+  /** Bold eyebrow label above the transcript (player style) */
+  eyebrow?: string;
+};
+
+export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock | VoiceBlock;
 
 // ── Product item ──────────────────────────────────────────
 
@@ -135,6 +147,11 @@ export type EditorState = {
   /** 마이그레이션 중 skip된 에셋 수. >0 이면 앱 진입 시 토스트 표시 */
   migrationSkipCount: number;
   clearMigrationWarning: () => void;
+
+  // ── Canvas capacity (non-persisted) ─────────────────────
+  /** 모바일 캔버스 하단 48px 여백 기준, 콘텐츠가 꽉 찼는지 여부 */
+  canvasIsFull: boolean;
+  setCanvasIsFull: (isFull: boolean) => void;
 };
 
 // ── v0 → v1 마이그레이션 ──────────────────────────────────
@@ -250,7 +267,7 @@ export const useEditorStore = create<EditorState>()(
       templateId:        "feature-mockup",
       layout:            "center",
       exportSize:        "desktop",
-      backgroundId:      "bg-1",
+      backgroundId:      "bg-200",
       appName:           "delight.ai",
       messages:          [],
       customBackgrounds: [],
@@ -269,6 +286,10 @@ export const useEditorStore = create<EditorState>()(
       // Migration warning — set by onRehydrateStorage, never persisted
       migrationSkipCount:    0,
       clearMigrationWarning: () => set({ migrationSkipCount: 0 }),
+
+      // Canvas capacity — transient, never persisted
+      canvasIsFull:    false,
+      setCanvasIsFull: (isFull) => set({ canvasIsFull: isFull }),
 
       setTemplateId:   (templateId)   => set({ templateId }),
       setLayout:       (layout)       => set({ layout }),
@@ -293,9 +314,12 @@ export const useEditorStore = create<EditorState>()(
         })),
 
       removeMessage: (id) =>
-        set((s) => ({ messages: s.messages.filter((m) => m.id !== id) })),
+        set((s) => ({
+          messages: s.messages.filter((m) => m.id !== id),
+          canvasIsFull: false, // ResizeObserver가 재계산 후 필요 시 다시 true로 설정
+        })),
 
-      setMessages: (messages) => set({ messages }),
+      setMessages: (messages) => set({ messages, canvasIsFull: false }),
 
       addCustomBackground: (bg) =>
         set((s) => ({ customBackgrounds: [...s.customBackgrounds, bg] })),

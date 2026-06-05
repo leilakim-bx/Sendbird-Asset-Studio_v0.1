@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useEffect, memo } from "react";
-import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock } from "@/lib/store";
+import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock } from "@/lib/store";
+import { computeCapacity } from "@/lib/canvas-capacity";
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -14,6 +15,8 @@ export type FeatureMockupProps = {
   width?: number;
   height?: number;
   onOverflowChange?: (isOverflowing: boolean) => void;
+  /** Preview 전용: 캔버스 포화 여부 콜백 (off-screen export 인스턴스에는 전달 안 함) */
+  onCapacityChange?: (isFull: boolean) => void;
   /** Global user profile — overrides per-message sender / avatar */
   userName?: string;
   userAvatarUrl?: string;
@@ -62,8 +65,7 @@ const ChatBubble = memo(function ChatBubble({
       padding: `0 ${Math.round(14 * scale)}px`,
     }}>
       <div style={{
-        // 버튼 포함 시 전체 너비 사용, 텍스트만이면 75% 캡
-        ...(inlineButtons ? { width: "100%" } : { maxWidth: "75%" }),
+        maxWidth: "75%",
         borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
@@ -85,7 +87,7 @@ const ChatBubble = memo(function ChatBubble({
           </span>
         </div>
         {/* Text */}
-        <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: 0 }}>
+        <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" }}>
           {text}
         </p>
         {/* Inline action buttons (bot 전용) */}
@@ -97,8 +99,11 @@ const ChatBubble = memo(function ChatBubble({
                 padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
                 textAlign: "center",
                 fontSize: 14 * fs,
-                color: "#374151",
-                background: "#F3F4F6",
+                color: "#3B3530",
+                background: "#E5E3DF",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}>{btn}</div>
             ))}
           </div>
@@ -111,7 +116,7 @@ const ChatBubble = memo(function ChatBubble({
 // ── ActionButtons ─────────────────────────────────────────
 
 const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18 }: { msg: ChatMessage; scale: number; appName: string; br?: number }) {
-  const { buttons } = msg.block as ActionsBlock;
+  const { buttons, text } = msg.block as ActionsBlock;
   const fs = Math.min(1, scale);
   return (
     <div style={{
@@ -120,17 +125,25 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18
       padding: `0 ${Math.round(14 * scale)}px`,
     }}>
       <div style={{
-        width: "100%",
+        width: "75%",
+        minWidth: "75%",
+        maxWidth: "75%",
         borderRadius: Math.round(br * scale),
-        padding: `${Math.round(10 * scale)}px ${Math.round(12 * scale)}px ${Math.round(12 * scale)}px`,
+        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
         boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
       }}>
         {/* Bot dot + name */}
-        <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(8 * scale) }}>
+        <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(6 * scale) }}>
           <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
           <span style={{ fontSize: 12 * fs, color: "#999", lineHeight: 1 }}>{appName}</span>
         </div>
+        {/* Text (optional) */}
+        {text && (
+          <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: `0 0 ${Math.round(8 * scale)}px` }}>
+            {text}
+          </p>
+        )}
         {/* Buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale) }}>
           {buttons.map((btn, i) => (
@@ -139,8 +152,11 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18
               padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
               textAlign: "center",
               fontSize: 14 * fs,
-              color: "#374151",
-              background: "#F3F4F6",
+              color: "#3B3530",
+              background: "#E5E3DF",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}>
               {btn}
             </div>
@@ -190,8 +206,8 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
         }}>{item.sub}</p>
         {/* CTA — gray fill, no border */}
         <div style={{
-          fontSize: 13 * fs, fontWeight: 600, color: "#374151",
-          background: "#F3F4F6", borderRadius: 8,
+          fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
+          background: "#E5E3DF", borderRadius: 8,
           padding: "6px 0", textAlign: "center",
         }}>{item.cta}</div>
       </div>
@@ -199,7 +215,7 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
   );
 }
 
-const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessage; scale: number }) {
+const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: ChatMessage; scale: number; br?: number }) {
   const { items } = msg.block as ProductsBlock;
   const px = Math.round(16 * scale);
   const gap = Math.round(8 * scale);
@@ -233,7 +249,68 @@ const ProductCards = memo(function ProductCards({ msg, scale }: { msg: ChatMessa
     );
   }
 
-  // ── 1–2 items → 2-column grid ───────────────────────────
+  // ── 1 item → wide horizontal card ──────────────────────
+  if (items.length === 1) {
+    const item = items[0];
+    const fs = Math.min(1, scale);
+    return (
+      <div style={{ padding: `0 ${px}px` }}>
+        <div style={{
+          borderRadius: Math.round(br * scale),
+          overflow: "hidden",
+          background: "#ffffff",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          display: "flex",
+          flexDirection: "row",
+          maxWidth: "82%",
+        }}>
+          {/* Image — left */}
+          <div style={{ width: "42%", flexShrink: 0, alignSelf: "stretch" }}>
+            {item.img
+              ? /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={item.img} alt={item.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              : <div style={{
+                  width: "100%", height: "100%", minHeight: Math.round(90 * scale),
+                  background: "#E5E7EB",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
+                </div>
+            }
+          </div>
+          {/* Content — right */}
+          <div style={{
+            flex: 1,
+            padding: `${Math.round(10 * scale)}px ${Math.round(12 * scale)}px`,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: Math.round(8 * scale),
+          }}>
+            <div>
+              <p style={{
+                fontSize: 14 * fs, fontWeight: 700, color: "#111",
+                lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{item.name}</p>
+              <p style={{
+                fontSize: 12 * fs, color: "#6B7280", margin: 0,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>{item.sub}</p>
+            </div>
+            <div style={{
+              fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
+              background: "#E5E3DF", borderRadius: 8,
+              padding: `${Math.round(6 * scale)}px 0`, textAlign: "center",
+            }}>{item.cta}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 2 items → 2-column grid ─────────────────────────────
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap, padding: `0 ${px}px` }}>
       {items.map((item, i) => (
@@ -318,7 +395,7 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
 
 const STATUS_PILL_STYLES = {
   success: { bg: "#F2FF66", icon: "✓", iconColor: "#111111", textColor: "#111111" },
-  warning: { bg: "#2D1A00", icon: "!", iconColor: "#FBBF24", textColor: "#F9FAFB" },
+  warning: { bg: "#FF5E69", icon: "!", iconColor: "#FFFFFF", textColor: "#FFFFFF" },
 } as const;
 
 const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; scale: number }) {
@@ -327,13 +404,14 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
   const { bg, icon, iconColor, textColor } = STATUS_PILL_STYLES[variant];
 
   return (
-    <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
       <div style={{
         display: "inline-flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         gap: Math.round(6 * scale),
+        maxWidth: "75%",
         background: bg,
-        borderRadius: 999,
+        borderRadius: Math.round(18 * scale),
         padding: `${Math.round(7 * scale)}px ${Math.round(14 * scale)}px`,
       }}>
         {/* Icon badge */}
@@ -343,16 +421,72 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
           border: `1px solid ${iconColor}`,
           display: "flex", alignItems: "center", justifyContent: "center",
           flexShrink: 0,
+          marginTop: Math.round(1 * scale),
         }}>
           <span style={{ fontSize: 9 * fs, color: iconColor, lineHeight: 1, fontWeight: 700 }}>
             {icon}
           </span>
         </div>
         {/* Label */}
-        <span style={{ fontSize: 12 * fs, color: textColor, fontWeight: 500, whiteSpace: "nowrap" }}>
+        <span style={{
+          fontSize: 12 * fs, color: textColor, fontWeight: 500,
+          minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.35,
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
           {label}
         </span>
       </div>
+    </div>
+  );
+});
+
+// ── VoiceCard — voice AI mockup ───────────────────────────
+
+const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock; width: number }) {
+  const scale = Math.min(1.1, width / 520);
+  const fs = Math.min(1, scale);
+
+  const cardBase = {
+    width,
+    borderRadius: Math.round(28 * scale),
+    background: "rgba(255,255,255,0.30)",
+    backdropFilter: "blur(20px)",
+    WebkitBackdropFilter: "blur(20px)",
+    border: "1px solid rgba(255,255,255,0.50)",
+    boxSizing: "border-box" as const,
+  };
+
+  if (block.style === "player") {
+    return (
+      <div style={{ ...cardBase, padding: Math.round(36 * scale), display: "flex", flexDirection: "column", gap: Math.round(26 * scale) }}>
+        {/* Player bar — fixed image */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/preview/voice_playerbar.png" alt="" style={{ width: "100%", height: "auto", display: "block" }} />
+        {/* Body */}
+        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(4 * scale)}px ${Math.round(6 * scale)}px ${Math.round(8 * scale)}px` }}>
+          {block.eyebrow && (
+            <span style={{ fontSize: 24 * fs, fontWeight: 500, color: "#111", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
+          )}
+          <span style={{ fontSize: 24 * fs, fontWeight: 400, color: "#1a1a1a", lineHeight: 1.4, letterSpacing: "-0.01em" }}>{block.transcript}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // quote style
+  return (
+    <div style={{ ...cardBase, padding: `${Math.round(44 * scale)}px ${Math.round(40 * scale)}px`, display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(24 * scale) }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/preview/voice_icon.png" alt="" width={Math.round(56 * scale)} height={Math.round(56 * scale)} style={{ borderRadius: "50%", display: "block" }} />
+      <span style={{
+        fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
+        fontSize: 24 * fs, fontWeight: 500, color: "#1a1a1a", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
+      }}>
+        {"“" + block.transcript + "”"}
+      </span>
+      {block.caption && (
+        <span style={{ fontSize: 15 * fs, color: "#4a4a4a", textAlign: "center" }}>{block.caption}</span>
+      )}
     </div>
   );
 });
@@ -365,6 +499,8 @@ const PhoneFrame = memo(function PhoneFrame({
   width,
   maxHeight,
   onOverflowChange,
+  onCapacityChange,
+  canvasHeight,
   userName,
   userAvatarUrl,
 }: {
@@ -373,6 +509,10 @@ const PhoneFrame = memo(function PhoneFrame({
   width: number;
   maxHeight?: number;          // undefined = 모바일 가변 높이 (제약 없음)
   onOverflowChange?: (isOverflowing: boolean) => void;
+  /** Preview 전용: 캔버스 포화 여부 콜백 */
+  onCapacityChange?: (isFull: boolean) => void;
+  /** 포화 측정 기준 캔버스 높이 (px, 모바일 전용) */
+  canvasHeight?: number;
   userName?: string;
   userAvatarUrl?: string;
 }) {
@@ -387,9 +527,13 @@ const PhoneFrame = memo(function PhoneFrame({
   const frameR  = isMobileFrame ? 26 : 32;
 
   const frameRef = useRef<HTMLDivElement>(null);
-  // Keep a ref to the callback so the effect never needs to re-run for it.
-  const onOverflowChangeRef = useRef(onOverflowChange);
+  // Keep refs to callbacks so the effect never needs to re-run for them.
+  const onOverflowChangeRef  = useRef(onOverflowChange);
+  const onCapacityChangeRef  = useRef(onCapacityChange);
+  const canvasHeightRef      = useRef(canvasHeight);
   onOverflowChangeRef.current = onOverflowChange;
+  onCapacityChangeRef.current = onCapacityChange;
+  canvasHeightRef.current     = canvasHeight;
 
   useEffect(() => {
     const el = frameRef.current;
@@ -398,6 +542,13 @@ const PhoneFrame = memo(function PhoneFrame({
       // 12px 여백이 사라지기 직전에 감지 — strict (+ 여유 없음)
       const overflows = el.scrollHeight > el.clientHeight;
       onOverflowChangeRef.current?.(overflows);
+
+      // 캔버스 포화 측정 (모바일 preview 전용 — canvasHeight 전달 시에만 동작)
+      const ch = canvasHeightRef.current;
+      if (ch !== undefined && onCapacityChangeRef.current) {
+        const { isFull } = computeCapacity(el.scrollHeight, ch);
+        onCapacityChangeRef.current(isFull);
+      }
     };
     check();
     // ResizeObserver fires whenever the content height changes (messages added/removed,
@@ -475,7 +626,7 @@ const PhoneFrame = memo(function PhoneFrame({
             return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} br={bubbleR} inlineButtons={inlineButtons} />;
           }
           if (type === "actions")   return <ActionButtons  key={msg.id} msg={msg} scale={scale} appName={appName} br={bubbleR} />;
-          if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} />;
+          if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "status")    return <StatusPill     key={msg.id} msg={msg} scale={scale} />;
           return null;
@@ -497,6 +648,7 @@ export const FeatureMockup = memo(function FeatureMockup({
   width,
   height,
   onOverflowChange,
+  onCapacityChange,
   userName,
   userAvatarUrl,
 }: FeatureMockupProps) {
@@ -507,6 +659,19 @@ export const FeatureMockup = memo(function FeatureMockup({
   const isCenter = layout === "center";
 
   const isSplit = !isMobile && !isCenter;
+
+  // Voice AI: 단일 voice 블록이면 채팅 프레임 대신 보이스 카드를 렌더
+  const voice = messages[0]?.block?.type === "voice" ? (messages[0].block as VoiceBlock) : null;
+  const isVoice = voice !== null;
+
+  // 보이스 카드는 overflow/capacity 측정 대상이 아님 — 전환 시 stale 경고 제거
+  useEffect(() => {
+    if (isVoice) {
+      onOverflowChange?.(false);
+      onCapacityChange?.(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVoice]);
 
   // 최소 여백: 데스크탑 70px 고정, 모바일은 캔버스 비율 기반(~8%)
   const MIN_PAD = isMobile ? 24 : 70;
@@ -526,7 +691,10 @@ export const FeatureMockup = memo(function FeatureMockup({
     maxFrameW,
   );
 
-  const justifyContent = isSplit ? "flex-start" : "center";
+  // 보이스 카드는 고정 width 530, 항상 중앙 정렬 (캔버스를 넘지 않게 cap)
+  const voiceFrameW = Math.min(530, canvasW - MIN_PAD * 2);
+
+  const justifyContent = isVoice ? "center" : isSplit ? "flex-start" : "center";
   // 모바일은 가변 높이 — maxFrameH 제약 없음
   const maxFrameH = isMobile ? undefined : canvasH - vPad * 2;
 
@@ -536,15 +704,17 @@ export const FeatureMockup = memo(function FeatureMockup({
     ? `0 0 ${MIN_PAD}px ${hPadL}px`
     : `${vPad}px ${hPadL}px`;
 
+  // 모바일: paddingBottom 최소 48px (배경이 마지막 버블 아래 48px까지 채워지도록)
+  const contentPadding = isMobile ? `${vPad}px ${hPadL}px 48px` : framePadding;
+
   return (
-    // 모바일: min-height + overflow visible (가변 확장)
+    // 모바일: CSS Grid 겹침 → 배경이 콘텐츠 높이에 맞춰 자동으로 늘어남
     // 데스크탑: 고정 height + overflow hidden (클리핑)
     <div style={{
       width: canvasW,
-      position: "relative",
       ...(isMobile
-        ? { minHeight: canvasH }
-        : { height: canvasH, overflow: "hidden" }),
+        ? { display: "grid" }
+        : { position: "relative", height: canvasH, overflow: "hidden" }),
     }}>
 
       {/* Background photo */}
@@ -553,8 +723,9 @@ export const FeatureMockup = memo(function FeatureMockup({
         src={backgroundUrl}
         alt=""
         style={{
-          position: "absolute", inset: 0,
-          width: "100%", height: "100%",
+          ...(isMobile
+            ? { gridArea: "1/1", width: "100%", height: "100%", display: "block" }
+            : { position: "absolute", inset: 0, width: "100%", height: "100%" }),
           objectFit: "cover",
           objectPosition: isSplit ? "right center" : "center",
         }}
@@ -562,33 +733,41 @@ export const FeatureMockup = memo(function FeatureMockup({
 
       {/* Subtle gradient veil */}
       <div style={{
-        position: "absolute", inset: 0,
+        ...(isMobile
+          ? { gridArea: "1/1" }
+          : { position: "absolute", inset: 0 }),
         background: isSplit
           ? "linear-gradient(to right, rgba(255,255,255,0.1) 0%, transparent 55%)"
           : "rgba(255,255,255,0.02)",
       }} />
 
       {/* Phone frame container
-          모바일: normal flow (부모가 콘텐츠 높이만큼 늘어남) + zIndex로 배경 위에
+          모바일: gridArea 1/1 — 콘텐츠 높이가 그리드 셀을 결정, 배경이 따라 늘어남
           데스크탑: absolute + inset 0 (고정 캔버스 내 배치) */}
       <div style={{
         ...(isMobile
-          ? { position: "relative", zIndex: 1, minHeight: canvasH, boxSizing: "border-box" as const }
+          ? { gridArea: "1/1", position: "relative", zIndex: 1, minHeight: canvasH, boxSizing: "border-box" as const }
           : { position: "absolute", inset: 0 }),
         display: "flex",
-        alignItems: isSplit ? "flex-end" : "center",
+        alignItems: isVoice ? "center" : isSplit ? "flex-end" : "center",
         justifyContent,
-        padding: framePadding,
+        padding: contentPadding,
       }}>
-        <PhoneFrame
-          appName={appName}
-          messages={messages}
-          width={frameW}
-          maxHeight={maxFrameH}
-          onOverflowChange={onOverflowChange}
-          userName={userName}
-          userAvatarUrl={userAvatarUrl}
-        />
+        {voice ? (
+          <VoiceCard block={voice} width={voiceFrameW} />
+        ) : (
+          <PhoneFrame
+            appName={appName}
+            messages={messages}
+            width={frameW}
+            maxHeight={maxFrameH}
+            onOverflowChange={onOverflowChange}
+            onCapacityChange={isMobile ? onCapacityChange : undefined}
+            canvasHeight={isMobile ? canvasH : undefined}
+            userName={userName}
+            userAvatarUrl={userAvatarUrl}
+          />
+        )}
       </div>
 
     </div>

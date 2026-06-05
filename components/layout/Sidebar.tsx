@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { X, MessageSquare, GitBranch, LayoutDashboard, Sparkles, ImageIcon, Download, BookOpen } from "lucide-react";
-import { useEditorStore } from "@/lib/store";
+import { X, MessageSquare, LayoutDashboard, BarChart3, Sparkles, BookOpen } from "lucide-react";
 
 // ── Nav ───────────────────────────────────────────────────
 
 const NAV_ITEMS = [
   { label: "Home",          href: "/" },
   { label: "Recent Assets", href: "/recent" },
-];
-
-const FINDER_ITEMS = [
-  { label: "Chat UI Finder",     href: "/finder/mobile-chat", countKey: "mobile-chat" as const },
-  { label: "Diagram Finder",     href: "/finder/diagram",     countKey: null },
-  { label: "Dashboard Finder",   href: "/finder/dashboard",   countKey: null },
 ];
 
 function NavItem({ label, href, badge }: { label: string; href: string; badge?: number }) {
@@ -76,7 +69,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: "mobile-chat",
-    label: "Chat UI",
+    label: "Chat conversation",
     icon: MessageSquare,
     steps: [
       {
@@ -98,15 +91,15 @@ const GUIDE_SECTIONS: GuideSection[] = [
     ],
   },
   {
-    id: "diagram",
-    label: "Diagram",
-    icon: GitBranch,
+    id: "infographic",
+    label: "Infographic",
+    icon: BarChart3,
     soon: true,
     comingSoon: true,
   },
   {
-    id: "dashboard",
-    label: "Dashboard",
+    id: "product-ui",
+    label: "Product UI",
     icon: LayoutDashboard,
     soon: true,
     comingSoon: true,
@@ -193,22 +186,22 @@ const ASSET_TYPES = [
   {
     id: "feature-mockup",
     icon: MessageSquare,
-    title: "Feature Mockup",
+    title: "Chat conversation",
     description: "Floating glass chat UI over atmospheric scene photos. Perfect for product landing pages and feature sections.",
     ready: true,
   },
   {
-    id: "overview-diagram",
-    icon: GitBranch,
-    title: "Overview Diagram",
-    description: "Architecture and flow diagrams for technical documentation and product overview sections.",
+    id: "infographic",
+    icon: BarChart3,
+    title: "Infographic",
+    description: "Data-driven infographics and visual summaries for reports, overviews, and marketing decks.",
     ready: false,
   },
   {
-    id: "dashboard-snippet",
+    id: "product-ui",
     icon: LayoutDashboard,
-    title: "Dashboard Snippet",
-    description: "Dashboard and analytics UI snippets for showcasing data-driven product features.",
+    title: "Product UI",
+    description: "Product interface snippets and dashboards for showcasing real product features.",
     ready: false,
   },
 ];
@@ -229,7 +222,7 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-studio-border">
           <div>
-            <p className="text-studio-text font-semibold text-sm">New Asset</p>
+            <p className="text-studio-text font-semibold text-sm">Create asset</p>
             <p className="text-studio-muted text-xs mt-0.5">Choose a template to get started</p>
           </div>
           <button
@@ -294,13 +287,9 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────
 
 export function Sidebar() {
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-
-  // Hydration-safe count — show badge only after client mount
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const savedCount = useEditorStore((s) => s.savedAssets.length);
 
   return (
     <>
@@ -335,28 +324,34 @@ export function Sidebar() {
 
         <div className="border-t border-studio-border" />
 
-        {/* Finders */}
-        <nav className="px-3 py-4 flex flex-col gap-0.5">
-          {FINDER_ITEMS.map((item) => (
-            <NavItem
-              key={item.href}
-              label={item.label}
-              href={item.href}
-              badge={mounted && item.countKey === "mobile-chat" ? savedCount : undefined}
-            />
-          ))}
-        </nav>
-
-        <div className="border-t border-studio-border" />
-
-        {/* New Asset CTA */}
-        <div className="px-4 py-5">
+        {/* Action buttons */}
+        <div className="px-4 py-5 flex flex-col gap-2">
+          {/* Create asset */}
           <button
             onClick={() => setModalOpen(true)}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-studio-accent text-studio-accent-fg font-bold text-sm hover:opacity-90 transition-opacity"
           >
-            <span className="text-base leading-none">+</span>
-            New Asset
+            Create asset
+          </button>
+
+          {/* Create with AI — coming soon */}
+          <button
+            disabled
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-studio-border text-studio-muted font-semibold text-sm opacity-50 cursor-not-allowed"
+          >
+            <Sparkles size={15} />
+            Create with AI
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
+              Soon
+            </span>
+          </button>
+
+          {/* Open asset */}
+          <button
+            onClick={() => router.push("/open")}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-studio-border text-studio-muted font-semibold text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
+          >
+            Open asset
           </button>
         </div>
 

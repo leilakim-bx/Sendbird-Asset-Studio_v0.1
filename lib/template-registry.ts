@@ -1,4 +1,5 @@
 import type { ChatMessage } from "./store";
+import { getAvatarForName } from "./avatar";
 
 /** Wrap an external image URL through our same-origin proxy */
 function p(url: string) {
@@ -34,7 +35,7 @@ export type Template = {
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
   desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
-  mobile:  { id: "mobile",  label: "Mobile",  width: 344, height: 385 },
+  mobile:  { id: "mobile",  label: "Mobile",  width: 400, height: 385 },
 };
 
 // ── Templates ─────────────────────────────────────────────
@@ -42,20 +43,20 @@ export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
 export const TEMPLATES: Template[] = [
   {
     id: "feature-mockup",
-    name: "Feature Mockup",
+    name: "Chat conversation",
     description: "Glassmorphism chat UI over a lifestyle background",
     layouts: ["center", "split"],
     exportSizes: [EXPORT_SIZES.desktop, EXPORT_SIZES.mobile],
     defaultLayout: "center",
     defaultContent: {
       appName: "delight.ai",
-      backgroundId: "bg-100",
+      backgroundId: "bg-200",
       messages: [
         {
           id: "m1",
           role: "user",
           sender: "Taylor",
-          avatar: p("https://i.pravatar.cc/48?img=47"),
+          avatar: getAvatarForName("Taylor"),
           block: {
             type: "text",
             text: "I need something for a summer wedding",

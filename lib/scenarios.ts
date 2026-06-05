@@ -1,5 +1,10 @@
 import type { ChatMessage } from "./store";
 
+/** Wrap an external image URL through our same-origin proxy */
+function p(url: string) {
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+}
+
 export type Scenario = {
   id: string;
   name: string;
@@ -36,8 +41,8 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Pegasus 41",  sub: "$130", cta: "Buy now", imageQuery: "running shoes" },
-            { img: "", name: "Vomero 17",   sub: "$150", cta: "Buy now", imageQuery: "running shoes" },
+            { img: p("https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&h=350"), name: "Pegasus 41",  sub: "$130", cta: "Buy now", imageQuery: "running shoes" },
+            { img: p("https://images.pexels.com/photos/9777229/pexels-photo-9777229.jpeg?auto=compress&cs=tinysrgb&h=350"), name: "Vomero 17",   sub: "$150", cta: "Buy now", imageQuery: "running shoes" },
           ],
         },
       },
@@ -200,35 +205,22 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 7. Multi-step Resolution
+  // 7. Voice AI
   {
-    id: "multistep-resolution",
-    name: "Multi-step Resolution",
-    tagline: "One request, full resolution",
+    id: "voice-ai",
+    name: "Voice AI",
+    tagline: "AI that speaks",
     messages: [
       {
-        id: "s7-1",
-        role: "user",
-        sender: "Liam",
-        block: { type: "text", text: "I lost my package." },
-      },
-      {
-        id: "s7-2",
-        role: "bot",
-        sender: "bot",
-        block: { type: "text", text: "I'm on it." },
-      },
-      {
-        id: "s7-3",
+        id: "v1-1",
         role: "bot",
         sender: "bot",
         block: {
-          type: "checklist",
-          items: [
-            { id: "s7-c1", label: "Carrier notified",      status: "done" },
-            { id: "s7-c2", label: "Replacement queued",    status: "done" },
-            { id: "s7-c3", label: "Tracking new shipment", status: "in-progress" },
-          ],
+          type: "voice",
+          style: "quote",
+          transcript: "Your order is ready for pickup. Use code 7291 to skip the line — we're holding it until 8pm.",
+          caption: "Order notification",
+          eyebrow: "Voice AI agents:",
         },
       },
     ],

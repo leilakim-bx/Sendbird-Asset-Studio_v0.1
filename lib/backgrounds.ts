@@ -9,16 +9,22 @@ export type Background = {
 
 export const BACKGROUNDS: Background[] = [
   {
+    id: "bg-200",
+    label: "Flower Abstract",
+    url: "/background/bg-200.png",
+    category: "lifestyle",
+  },
+  {
     id: "bg-100",
     label: "Autumn Blur",
     url: "/background/bg-100.png",
     category: "nature",
   },
   {
-    id: "bg-200",
-    label: "Flower Abstract",
-    url: "/background/bg-200.png",
-    category: "lifestyle",
+    id: "bg-101",
+    label: "Pink Sky",
+    url: "/background/bg-101.png",
+    category: "nature",
   },
   {
     id: "bg-201",
@@ -40,8 +46,20 @@ export const BACKGROUNDS: Background[] = [
   },
   {
     id: "bg-300",
-    label: "Bloom Haze",
+    label: "Agent Steward",
     url: "/background/bg-300.png",
+    category: "nature",
+  },
+  {
+    id: "bg-301",
+    label: "Voice AI",
+    url: "/background/bg-301.png",
+    category: "nature",
+  },
+  {
+    id: "bg-302",
+    label: "Trust OS",
+    url: "/background/bg-302.png",
     category: "nature",
   },
 ];
