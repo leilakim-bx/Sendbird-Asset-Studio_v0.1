@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { env } from "@/lib/env";
 
 /**
  * POST /api/generate-scenario
@@ -88,7 +89,7 @@ function mockMessages(prompt: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = env.anthropicApiKey;
 
   if (!apiKey) {
     return Response.json(

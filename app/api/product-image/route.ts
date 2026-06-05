@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { env } from "@/lib/env";
 
 /**
  * GET /api/product-image?q=lace+dress
@@ -11,7 +12,7 @@ import { type NextRequest } from "next/server";
  */
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim() || "product";
-  const apiKey = process.env.PEXELS_API_KEY;
+  const apiKey = env.pexelsApiKey;
 
   if (!apiKey || apiKey === "your_pexels_api_key_here") {
     return Response.json(

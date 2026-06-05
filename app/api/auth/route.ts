@@ -1,21 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const COOKIE_NAME    = "studio-auth";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7일
+import { env } from "@/lib/env";
+import { COOKIE_NAME, COOKIE_MAX_AGE, hashToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
-  const body         = (await request.json()) as { password?: string };
-  const sitePassword = process.env.SITE_PASSWORD;
+  const body         = (await request.json().catch(() => ({}))) as { password?: string };
+  const sitePassword = env.sitePassword;
 
   if (!sitePassword || body.password !== sitePassword) {
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });
   }
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(COOKIE_NAME, sitePassword, {
+  // 쿠키 값 = 비밀번호의 SHA-256 해시 (원문 저장 금지)
+  response.cookies.set(COOKIE_NAME, await hashToken(sitePassword), {
     httpOnly: true,
-    secure:   process.env.NODE_ENV === "production",
+    secure:   env.isProd,
     sameSite: "lax",
     maxAge:   COOKIE_MAX_AGE,
     path:     "/",

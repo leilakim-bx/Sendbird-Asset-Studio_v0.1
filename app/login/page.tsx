@@ -2,7 +2,6 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +21,9 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.push("/");
+      // from 파라미터로 원래 목적지 복귀 (내부 경로만 허용 — 오픈 리다이렉트 방지)
+      const from = new URLSearchParams(window.location.search).get("from");
+      router.push(from && from.startsWith("/") ? from : "/");
       router.refresh();
     } else {
       setError("Incorrect password. Please try again.");
@@ -33,15 +34,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full bg-studio-bg flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-
-        {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <Image src="/Logo_Das.svg" alt="Sendbird Asset Studio" width={36} height={36} />
-          <div>
-            <p className="text-studio-text font-semibold text-sm leading-tight">Sendbird Asset Studio</p>
-            <p className="text-studio-muted text-xs mt-0.5">Internal tool</p>
-          </div>
-        </div>
 
         {/* Card */}
         <div className="bg-studio-sidebar border border-studio-border rounded-2xl p-6">
@@ -65,7 +57,7 @@ export default function LoginPage() {
               disabled={loading || !password}
               className="h-9 rounded-lg bg-studio-accent text-studio-accent-fg font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Checking…" : "Continue →"}
+              {loading ? "Checking…" : "Continue"}
             </button>
           </form>
         </div>
