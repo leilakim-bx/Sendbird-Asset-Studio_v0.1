@@ -52,7 +52,7 @@ export const SCENARIOS: Scenario[] = [
   // 2. Proactive Outreach
   {
     id: "proactive-outreach",
-    name: "Proactive Outreach",
+    name: "Proactive Chat",
     tagline: "AI that anticipates",
     messages: [
       {
@@ -79,7 +79,7 @@ export const SCENARIOS: Scenario[] = [
   // 3. Omnichannel Pickup
   {
     id: "omnichannel-pickup",
-    name: "Omnichannel Pickup",
+    name: "Omnipresence",
     tagline: "Continuous across channels",
     messages: [
       {
@@ -153,18 +153,13 @@ export const SCENARIOS: Scenario[] = [
         id: "s5-2",
         role: "bot",
         sender: "bot",
-        block: { type: "text", text: "$2,847.32 as of 2 minutes ago." },
-      },
-      {
-        id: "s5-3",
-        role: "bot",
-        sender: "bot",
         block: {
-          type: "checklist",
-          items: [
-            { id: "s5-c1", label: "Identity verified",         status: "done" },
-            { id: "s5-c2", label: "PII redacted from logs",    status: "done" },
-            { id: "s5-c3", label: "Source: live banking API",  status: "done" },
+          type: "text",
+          text: "$2,847.32 as of 2 minutes ago.",
+          verifications: [
+            "Identity verified",
+            "PII redacted from logs",
+            "Source: live banking API",
           ],
         },
       },
@@ -224,5 +219,13 @@ export const SCENARIOS: Scenario[] = [
         },
       },
     ],
+  },
+
+  // 8. None — background only (no chat frame)
+  {
+    id: "none",
+    name: "None",
+    tagline: "Background only — no chat frame",
+    messages: [],
   },
 ];

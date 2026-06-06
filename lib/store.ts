@@ -5,7 +5,15 @@ import { getRandomUserProfile, getAvatarForName } from "@/lib/avatar";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
-export type TextBlock    = { type: "text";     text: string };
+export type TextBlock    = {
+  type: "text";
+  text: string;
+  /**
+   * Optional internal AI activity / verification lines, rendered inside the
+   * bot bubble as a footer ("AI agent activity log"). Bot messages only.
+   */
+  verifications?: string[];
+};
 export type ActionsBlock = { type: "actions";  buttons: string[]; text?: string };
 export type ProductsBlock = { type: "products"; items: ProductItem[] };
 
@@ -13,6 +21,8 @@ export type ChecklistItem = {
   id: string;
   label: string;
   status: "done" | "in-progress" | "pending";
+  /** Optional short channel tag shown as a pill, e.g. "API", "SMS" */
+  badge?: string;
 };
 export type ChecklistBlock = { type: "checklist"; items: ChecklistItem[] };
 

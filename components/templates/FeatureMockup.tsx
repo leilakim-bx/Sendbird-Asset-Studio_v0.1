@@ -3,6 +3,7 @@
 import { useRef, useEffect, memo } from "react";
 import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock } from "@/lib/store";
 import { computeCapacity } from "@/lib/canvas-capacity";
+import { ChecklistStatusIcon } from "./checklist-status-icon";
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -51,6 +52,8 @@ const ChatBubble = memo(function ChatBubble({
 }) {
   const isUser = msg.role === "user";
   const text = (msg.block as TextBlock).text;
+  // Internal AI activity log — bot bubbles only
+  const verifications = !isUser ? (msg.block as TextBlock).verifications : undefined;
   // Global profile takes priority; fall back to per-message values
   const displayName   = isUser ? (userName   || msg.sender) : appName;
   const displayAvatar = isUser ? (userAvatarUrl || msg.avatar) : undefined;
@@ -82,14 +85,34 @@ const ChatBubble = memo(function ChatBubble({
           ) : (
             <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
           )}
-          <span style={{ fontSize: 12 * fs, color: "#999", lineHeight: 1 }}>
+          <span style={{ fontSize: 12 * fs, color: "#8C867E", lineHeight: 1 }}>
             {displayName}
           </span>
         </div>
         {/* Text */}
-        <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 7, WebkitBoxOrient: "vertical" }}>
+        <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 15, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", wordBreak: "break-word" }}>
           {text}
         </p>
+        {/* Internal AI activity log footer (bot 전용) */}
+        {verifications && verifications.length > 0 && (
+          <div style={{ marginTop: Math.round(10 * scale) }}>
+            <div style={{ borderTop: "1px solid #E5E7EB", marginBottom: Math.round(8 * scale) }} />
+            <div style={{
+              fontSize: 10.5 * fs, fontWeight: 600, letterSpacing: "0.03em",
+              color: "#111111", textTransform: "uppercase", marginBottom: Math.round(6 * scale),
+            }}>
+              AI agent activity log
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: Math.round(5 * scale) }}>
+              {verifications.map((v, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: Math.round(7 * scale), fontSize: 12 * fs, color: "#736E68", lineHeight: 1.35 }}>
+                  <div style={{ width: Math.round(7 * scale), height: Math.round(7 * scale), borderRadius: "50%", background: "#A8A39B", flexShrink: 0 }} />
+                  <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Inline action buttons (bot 전용) */}
         {inlineButtons && (
           <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale), marginTop: Math.round(10 * scale) }}>
@@ -136,11 +159,11 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18
         {/* Bot dot + name */}
         <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(6 * scale) }}>
           <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
-          <span style={{ fontSize: 12 * fs, color: "#999", lineHeight: 1 }}>{appName}</span>
+          <span style={{ fontSize: 12 * fs, color: "#8C867E", lineHeight: 1 }}>{appName}</span>
         </div>
         {/* Text (optional) */}
         {text && (
-          <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: `0 0 ${Math.round(8 * scale)}px` }}>
+          <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: `0 0 ${Math.round(8 * scale)}px`, overflowWrap: "anywhere", wordBreak: "break-word" }}>
             {text}
           </p>
         )}
@@ -200,16 +223,18 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{item.name}</p>
         <p style={{
-          fontSize: 12 * fs, color: "#6B7280",
+          fontSize: 12 * fs, color: "#8C867E",
           margin: "0 0 4px",
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{item.sub}</p>
-        {/* CTA — gray fill, no border */}
-        <div style={{
-          fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
-          background: "#E5E3DF", borderRadius: 8,
-          padding: "6px 0", textAlign: "center",
-        }}>{item.cta}</div>
+        {/* CTA — gray fill, no border. 라벨이 비면 버튼 자체를 숨김 */}
+        {item.cta.trim() && (
+          <div style={{
+            fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
+            background: "#E5E3DF", borderRadius: 8,
+            padding: "6px 0", textAlign: "center",
+          }}>{item.cta}</div>
+        )}
       </div>
     </div>
   );
@@ -264,14 +289,15 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
           flexDirection: "row",
           maxWidth: "82%",
         }}>
-          {/* Image — left */}
-          <div style={{ width: "42%", flexShrink: 0, alignSelf: "stretch" }}>
+          {/* Image — left. absolute로 깔아 콘텐츠가 카드 높이를 결정하게 함
+              (이미지 원본 비율이 카드 높이를 끌어올리는 것 방지) */}
+          <div style={{ width: "42%", flexShrink: 0, alignSelf: "stretch", position: "relative", minHeight: Math.round(72 * scale) }}>
             {item.img
               ? /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={item.img} alt={item.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               : <div style={{
-                  width: "100%", height: "100%", minHeight: Math.round(90 * scale),
+                  position: "absolute", inset: 0,
                   background: "#E5E7EB",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
@@ -295,7 +321,7 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{item.name}</p>
               <p style={{
-                fontSize: 12 * fs, color: "#6B7280", margin: 0,
+                fontSize: 12 * fs, color: "#8C867E", margin: 0,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{item.sub}</p>
             </div>
@@ -329,8 +355,9 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
   const gap = Math.round(8 * scale);
 
   return (
-    <div style={{ padding: `0 ${Math.round(14 * scale)}px` }}>
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
       <div style={{
+        maxWidth: "90%",
         borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
@@ -341,45 +368,28 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
             <div key={item.id} style={{ display: "flex", alignItems: "center", gap: Math.round(8 * scale) }}>
 
               {/* Status icon */}
-              {item.status === "done" && (
-                <div style={{
-                  width: sz, height: sz, borderRadius: "50%",
-                  background: "#111", flexShrink: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
+              <ChecklistStatusIcon status={item.status} size={sz} />
+
+              {/* Channel badge (optional) */}
+              {item.badge && (
+                <span style={{
+                  fontSize: 10 * fs, fontWeight: 600, color: "#3B3530",
+                  background: "#E5E3DF", borderRadius: Math.round(6 * scale),
+                  padding: `${Math.round(3 * scale)}px ${Math.round(7 * scale)}px`,
+                  letterSpacing: "0.03em", textTransform: "uppercase",
+                  lineHeight: 1, flexShrink: 0,
                 }}>
-                  {/* white checkmark */}
-                  <svg width={Math.round(9 * scale)} height={Math.round(9 * scale)} viewBox="0 0 9 7" fill="none">
-                    <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              )}
-              {item.status === "in-progress" && (
-                <svg width={sz} height={sz} viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
-                  {/* 3/4 arc loading ring — gap at top-right */}
-                  <circle
-                    cx="8" cy="8" r="6"
-                    stroke="#1a1a1a"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeDasharray={`${2 * Math.PI * 6 * 0.78} ${2 * Math.PI * 6 * 0.22}`}
-                    strokeDashoffset={2 * Math.PI * 6 * 0.06}
-                  />
-                </svg>
-              )}
-              {item.status === "pending" && (
-                <div style={{
-                  width: sz, height: sz, borderRadius: "50%",
-                  border: `${Math.max(1, Math.round(1.5 * scale))}px solid #D1D5DB`,
-                  flexShrink: 0,
-                }} />
+                  {item.badge}
+                </span>
               )}
 
               {/* Label */}
               <span style={{
                 fontSize: 13 * fs,
-                color: item.status === "done" ? "#9CA3AF" : "#1a1a1a",
+                color: item.status === "done" ? "#736E68" : "#1a1a1a",
                 textDecoration: item.status === "done" ? "line-through" : "none",
                 lineHeight: 1.35,
+                minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
                 {item.label}
               </span>
@@ -394,14 +404,15 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
 // ── StatusPill ────────────────────────────────────────────
 
 const STATUS_PILL_STYLES = {
-  success: { bg: "#F2FF66", icon: "✓", iconColor: "#111111", textColor: "#111111" },
-  warning: { bg: "#FF5E69", icon: "!", iconColor: "#FFFFFF", textColor: "#FFFFFF" },
+  success: { bg: "#F2FF66", textColor: "#111111" },
+  warning: { bg: "#FF5E69", textColor: "#FFFFFF" },
 } as const;
 
 const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; scale: number }) {
   const { label, variant } = msg.block as StatusBlock;
   const fs = Math.min(1, scale);
-  const { bg, icon, iconColor, textColor } = STATUS_PILL_STYLES[variant];
+  const { bg, textColor } = STATUS_PILL_STYLES[variant];
+  const iconSize = Math.round(14 * scale);
 
   return (
     <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
@@ -414,18 +425,18 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
         borderRadius: Math.round(18 * scale),
         padding: `${Math.round(7 * scale)}px ${Math.round(14 * scale)}px`,
       }}>
-        {/* Icon badge */}
-        <div style={{
-          width: Math.round(14 * scale), height: Math.round(14 * scale),
-          borderRadius: "50%",
-          border: `1px solid ${iconColor}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-          marginTop: Math.round(1 * scale),
-        }}>
-          <span style={{ fontSize: 9 * fs, color: iconColor, lineHeight: 1, fontWeight: 700 }}>
-            {icon}
-          </span>
+        {/* Icon — 체크리스트 done 아이콘과 동일 (채워진 검은 원 + 흰 글리프) */}
+        <div style={{ marginTop: Math.round(1 * scale), flexShrink: 0 }}>
+          {variant === "success" ? (
+            <ChecklistStatusIcon status="done" size={iconSize} />
+          ) : (
+            <div style={{
+              width: iconSize, height: iconSize, borderRadius: "50%", background: "#ffffff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <span style={{ fontSize: iconSize * 0.62, color: "#FF5E69", lineHeight: 1, fontWeight: 700 }}>!</span>
+            </div>
+          )}
         </div>
         {/* Label */}
         <span style={{
@@ -454,6 +465,9 @@ const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock;
     WebkitBackdropFilter: "blur(20px)",
     border: "1px solid rgba(255,255,255,0.50)",
     boxSizing: "border-box" as const,
+    // flex min-width:auto가 줄바꿈 불가 문자열의 min-content를 따라 카드를 늘리는 것 방지
+    minWidth: 0,
+    maxWidth: width,
   };
 
   if (block.style === "player") {
@@ -463,11 +477,15 @@ const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock;
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/preview/voice_playerbar.png" alt="" style={{ width: "100%", height: "auto", display: "block" }} />
         {/* Body */}
-        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(4 * scale)}px ${Math.round(6 * scale)}px ${Math.round(8 * scale)}px` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(4 * scale)}px ${Math.round(16 * scale)}px ${Math.round(8 * scale)}px` }}>
           {block.eyebrow && (
-            <span style={{ fontSize: 24 * fs, fontWeight: 500, color: "#111", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
+            <span style={{ fontSize: 24 * fs, fontWeight: 500, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
           )}
-          <span style={{ fontSize: 24 * fs, fontWeight: 400, color: "#1a1a1a", lineHeight: 1.4, letterSpacing: "-0.01em" }}>{block.transcript}</span>
+          <span style={{
+            fontSize: 24 * fs, fontWeight: 400, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em",
+            overflowWrap: "anywhere", wordBreak: "break-word",
+            display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
+          }}>{block.transcript}</span>
         </div>
       </div>
     );
@@ -480,7 +498,9 @@ const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock;
       <img src="/preview/voice_icon.png" alt="" width={Math.round(56 * scale)} height={Math.round(56 * scale)} style={{ borderRadius: "50%", display: "block" }} />
       <span style={{
         fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
-        fontSize: 24 * fs, fontWeight: 500, color: "#1a1a1a", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
+        fontSize: 24 * fs, fontWeight: 500, color: "#292016", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
+        maxWidth: "100%", overflowWrap: "anywhere", wordBreak: "break-word",
+        display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
       }}>
         {"“" + block.transcript + "”"}
       </span>
@@ -610,20 +630,8 @@ const PhoneFrame = memo(function PhoneFrame({
           if (!msg?.block) return null;
           const type = msg.block.type;
 
-          // bot text 뒤에 오는 actions → 앞 버블에 합쳐졌으므로 skip
-          if (type === "actions") {
-            const prev = messages[idx - 1];
-            if (prev?.role === "bot" && prev.block?.type === "text") return null;
-          }
-
           if (type === "text") {
-            // bot text 뒤에 actions가 있으면 inlineButtons로 전달
-            const next = messages[idx + 1];
-            const inlineButtons =
-              msg.role === "bot" && next?.block?.type === "actions"
-                ? (next.block as ActionsBlock).buttons
-                : undefined;
-            return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} br={bubbleR} inlineButtons={inlineButtons} />;
+            return <ChatBubble key={msg.id} msg={msg} appName={appName} userName={userName} userAvatarUrl={userAvatarUrl} scale={scale} br={bubbleR} />;
           }
           if (type === "actions")   return <ActionButtons  key={msg.id} msg={msg} scale={scale} appName={appName} br={bubbleR} />;
           if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
@@ -663,15 +671,17 @@ export const FeatureMockup = memo(function FeatureMockup({
   // Voice AI: 단일 voice 블록이면 채팅 프레임 대신 보이스 카드를 렌더
   const voice = messages[0]?.block?.type === "voice" ? (messages[0].block as VoiceBlock) : null;
   const isVoice = voice !== null;
+  // None: 메시지가 없으면 프레임 없이 배경만 렌더
+  const isEmpty = !isVoice && messages.length === 0;
 
-  // 보이스 카드는 overflow/capacity 측정 대상이 아님 — 전환 시 stale 경고 제거
+  // 보이스 카드 / 빈 상태는 overflow/capacity 측정 대상이 아님 — 전환 시 stale 경고 제거
   useEffect(() => {
-    if (isVoice) {
+    if (isVoice || isEmpty) {
       onOverflowChange?.(false);
       onCapacityChange?.(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVoice]);
+  }, [isVoice, isEmpty]);
 
   // 최소 여백: 데스크탑 70px 고정, 모바일은 캔버스 비율 기반(~8%)
   const MIN_PAD = isMobile ? 24 : 70;
@@ -755,7 +765,7 @@ export const FeatureMockup = memo(function FeatureMockup({
       }}>
         {voice ? (
           <VoiceCard block={voice} width={voiceFrameW} />
-        ) : (
+        ) : isEmpty ? null : (
           <PhoneFrame
             appName={appName}
             messages={messages}

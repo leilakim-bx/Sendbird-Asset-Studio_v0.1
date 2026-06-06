@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Search, RotateCcw, ChevronDown, Copy, Trash2, MessageSquare, ShoppingBag, MousePointerClick, ListChecks, Tag, AudioLines, Circle } from "lucide-react";
+import { Sparkles, Search, RotateCcw, ChevronDown, Copy, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, MessageSquare, MousePointerClick, ShoppingBag, ListChecks, Activity, Mic, UserRound, Bot, ShieldCheck, Plus, X } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
+import { ChecklistStatusIcon } from "@/components/templates/checklist-status-icon";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,7 +74,6 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
     <div className="bg-studio-bg border border-studio-border rounded-lg overflow-hidden">
       {/* Card header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-studio-border">
-        <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab" />
         <span className="text-xs font-medium text-studio-text flex-1">Product {index + 1}</span>
         <button onClick={onDuplicate} title="Duplicate" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors">
           <Copy size={12} />
@@ -84,56 +84,7 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
       </div>
 
       <div className="flex flex-col gap-3 p-3">
-        {/* IMAGE section */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <SectionLabel>Image</SectionLabel>
-            <button onClick={applyImage} disabled={loading} title="Try another image"
-              className="flex items-center justify-center w-5 h-5 rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50">
-              <RotateCcw size={11} />
-            </button>
-          </div>
-          <div className="flex items-start gap-3">
-            {/* Thumbnail */}
-            {item.img ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.img} alt={item.name}
-                className="w-16 h-16 rounded-md object-cover border border-studio-border shrink-0" />
-            ) : (
-              <div className="w-16 h-16 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center shrink-0">
-                <Search size={16} className="text-studio-muted opacity-40" />
-              </div>
-            )}
-            {/* Query + remove */}
-            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-              <div className="relative">
-                <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
-                <Input
-                  value={imageQuery}
-                  onChange={(e) => setImageQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
-                  placeholder="e.g. white sneakers"
-                  className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-                />
-              </div>
-              <button
-                onClick={applyImage}
-                disabled={loading}
-                className="w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 transition-colors text-[11px] font-semibold disabled:opacity-50"
-              >
-                {loading ? "Loading…" : "Apply Image"}
-              </button>
-              {item.img && (
-                <button onClick={() => onUpdate({ img: "" })}
-                  className="text-[11px] text-studio-muted hover:text-red-400 transition-colors text-left">
-                  Remove
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* TITLE section */}
+        {/* TITLE section — 자주 만지는 것 우선 */}
         <div>
           <SectionLabel>Title</SectionLabel>
           <Input
@@ -166,6 +117,44 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
             />
           </div>
         </div>
+
+        {/* IMAGE section — 컴팩트 한 줄: 썸네일 + 검색(Enter) + 재검색(↻) */}
+        <div>
+          <SectionLabel>Image</SectionLabel>
+          <div className="flex items-center gap-2">
+            {/* Thumbnail */}
+            {item.img ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={item.img} alt={item.name}
+                className="w-11 h-11 rounded-md object-cover border border-studio-border shrink-0" />
+            ) : (
+              <div className="w-11 h-11 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center shrink-0">
+                <Search size={14} className="text-studio-muted opacity-40" />
+              </div>
+            )}
+            {/* Search query — Enter to fetch */}
+            <div className="relative flex-1 min-w-0">
+              <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
+              <Input
+                value={imageQuery}
+                onChange={(e) => setImageQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyImage(); } }}
+                placeholder="Search image — press Enter"
+                className="h-8 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+              />
+            </div>
+            {/* Re-fetch another image */}
+            <button
+              onClick={applyImage}
+              disabled={loading || !imageQuery.trim()}
+              title="Try another image"
+              aria-label="Try another image"
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-studio-muted"
+            >
+              <RotateCcw size={13} className={loading ? "animate-spin" : ""} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -173,24 +162,121 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
 
 // ── Section wrapper ───────────────────────────────────────
 
+// 섹션 접힘 상태 영속화 — 에디터 스토어와 분리된 별도 localStorage 키 (마이그레이션 불필요)
+const SECTION_COLLAPSE_KEY = "sendbird-section-collapsed-v1";
+
+function readCollapsedMap(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || "{}") as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+function writeCollapsed(title: string, collapsed: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    const map = readCollapsedMap();
+    map[title] = collapsed;
+    localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(map));
+  } catch {
+    // 쿼터 초과 등은 조용히 무시
+  }
+}
+
 function Section({
   title,
+  info,
   action,
   children,
 }: {
   title: string;
+  /** Optional hover hint shown via an ℹ️ icon next to the title */
+  info?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  // SSR/CSR 하이드레이션 불일치 방지: 항상 펼친 상태로 시작 후 마운트 시 저장값 반영
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (readCollapsedMap()[title]) setCollapsed(true);
+  }, [title]);
+
+  const toggle = () =>
+    setCollapsed((c) => {
+      const next = !c;
+      writeCollapsed(title, next);
+      return next;
+    });
+
   return (
-    <div className="border-b border-studio-border pb-5 mb-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-studio-muted uppercase tracking-wider">
-          {title}
-        </p>
+    <div className="pb-5 mb-5">
+      <div className={`flex items-center justify-between ${collapsed ? "" : "mb-3"}`}>
+        <div className="flex items-center gap-1.5">
+          {/* chevron+타이틀 영역만 토글 (info / action 버튼과 충돌 방지) */}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={!collapsed}
+            className="flex items-center gap-1.5 -ml-0.5 group/sec"
+          >
+            <ChevronDown
+              size={13}
+              className={`shrink-0 text-studio-muted transition-transform group-hover/sec:text-studio-text ${collapsed ? "-rotate-90" : ""}`}
+            />
+            <p className="text-xs font-semibold text-studio-muted uppercase tracking-wider group-hover/sec:text-studio-text transition-colors">
+              {title}
+            </p>
+          </button>
+          {info && (
+            <span className="relative group/tip flex items-center">
+              <Info size={14} className="text-studio-muted cursor-help" />
+              <span className="pointer-events-none absolute top-full left-0 mt-1.5 z-20 w-52 px-2 py-1 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug normal-case tracking-normal font-normal opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                {info}
+              </span>
+            </span>
+          )}
+        </div>
         {action}
       </div>
-      {children}
+      {!collapsed && children}
+    </div>
+  );
+}
+
+// ── Icon segmented toggle ─────────────────────────────────
+// 카드 헤더의 옵션 선택(아이콘 전용)을 세그먼트 토글로 통일 — Voice/Status/Text 공용
+function IconSegmentToggle<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; Icon: typeof Circle; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-studio-bg border border-studio-border">
+      {options.map(({ value: v, Icon, label }) => (
+        <div key={v} className="relative group/tip flex">
+          <button
+            type="button"
+            onClick={() => onChange(v)}
+            className={[
+              "w-7 h-5 rounded-md flex items-center justify-center transition-colors",
+              value === v
+                ? "bg-white/10 text-studio-text"
+                : "text-studio-muted hover:text-studio-text",
+            ].join(" ")}
+          >
+            <Icon size={13} />
+          </button>
+          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+            {label}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -231,9 +317,11 @@ const MessageItem = memo(function MessageItem({
   // the Zustand store is only mutated 300 ms after the user stops typing.
   const storeText = msg.block?.type === "text" ? (msg.block as TextBlock).text : "";
   const [localText, setLocalText] = useState(storeText);
+  // 체크리스트 항목별 채널 태그 입력이 펼쳐졌는지 (값이 없을 때만 의미)
+  const [tagOpen, setTagOpen] = useState<Record<string, boolean>>({});
   // 버블 너비(~264px)에서 15px 폰트 기준 약 33자/줄로 추정
   const estimatedLines = localText.split("\n").reduce((acc, line) => acc + Math.max(1, Math.ceil((line.length || 1) / 33)), 0);
-  const isOverMaxLines = estimatedLines > 7;
+  const isOverMaxLines = estimatedLines > 15;
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const committedRef = useRef(storeText); // last value we wrote to the store
 
@@ -260,11 +348,20 @@ const MessageItem = memo(function MessageItem({
   }
 
   // ── Shared drag / style ────────────────────────────────
+  // 드래그 중 삽입 위치를 블록 사이 라임 라인으로 표시 (드래그 방향에 맞춰 위/아래)
+  const dragFrom = dragIndexRef.current;
+  const showLineAbove = isDragOver && dragFrom !== null && dragFrom > index;
+  const showLineBelow = isDragOver && dragFrom !== null && dragFrom < index;
   const wrapCls = [
-    "bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
-    dragIndexRef.current === index ? "opacity-40" : "",
-    isDragOver ? "ring-1 ring-studio-accent" : "",
+    "relative bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
+    dragFrom === index ? "opacity-40" : "",
+    showLineAbove ? "before:content-[''] before:absolute before:left-0 before:right-0 before:-top-1 before:h-0.5 before:bg-studio-accent before:rounded-full" : "",
+    showLineBelow ? "after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-0.5 after:bg-studio-accent after:rounded-full" : "",
   ].join(" ");
+
+  // 역할별 왼쪽 색 띠: User = 민트, Bot(delight.ai) = 브랜드 라임
+  const roleColor = msg.role === "user" ? "#D0F3E6" : "#D4FF4D";
+  const wrapStyle = { borderLeft: `3px solid ${roleColor}` };
 
   const dragProps = {
     draggable: true as const,
@@ -274,47 +371,46 @@ const MessageItem = memo(function MessageItem({
     onDragEnd,
   };
 
-  const Grip = () => (
-    <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab active:cursor-grabbing" />
+  // Text 카드 발신자 토글 — Voice/Status와 동일한 아이콘 세그먼트 토글 (👤 User / 🤖 delight.ai)
+  const SenderToggle = () => (
+    <IconSegmentToggle
+      options={[
+        { value: "user", Icon: UserRound, label: "User" },
+        { value: "bot",  Icon: Bot,       label: "delight.ai" },
+      ] as const}
+      value={msg.role === "user" ? "user" : "bot"}
+      onChange={(role) => onUpdate(msg.id, { role })}
+    />
+  );
+
+  // 카드 헤더: 1줄 = 아이콘 + 타입 타이틀 + (우측 extra) + ✕, (선택) 2줄 = 발신자
+  const CardHeader = ({ icon: Icon, title, extra, sender }: { icon: typeof MessageSquare; title: string; extra?: React.ReactNode; sender?: React.ReactNode }) => (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <Icon size={13} className="shrink-0 text-studio-muted" />
+        <span className="text-xs text-studio-muted flex-1">{title}</span>
+        {extra}
+        <button
+          onClick={() => onRemove(msg.id)}
+          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+      {sender}
+    </div>
   );
 
   // ── Text message ───────────────────────────────────────
   if (msg.block.type === "text") {
+    const hasActivityLog = msg.role === "bot" && !!msg.block.verifications?.length;
     return (
-      <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Text</span>
-          {/* Sender toggle: User / Bot */}
-          {([
-            { role: "user" as const, Icon: UserRound, label: "User" },
-            { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
-          ]).map(({ role, Icon, label }) => (
-            <div key={role} className="relative group/tip">
-              <button
-                onClick={() => onUpdate(msg.id, { role })}
-                className={[
-                  "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
-                  msg.role === role
-                    ? "bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                <Icon size={13} />
-              </button>
-              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                {label}
-              </span>
-            </div>
-          ))}
-          <div className="flex-1" />
-          <button
-            onClick={() => onRemove(msg.id)}
-            className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+        <CardHeader
+          icon={hasActivityLog ? ShieldCheck : MessageSquare}
+          title={hasActivityLog ? "Text + Activity log" : "Text"}
+          extra={hasActivityLog ? undefined : <SenderToggle />}
+        />
         <textarea
           value={localText}
           onChange={handleTextChange}
@@ -324,9 +420,63 @@ const MessageItem = memo(function MessageItem({
         />
         {isOverMaxLines && (
           <p className="text-[10px] text-red-400 leading-none">
-            Text exceeds 7-line limit and will be clipped
+            Text exceeds 15-line limit and will be clipped
           </p>
         )}
+        {msg.role === "bot" && (() => {
+          const verifications = msg.block.verifications;
+          const setVerifications = (next: string[]) =>
+            onUpdate(msg.id, {
+              block: { ...(msg.block as TextBlock), verifications: next.length ? next : undefined },
+            });
+          if (!verifications || verifications.length === 0) {
+            return (
+              <button
+                onClick={() => setVerifications(["Verified"])}
+                className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+              >
+                <ShieldCheck size={12} />
+                Add AI activity log
+              </button>
+            );
+          }
+          return (
+            <div className="mt-1 pt-2 border-t border-studio-border flex flex-col gap-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-muted">
+                AI agent activity log
+              </div>
+              {verifications.map((v, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <Circle size={7} className="shrink-0 fill-studio-muted text-studio-muted" />
+                  <Input
+                    value={v}
+                    onChange={(e) => {
+                      const next = [...verifications];
+                      next[i] = e.target.value;
+                      setVerifications(next);
+                    }}
+                    placeholder={`Activity ${i + 1}`}
+                    className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                  />
+                  <button
+                    onClick={() => setVerifications(verifications.filter((_, idx) => idx !== i))}
+                    className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+                    aria-label="Remove activity line"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setVerifications([...verifications, ""])}
+                className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+              >
+                <Plus size={12} />
+                Add line
+              </button>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -335,14 +485,8 @@ const MessageItem = memo(function MessageItem({
   if (msg.block.type === "actions") {
     const actionsBlock = msg.block as ActionsBlock;
     return (
-      <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Action Buttons</span>
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <div className="flex-1" />
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+        <CardHeader icon={MousePointerClick} title="Action Buttons" />
         <textarea
           value={actionsBlock.text ?? ""}
           onChange={(e) => onUpdate(msg.id, { block: { ...actionsBlock, text: e.target.value } })}
@@ -351,18 +495,38 @@ const MessageItem = memo(function MessageItem({
           className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
         />
         {actionsBlock.buttons.map((btn, i) => (
-          <Input
-            key={i}
-            value={btn}
-            onChange={(e) => {
-              const buttons = [...actionsBlock.buttons];
-              buttons[i] = e.target.value;
-              onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
-            }}
-            placeholder={`Button ${i + 1}`}
-            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
+          <div key={i} className="flex items-center gap-1.5">
+            <Input
+              value={btn}
+              onChange={(e) => {
+                const buttons = [...actionsBlock.buttons];
+                buttons[i] = e.target.value;
+                onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
+              }}
+              placeholder={`Button ${i + 1}`}
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+            <button
+              onClick={() => {
+                const buttons = actionsBlock.buttons.filter((_, idx) => idx !== i);
+                onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
+              }}
+              disabled={actionsBlock.buttons.length <= 1}
+              aria-label="Remove button"
+              className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              <X size={12} />
+            </button>
+          </div>
         ))}
+        <button
+          onClick={() => onUpdate(msg.id, { block: { ...actionsBlock, buttons: [...actionsBlock.buttons, `Option ${actionsBlock.buttons.length + 1}`] } })}
+          disabled={actionsBlock.buttons.length >= 6}
+          title={actionsBlock.buttons.length >= 6 ? "Max 6 buttons" : undefined}
+          className="mt-1 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
+        >
+          + Add button
+        </button>
       </div>
     );
   }
@@ -372,19 +536,17 @@ const MessageItem = memo(function MessageItem({
     const productsBlock = msg.block as ProductsBlock;
     const count = productsBlock.items.length;
     return (
-      <div {...dragProps} className={wrapCls}>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
         {/* Block header */}
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Product Cards</span>
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <div className="flex-1" />
-          {/* Count badge */}
-          <span className="text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
-            {count}
-          </span>
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+        <CardHeader
+          icon={ShoppingBag}
+          title="Product Cards"
+          extra={
+            <span className="shrink-0 text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
+              {count}
+            </span>
+          }
+        />
 
         {/* Per-card rows */}
         <div className="flex flex-col gap-3 mt-2">
@@ -422,7 +584,7 @@ const MessageItem = memo(function MessageItem({
             ];
             onUpdate(msg.id, { block: { type: "products", items } });
           }}
-          className="mt-2 w-full h-7 rounded-md border border-dashed border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-studio-muted disabled:hover:border-studio-border"
+          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
         >
           + Add product
         </button>
@@ -443,42 +605,67 @@ const MessageItem = memo(function MessageItem({
       "in-progress": "done",
       done: "pending",
     };
-    const STATUS_ICON: Record<ChecklistItem["status"], string> = {
-      pending: "○",
-      "in-progress": "◑",
-      done: "●",
+    const STATUS_LABEL: Record<ChecklistItem["status"], string> = {
+      pending: "Pending",
+      "in-progress": "In progress",
+      done: "Done",
     };
-    const STATUS_COLOR: Record<ChecklistItem["status"], string> = {
-      pending: "text-studio-muted",
-      "in-progress": "text-amber-400",
-      done: "text-studio-text",
-    };
-
     return (
-      <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Checklist</span>
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <div className="flex-1" />
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+        <CardHeader icon={ListChecks} title="Checklist" />
         <div className="flex flex-col gap-1.5">
           {checklistBlock.items.map((item, i) => (
             <div key={item.id} className="flex items-center gap-1.5">
               {/* Status toggle */}
-              <button
-                title={item.status}
-                onClick={() => {
-                  const items = checklistBlock.items.map((it, idx) =>
-                    idx === i ? { ...it, status: CYCLE[it.status] } : it
-                  );
-                  onUpdate(msg.id, { block: { type: "checklist", items } });
-                }}
-                className={`shrink-0 w-5 h-5 flex items-center justify-center text-sm leading-none transition-colors ${STATUS_COLOR[item.status]}`}
-              >
-                {STATUS_ICON[item.status]}
-              </button>
+              <div className="relative group/tip shrink-0">
+                <button
+                  onClick={() => {
+                    const items = checklistBlock.items.map((it, idx) =>
+                      idx === i ? { ...it, status: CYCLE[it.status] } : it
+                    );
+                    onUpdate(msg.id, { block: { type: "checklist", items } });
+                  }}
+                  className="w-5 h-5 flex items-center justify-center transition-opacity hover:opacity-80"
+                >
+                  <ChecklistStatusIcon
+                    status={item.status}
+                    size={16}
+                    fill="#F3F4F6"
+                    check="#1a1a1a"
+                    arc="#F3F4F6"
+                    border="#6B7280"
+                  />
+                </button>
+                <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
+                  {STATUS_LABEL[item.status]} · click to change
+                </span>
+              </div>
+              {/* Channel badge (optional) — collapsed to "+ Tag" until used */}
+              {(item.badge || tagOpen[item.id]) ? (
+                <Input
+                  value={item.badge ?? ""}
+                  autoFocus={!item.badge && !!tagOpen[item.id]}
+                  onChange={(e) => {
+                    const badge = e.target.value.toUpperCase();
+                    const items = checklistBlock.items.map((it, idx) =>
+                      idx === i ? { ...it, badge } : it
+                    );
+                    onUpdate(msg.id, { block: { type: "checklist", items } });
+                  }}
+                  onFocus={() => setTagOpen((o) => ({ ...o, [item.id]: true }))}
+                  onBlur={() => { if (!item.badge) setTagOpen((o) => ({ ...o, [item.id]: false })); }}
+                  placeholder="Tag"
+                  maxLength={6}
+                  className="shrink-0 w-14 h-7 text-xs text-center uppercase bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:normal-case"
+                />
+              ) : (
+                <button
+                  onClick={() => setTagOpen((o) => ({ ...o, [item.id]: true }))}
+                  className="shrink-0 h-7 px-2 rounded-md border border-dashed border-studio-border text-[10px] text-studio-muted hover:text-studio-text hover:border-studio-muted transition-colors"
+                >
+                  + Tag
+                </button>
+              )}
               {/* Label */}
               <Input
                 value={item.label}
@@ -528,21 +715,23 @@ const MessageItem = memo(function MessageItem({
   // ── Status pill ────────────────────────────────────────
   if (msg.block.type === "status") {
     const statusBlock = msg.block as StatusBlock;
-    const VARIANTS: StatusBlock["variant"][] = ["success", "warning"];
-    const VARIANT_LABEL: Record<StatusBlock["variant"], string> = {
-      success: "Success",
-      warning: "Warning",
-    };
 
     return (
-      <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Status</span>
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <div className="flex-1" />
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+        <CardHeader
+          icon={Activity}
+          title="Status"
+          extra={
+            <IconSegmentToggle
+              options={[
+                { value: "success", Icon: CircleCheck,   label: "Success" },
+                { value: "warning", Icon: TriangleAlert, label: "Warning" },
+              ] as const}
+              value={statusBlock.variant}
+              onChange={(variant) => onUpdate(msg.id, { block: { ...statusBlock, variant } })}
+            />
+          }
+        />
         {/* Label input */}
         <Input
           value={statusBlock.label}
@@ -550,23 +739,6 @@ const MessageItem = memo(function MessageItem({
           placeholder="Status label"
           className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
         />
-        {/* Variant selector */}
-        <div className="flex gap-1">
-          {VARIANTS.map((v) => (
-            <button
-              key={v}
-              onClick={() => onUpdate(msg.id, { block: { ...statusBlock, variant: v } })}
-              className={[
-                "flex-1 h-6 rounded-md text-[10px] font-medium transition-colors",
-                statusBlock.variant === v
-                  ? "bg-studio-muted/20 text-studio-text"
-                  : "bg-studio-hover text-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              {VARIANT_LABEL[v]}
-            </button>
-          ))}
-        </div>
       </div>
     );
   }
@@ -581,33 +753,18 @@ const MessageItem = memo(function MessageItem({
     const patch = (p: Partial<VoiceBlock>) => onUpdate(msg.id, { block: { ...voiceBlock, ...p } });
 
     return (
-      <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <span className="text-xs text-studio-muted">Voice</span>
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          {/* Style toggle */}
-          {STYLE_OPTIONS.map(({ style, Icon, label }) => (
-            <div key={style} className="relative group/tip">
-              <button
-                onClick={() => patch({ style })}
-                className={[
-                  "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
-                  voiceBlock.style === style
-                    ? "bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                <Icon size={13} />
-              </button>
-              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                {label}
-              </span>
-            </div>
-          ))}
-          <div className="flex-1" />
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+        <CardHeader
+          icon={Mic}
+          title="Voice"
+          extra={
+            <IconSegmentToggle
+              options={STYLE_OPTIONS.map(({ style, Icon, label }) => ({ value: style, Icon, label }))}
+              value={voiceBlock.style}
+              onChange={(style) => patch({ style })}
+            />
+          }
+        />
 
         {/* Transcript */}
         <textarea
@@ -900,18 +1057,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       </Section>
 
-      <Section
-        title="Background"
-        action={
-          <button
-            onClick={() => setShowBgModal(true)}
-            title="Browse or upload backgrounds"
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold bg-studio-accent text-studio-accent-fg hover:opacity-90 transition-opacity leading-none"
-          >
-            +
-          </button>
-        }
-      >
+      <Section title="Background">
         <div className="grid grid-cols-3 gap-2">
           {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
             <button
@@ -929,6 +1075,13 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             </button>
           ))}
         </div>
+        {/* Browse / upload more — placed below the grid like "+ Add message" */}
+        <button
+          onClick={() => setShowBgModal(true)}
+          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
+        >
+          Background Library
+        </button>
       </Section>
 
       <Section title="Layout">
@@ -958,7 +1111,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           value={activeScenario ?? ""}
           onValueChange={(val) => handleScenarioChange(String(val))}
         >
-          <SelectTrigger className="w-full h-8 border-studio-border bg-studio-hover text-studio-text text-xs rounded-lg">
+          <SelectTrigger className="w-full h-8 border-studio-border bg-studio-hover text-studio-text text-sm rounded-lg">
             <span className="flex-1 text-left truncate">
               {SCENARIOS.find((s) => s.id === activeScenario)?.name ?? "Select a scenario"}
             </span>
@@ -1073,7 +1226,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       </Section>
 
-      <Section title="Messages">
+      <Section title="Messages" info="Messages that exceed the frame height won't be added to the preview">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
             <MessageItem
@@ -1115,33 +1268,31 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           )}
           <Menu.Portal>
             <Menu.Positioner side="top" align="center" sideOffset={6}>
-              <Menu.Popup className="z-50 min-w-[220px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-2 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+              <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
                 {([
-                  { Icon: MessageSquare,     label: "Text message",    add: () => {
+                  { label: "Text message",    add: () => {
                     const lastRole = messages.at(-1)?.role ?? "bot";
                     const role = lastRole === "bot" ? "user" : "bot";
                     addMessage({ id: uid(), role, sender: role === "user" ? (userName || "User") : "bot", block: { type: "text", text: "" } });
                   }},
-                  { Icon: ShoppingBag,       label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
+                  { label: "Text + Activity log", add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "text", text: "", verifications: ["Identity verified", "Source: live data"] } }) },
+                  { label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
                     { img: "", name: "Product A", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                     { img: "", name: "Product B", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                   ]}})},
-                  { Icon: MousePointerClick, label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
-                  { Icon: ListChecks,        label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
+                  { label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
+                  { label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
                     { id: uid(), label: "Task one",   status: "done" },
                     { id: uid(), label: "Task two",   status: "in-progress" },
                     { id: uid(), label: "Task three", status: "pending" },
                   ]}})},
-                  { Icon: Tag,               label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
-                ] as const).map(({ Icon, label, add }) => (
+                  { label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
+                ] as const).map(({ label, add }) => (
                   <Menu.Item
                     key={label}
                     onClick={add}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none mx-1 rounded-lg"
+                    className="text-xs text-studio-text px-3 py-1.5 cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white"
                   >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                      <Icon size={16} className="text-studio-text" />
-                    </span>
                     {label}
                   </Menu.Item>
                 ))}
@@ -1150,11 +1301,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           </Menu.Portal>
         </Menu.Root>
       </Section>
-
-      {/* Bottom hint */}
-      <p className="text-[11px] text-studio-muted leading-relaxed pb-2">
-        Messages that exceed the frame height won&apos;t be added to the preview.
-      </p>
 
       {/* Scenario switch confirm modal */}
       {pendingScenarioId && (
