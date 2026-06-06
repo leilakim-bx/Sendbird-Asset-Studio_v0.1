@@ -13,10 +13,10 @@ import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
 import { exportImage, exportSvgToClipboard, captureThumbnail } from "@/lib/export";
 import type { SavedAsset } from "@/lib/store";
-import type { Template } from "@/lib/template-registry";
+import type { ChatTemplate } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
 
-export function EditorShell({ template }: { template: Template }) {
+export function EditorShell({ template }: { template: ChatTemplate }) {
   const {
     layout, exportSize, backgroundId, appName, messages,
     setMessages, setLayout, setBackgroundId, setAppName, setExportSize,

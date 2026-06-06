@@ -17,7 +17,7 @@ const TEMPLATES = [
     id: "infographic",
     title: "Infographic",
     preview: "/preview/diagram.png",
-    ready: false,
+    ready: true,
   },
   {
     id: "product-ui",
