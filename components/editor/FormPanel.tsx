@@ -1175,7 +1175,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       </Section>
 
-      <Section title="Messages" info="Messages that exceed the frame height won't be added to the preview">
+      <Section title="Messages" info="Once the frame is full, you can't add more messages — remove or shorten one to make room.">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
             <MessageItem
