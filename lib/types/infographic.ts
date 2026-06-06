@@ -70,3 +70,14 @@ export const INFOGRAPHIC_BG_HEX: Record<InfographicBg, string> = {
   stone: "#D9D6D2",
   warmgray: "#E5E3DF",
 };
+
+export const INFOGRAPHIC_ACCENT_HEX: Record<InfographicAccent, string> = {
+  lime: "#CBFF4D",
+  blue: "#27A6F7",
+  red: "#FF5E69",
+  green: "#25BD85",
+};
+
+/** Ink (text) colors — shared across all infographic blocks. */
+export const INFOGRAPHIC_INK = "#1C1917";
+export const INFOGRAPHIC_INK_MUTED = "#7C7166";

@@ -289,6 +289,25 @@
   --studio-accent-fg:  #000000;
 }
 
+/* Infographic template — flat/branded canvas tokens (export uses resolved hex
+   inline; these mirror lib/types/infographic.ts for any CSS-only consumers) */
+:root {
+  /* Backgrounds */
+  --ig-bg-sky:       #D8F0FF;
+  --ig-bg-stone:     #D9D6D2;
+  --ig-bg-warmgray:  #E5E3DF;
+
+  /* Accents */
+  --ig-accent-lime:  #CBFF4D;
+  --ig-accent-blue:  #27A6F7;
+  --ig-accent-red:   #FF5E69;
+  --ig-accent-green: #25BD85;
+
+  /* Ink */
+  --ig-ink:        #1C1917;
+  --ig-ink-muted:  #7C7166;
+}
+
 /* Studio shell colors — separate @theme block so Tailwind generates bg-studio-* / text-studio-* utilities */
 @theme {
   --color-studio-bg:        #252525;

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Background } from "@/lib/backgrounds";
 import { getRandomUserProfile, getAvatarForName } from "@/lib/avatar";
+import type { InfographicContent, InfographicFormat } from "@/lib/types/infographic";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -162,6 +163,12 @@ export type EditorState = {
   /** 모바일 캔버스 하단 48px 여백 기준, 콘텐츠가 꽉 찼는지 여부 */
   canvasIsFull: boolean;
   setCanvasIsFull: (isFull: boolean) => void;
+
+  // ── Infographic template (non-persisted session state) ──
+  /** Seeded from the infographic template's defaultContent on editor mount. */
+  infographicContent: InfographicContent | null;
+  setInfographicContent: (content: InfographicContent) => void;
+  setInfographicFormat: (format: InfographicFormat) => void;
 };
 
 // ── v0 → v1 마이그레이션 ──────────────────────────────────
@@ -300,6 +307,16 @@ export const useEditorStore = create<EditorState>()(
       // Canvas capacity — transient, never persisted
       canvasIsFull:    false,
       setCanvasIsFull: (isFull) => set({ canvasIsFull: isFull }),
+
+      // Infographic content — transient session state, never persisted
+      infographicContent:    null,
+      setInfographicContent: (infographicContent) => set({ infographicContent }),
+      setInfographicFormat:  (format) =>
+        set((s) =>
+          s.infographicContent
+            ? { infographicContent: { ...s.infographicContent, format } }
+            : s,
+        ),
 
       setTemplateId:   (templateId)   => set({ templateId }),
       setLayout:       (layout)       => set({ layout }),
