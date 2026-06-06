@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Home, ChevronDown, ImageDown, Clipboard, Blocks } from "lucide-react";
+import { BookOpen, Home, ChevronDown, ImageDown, Clipboard, Blocks, Monitor, Smartphone } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
@@ -115,21 +115,35 @@ export function EditorShell({ template }: { template: Template }) {
     toastTimer.current = setTimeout(() => setToastMsg(null), 3000);
   }
 
-  function exportFilename(ext: string) {
+  function exportFilename(size: "desktop" | "mobile", ext: string) {
     const scenarioSlug = activeScenarioId
       ?? appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    return `${scenarioSlug}-${exportSize}.${ext}`;
+    return `${scenarioSlug}-${size}.${ext}`;
   }
 
-  async function handleExport() {
-    const isDesktop = exportSize === "desktop";
+  // Capture one size from its dedicated off-screen canvas. Mobile passes
+  // height=undefined so the PNG is variable-height (matches the live preview);
+  // never hardcode a mobile height here.
+  async function exportOne(size: "desktop" | "mobile") {
+    const isDesktop = size === "desktop";
     const ref = isDesktop ? desktopRef.current : mobileRef.current;
     if (!ref) return;
+    const { width, height } = isDesktop ? desktopSize : mobileSize;
+    await exportImage(ref, width, isDesktop ? height : undefined, exportFilename(size, "png"));
+  }
+
+  async function handleExport(mode: "desktop" | "mobile" | "both") {
     setExporting(true);
     setExportError(null);
     try {
-      const { width, height } = isDesktop ? desktopSize : mobileSize;
-      await exportImage(ref, width, isDesktop ? height : undefined, exportFilename("png"));
+      if (mode === "both") {
+        await exportOne("desktop");
+        // Brief gap so the browser treats these as two distinct downloads.
+        await new Promise((r) => setTimeout(r, 400));
+        await exportOne("mobile");
+      } else {
+        await exportOne(mode);
+      }
     } catch (err) {
       const msg = err instanceof Error
         ? err.message
@@ -237,11 +251,35 @@ export function EditorShell({ template }: { template: Template }) {
       <div className="flex flex-1 min-h-0">
         {/* Left: Preview Canvas */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-studio-bg overflow-auto py-8">
-        <p className="text-studio-muted text-xs uppercase tracking-wider">
-          Preview — {exportSize === "desktop"
-            ? `Desktop ${desktopSize.width}×${desktopSize.height}`
-            : `Mobile ${mobileSize.width}×${mobileSize.height}`}
-        </p>
+        {/* Desktop / Mobile preview toggle */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-1 p-1 rounded-xl border border-studio-border bg-studio-sidebar">
+            {([
+              { size: "desktop" as const, label: "Desktop", Icon: Monitor },
+              { size: "mobile"  as const, label: "Mobile",  Icon: Smartphone },
+            ]).map(({ size, label, Icon }) => (
+              <button
+                key={size}
+                onClick={() => setExportSize(size)}
+                aria-pressed={exportSize === size}
+                className={[
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                  exportSize === size
+                    ? "bg-studio-hover text-studio-text"
+                    : "text-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-studio-muted text-[11px] uppercase tracking-wider">
+            {exportSize === "desktop"
+              ? `${desktopSize.width}×${desktopSize.height}`
+              : `${mobileSize.width}×${mobileSize.height}`}
+          </p>
+        </div>
 
         {/* Visible preview (scaled) */}
         <div
@@ -287,16 +325,38 @@ export function EditorShell({ template }: { template: Template }) {
               <Menu.Portal>
                 <Menu.Positioner side="top" align="end" sideOffset={8}>
                   <Menu.Popup className="z-50 min-w-[220px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-2 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-                    {/* PNG */}
+                    {/* PNG · Both (Desktop + Mobile) — headline */}
                     <Menu.Item
-                      onClick={handleExport}
+                      onClick={() => handleExport("both")}
                       className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                     >
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                         <ImageDown size={16} className="text-studio-text" />
                       </span>
-                      <span className="flex-1">PNG</span>
-                      <span className="text-[11px] text-studio-muted">.png · @2x</span>
+                      <span className="flex-1">PNG · Both</span>
+                      <span className="text-[11px] text-studio-muted">Desktop + Mobile</span>
+                    </Menu.Item>
+                    {/* PNG · Desktop */}
+                    <Menu.Item
+                      onClick={() => handleExport("desktop")}
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <Monitor size={16} className="text-studio-text" />
+                      </span>
+                      <span className="flex-1">PNG · Desktop</span>
+                      <span className="text-[11px] text-studio-muted">{desktopSize.width}×{desktopSize.height}</span>
+                    </Menu.Item>
+                    {/* PNG · Mobile */}
+                    <Menu.Item
+                      onClick={() => handleExport("mobile")}
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <Smartphone size={16} className="text-studio-text" />
+                      </span>
+                      <span className="flex-1">PNG · Mobile</span>
+                      <span className="text-[11px] text-studio-muted">{mobileSize.width}w</span>
                     </Menu.Item>
                     {/* Copy for Figma — coming soon */}
                     <Menu.Item

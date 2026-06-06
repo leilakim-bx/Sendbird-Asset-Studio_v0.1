@@ -131,13 +131,3 @@ export async function captureThumbnail(element: HTMLElement): Promise<string> {
     restore();
   }
 }
-
-export async function exportBoth(
-  desktopEl: HTMLElement,
-  mobileEl: HTMLElement,
-  baseName = "sendbird-asset"
-): Promise<void> {
-  await exportImage(desktopEl, 866, 660, `${baseName}-desktop.png`);
-  await new Promise((r) => setTimeout(r, 400));
-  await exportImage(mobileEl, 430, 540, `${baseName}-mobile.png`);
-}

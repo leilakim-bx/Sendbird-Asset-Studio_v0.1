@@ -816,7 +816,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const [avatarLoadError, setAvatarLoadError] = useState(false);
   const {
     layout, setLayout,
-    exportSize, setExportSize,
     backgroundId, setBackgroundId,
     appName, setAppName,
     messages, addMessage, updateMessage, removeMessage, setMessages,
@@ -1287,14 +1286,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
           ]}
           onChange={setLayout}
-        />
-      </Section>
-
-      <Section title="Export Size" defaultCollapsed>
-        <ToggleGroup
-          value={exportSize}
-          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
-          onChange={setExportSize}
         />
       </Section>
 
