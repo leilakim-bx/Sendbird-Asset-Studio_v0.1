@@ -60,7 +60,7 @@ export const TEMPLATES: Template[] = [
   {
     kind: "chat",
     id: "feature-mockup",
-    name: "Chat conversation",
+    name: "Chat UI",
     description: "Glassmorphism chat UI over a lifestyle background",
     layouts: ["center", "split"],
     exportSizes: [EXPORT_SIZES.desktop, EXPORT_SIZES.mobile],

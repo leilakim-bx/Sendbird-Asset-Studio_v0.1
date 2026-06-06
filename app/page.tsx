@@ -9,7 +9,7 @@ import { AssetLibrary } from "@/components/assets/AssetLibrary";
 const TEMPLATES = [
   {
     id: "feature-mockup",
-    title: "Chat conversation",
+    title: "Chat UI",
     preview: "/preview/mobile_mockup.png",
     ready: true,
   },

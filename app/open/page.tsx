@@ -10,7 +10,7 @@ import { useEditorStore } from "@/lib/store";
 type TabId = "chat" | "infographic" | "product-ui";
 
 const TABS: { id: TabId; label: string; soon?: boolean }[] = [
-  { id: "chat",        label: "Chat conversation" },
+  { id: "chat",        label: "Chat UI" },
   { id: "infographic", label: "Infographic", soon: true },
   { id: "product-ui",  label: "Product UI",  soon: true },
 ];

@@ -69,7 +69,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: "mobile-chat",
-    label: "Chat conversation",
+    label: "Chat UI",
     icon: MessageSquare,
     steps: [
       {
@@ -186,7 +186,7 @@ const ASSET_TYPES = [
   {
     id: "feature-mockup",
     icon: MessageSquare,
-    title: "Chat conversation",
+    title: "Chat UI",
     description: "Floating glass chat UI over atmospheric scene photos. Perfect for product landing pages and feature sections.",
     ready: true,
   },
