@@ -8,6 +8,7 @@ import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import { exportImage } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
+import { InfographicSidebar } from "./InfographicSidebar";
 import type { InfographicTemplate } from "@/lib/template-registry";
 import type { InfographicFormat } from "@/lib/types/infographic";
 
@@ -210,10 +211,8 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
           </div>
         </div>
 
-        {/* Right: sidebar placeholder (filled in step 3) */}
-        <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar flex items-center justify-center p-8">
-          <p className="text-studio-muted text-xs text-center">Sidebar coming in step 3</p>
-        </div>
+        {/* Right: editing sidebar */}
+        <InfographicSidebar />
       </div>
     </div>
   );

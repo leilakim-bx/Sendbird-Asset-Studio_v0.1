@@ -81,3 +81,6 @@ export const INFOGRAPHIC_ACCENT_HEX: Record<InfographicAccent, string> = {
 /** Ink (text) colors — shared across all infographic blocks. */
 export const INFOGRAPHIC_INK = "#1C1917";
 export const INFOGRAPHIC_INK_MUTED = "#7C7166";
+
+/** Serif display stack (brand "Serrif") — titles + big numbers. */
+export const INFOGRAPHIC_SERIF = '"Serrif", Georgia, "Times New Roman", serif';

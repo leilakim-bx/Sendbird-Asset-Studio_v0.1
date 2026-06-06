@@ -2,7 +2,13 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Background } from "@/lib/backgrounds";
 import { getRandomUserProfile, getAvatarForName } from "@/lib/avatar";
-import type { InfographicContent, InfographicFormat } from "@/lib/types/infographic";
+import type {
+  InfographicContent,
+  InfographicFormat,
+  InfographicBg,
+  InfographicAccent,
+  InfographicBlock,
+} from "@/lib/types/infographic";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -169,6 +175,13 @@ export type EditorState = {
   infographicContent: InfographicContent | null;
   setInfographicContent: (content: InfographicContent) => void;
   setInfographicFormat: (format: InfographicFormat) => void;
+  setInfographicBg: (bg: InfographicBg) => void;
+  setInfographicAccent: (accent: InfographicAccent) => void;
+  setInfographicTitle: (title: string) => void;
+  setInfographicFootnote: (footnote: string) => void;
+  addInfographicBlock: (block: InfographicBlock) => void;
+  updateInfographicBlock: (id: string, block: InfographicBlock) => void;
+  removeInfographicBlock: (id: string) => void;
 };
 
 // ── v0 → v1 마이그레이션 ──────────────────────────────────
@@ -315,6 +328,42 @@ export const useEditorStore = create<EditorState>()(
         set((s) =>
           s.infographicContent
             ? { infographicContent: { ...s.infographicContent, format } }
+            : s,
+        ),
+      setInfographicBg: (bg) =>
+        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, bg } } : s)),
+      setInfographicAccent: (accent) =>
+        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, accent } } : s)),
+      setInfographicTitle: (title) =>
+        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, title } } : s)),
+      setInfographicFootnote: (footnote) =>
+        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, footnote } } : s)),
+      addInfographicBlock: (block) =>
+        set((s) =>
+          s.infographicContent
+            ? { infographicContent: { ...s.infographicContent, blocks: [...s.infographicContent.blocks, block] } }
+            : s,
+        ),
+      updateInfographicBlock: (id, block) =>
+        set((s) =>
+          s.infographicContent
+            ? {
+                infographicContent: {
+                  ...s.infographicContent,
+                  blocks: s.infographicContent.blocks.map((b) => (b.id === id ? block : b)),
+                },
+              }
+            : s,
+        ),
+      removeInfographicBlock: (id) =>
+        set((s) =>
+          s.infographicContent
+            ? {
+                infographicContent: {
+                  ...s.infographicContent,
+                  blocks: s.infographicContent.blocks.filter((b) => b.id !== id),
+                },
+              }
             : s,
         ),
 
