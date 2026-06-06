@@ -230,7 +230,8 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
           <div style={{
             fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
             background: "#E5E3DF", borderRadius: 8,
-            padding: "6px 0", textAlign: "center",
+            // scale 연동: desktop(~1.03)→7px 살짝 높게, mobile(~0.75)→5px 살짝 낮게
+            padding: `${Math.round(7 * scale)}px 0`, textAlign: "center",
           }}>{item.cta}</div>
         )}
       </div>
@@ -326,7 +327,8 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
             <div style={{
               fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
               background: "#E5E3DF", borderRadius: 8,
-              padding: `${Math.round(6 * scale)}px 0`, textAlign: "center",
+              // scale 연동: desktop(~1.03)→7px 살짝 높게, mobile(~0.75)→5px 살짝 낮게
+              padding: `${Math.round(7 * scale)}px 0`, textAlign: "center",
             }}>{item.cta}</div>
           </div>
         </div>
