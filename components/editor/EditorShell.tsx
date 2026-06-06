@@ -361,16 +361,18 @@ export function EditorShell({ template }: { template: Template }) {
                       <span className="flex-1">Mobile</span>
                       <span className="text-[11px] text-studio-muted tabular-nums">{mobileSize.width}×{mobileHeight}</span>
                     </Menu.Item>
-                    {/* Both */}
+                    {/* Both — coming soon */}
                     <Menu.Item
-                      onClick={() => handleExport("both")}
-                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      disabled
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text outline-none rounded-lg mx-1 opacity-50 cursor-not-allowed data-[disabled]:pointer-events-none"
                     >
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                         <Images size={16} className="text-studio-text" />
                       </span>
                       <span className="flex-1">Both</span>
-                      <span className="text-[11px] text-studio-muted">2 files</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
+                        Soon
+                      </span>
                     </Menu.Item>
 
                     <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
