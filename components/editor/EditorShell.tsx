@@ -266,33 +266,26 @@ export function EditorShell({ template }: { template: Template }) {
         {/* Left: Preview Canvas */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-studio-bg overflow-auto py-8">
         {/* Desktop / Mobile preview toggle */}
-        <div className="flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-xl border border-studio-border bg-studio-sidebar">
-            {([
-              { size: "desktop" as const, label: "Desktop", Icon: Monitor },
-              { size: "mobile"  as const, label: "Mobile",  Icon: Smartphone },
-            ]).map(({ size, label, Icon }) => (
-              <button
-                key={size}
-                onClick={() => setExportSize(size)}
-                aria-pressed={exportSize === size}
-                className={[
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                  exportSize === size
-                    ? "bg-studio-hover text-studio-text"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                <Icon size={14} />
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="text-studio-muted text-[11px] uppercase tracking-wider">
-            {exportSize === "desktop"
-              ? `${desktopSize.width}×${desktopSize.height}`
-              : `${mobileSize.width}×${mobileSize.height}`}
-          </p>
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-studio-sidebar">
+          {([
+            { size: "desktop" as const, label: "Desktop", Icon: Monitor },
+            { size: "mobile"  as const, label: "Mobile",  Icon: Smartphone },
+          ]).map(({ size, label, Icon }) => (
+            <button
+              key={size}
+              onClick={() => setExportSize(size)}
+              aria-pressed={exportSize === size}
+              className={[
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                exportSize === size
+                  ? "bg-studio-hover text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Visible preview (scaled) */}
