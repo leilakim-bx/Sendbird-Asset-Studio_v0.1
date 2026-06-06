@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TriangleAlert, ImageIcon } from "lucide-react";
-import { BACKGROUNDS, type Background } from "@/lib/backgrounds";
+import { BACKGROUNDS, type Background, type BackgroundGroup } from "@/lib/backgrounds";
+
+const TABS: { key: "all" | BackgroundGroup; label: string }[] = [
+  { key: "all",      label: "All" },
+  { key: "general",  label: "General" },
+  { key: "brand",    label: "Brand themes" },
+  { key: "industry", label: "Industry" },
+];
 
 type Props = {
   currentId: string;
@@ -21,6 +28,7 @@ export function BackgroundPickerModal({
 }: Props) {
   const [uploading, setUploading]     = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | BackgroundGroup>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close on ESC
@@ -70,6 +78,9 @@ export function BackgroundPickerModal({
   }
 
   const allBackgrounds = [...BACKGROUNDS, ...customBackgrounds];
+  const visibleBackgrounds = tab === "all"
+    ? allBackgrounds
+    : allBackgrounds.filter((bg) => bg.group === tab);
 
   return (
     <div
@@ -89,10 +100,31 @@ export function BackgroundPickerModal({
           </button>
         </div>
 
-        {/* Grid */}
-        <div className="overflow-y-auto flex-1 p-5">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 px-5 pt-4 pb-3 shrink-0">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={[
+                "text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
+                tab === t.key
+                  ? "bg-studio-hover text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid — fixed ~3.5 rows tall (탭별 개수와 무관하게 동일 높이), scrolls beyond */}
+        <div className="overflow-y-auto p-5 h-[348px]">
+          {visibleBackgrounds.length === 0 ? (
+            <p className="text-xs text-studio-muted text-center py-10">No backgrounds in this category yet.</p>
+          ) : (
           <div className="grid grid-cols-3 gap-3">
-            {allBackgrounds.map((bg) => (
+            {visibleBackgrounds.map((bg) => (
               <button
                 key={bg.id}
                 onClick={() => { onSelect(bg); onClose(); }}
@@ -101,7 +133,7 @@ export function BackgroundPickerModal({
                   "aspect-video",
                   currentId === bg.id
                     ? "border-studio-accent"
-                    : "border-transparent hover:border-studio-muted",
+                    : "border-transparent hover:border-studio-accent",
                 ].join(" ")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -118,6 +150,7 @@ export function BackgroundPickerModal({
               </button>
             ))}
           </div>
+          )}
         </div>
 
         {/* Footer: Upload */}
