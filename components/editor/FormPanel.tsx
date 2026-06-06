@@ -1044,6 +1044,54 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
       <div className="flex-1 overflow-y-auto p-5">
 
+      <Section title="Background" defaultCollapsed>
+        <div className="grid grid-cols-3 gap-2">
+          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
+            <button
+              key={bg.id}
+              onClick={() => setBackgroundId(bg.id)}
+              className={[
+                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
+                backgroundId === bg.id
+                  ? "border-studio-accent"
+                  : "border-transparent hover:border-studio-muted",
+              ].join(" ")}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+        {/* Browse / upload more — placed below the grid like "+ Add message" */}
+        <button
+          onClick={() => setShowBgModal(true)}
+          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
+        >
+          Background Library
+        </button>
+      </Section>
+
+      {showBgModal && (
+        <BackgroundPickerModal
+          currentId={backgroundId}
+          customBackgrounds={customBackgrounds}
+          onSelect={(bg) => setBackgroundId(bg.id)}
+          onUpload={(bg) => addCustomBackground(bg)}
+          onClose={() => setShowBgModal(false)}
+        />
+      )}
+
+      <Section title="Layout" defaultCollapsed>
+        <ToggleGroup
+          value={layout}
+          options={[
+            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
+            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
+          ]}
+          onChange={setLayout}
+        />
+      </Section>
+
       <Section title="Scenario">
         {/* Dropdown */}
         <Select
@@ -1203,43 +1251,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </Menu.Root>
       </Section>
 
-      <Section title="Background" defaultCollapsed>
-        <div className="grid grid-cols-3 gap-2">
-          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
-            <button
-              key={bg.id}
-              onClick={() => setBackgroundId(bg.id)}
-              className={[
-                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
-                backgroundId === bg.id
-                  ? "border-studio-accent"
-                  : "border-transparent hover:border-studio-muted",
-              ].join(" ")}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
-        {/* Browse / upload more — placed below the grid like "+ Add message" */}
-        <button
-          onClick={() => setShowBgModal(true)}
-          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
-        >
-          Background Library
-        </button>
-      </Section>
-
-      {showBgModal && (
-        <BackgroundPickerModal
-          currentId={backgroundId}
-          customBackgrounds={customBackgrounds}
-          onSelect={(bg) => setBackgroundId(bg.id)}
-          onUpload={(bg) => addCustomBackground(bg)}
-          onClose={() => setShowBgModal(false)}
-        />
-      )}
-
       <Section title="User Profile" defaultCollapsed>
         <div className="flex items-center gap-2">
           {/* Avatar preview */}
@@ -1276,17 +1287,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             </span>
           </div>
         </div>
-      </Section>
-
-      <Section title="Layout" defaultCollapsed>
-        <ToggleGroup
-          value={layout}
-          options={[
-            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
-            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
-          ]}
-          onChange={setLayout}
-        />
       </Section>
 
       <Section title="App Name" defaultCollapsed>
