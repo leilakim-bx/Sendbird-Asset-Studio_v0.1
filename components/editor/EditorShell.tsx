@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Home, ChevronDown, ImageDown, Clipboard, Blocks, Monitor, Smartphone } from "lucide-react";
+import { BookOpen, Home, ChevronDown, Images, Clipboard, Blocks, Monitor, Smartphone } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
@@ -67,6 +67,20 @@ export function EditorShell({ template }: { template: Template }) {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
+  // Live height of the off-screen mobile export canvas — this IS the exported
+  // PNG height (mobile export passes no height, so html-to-image captures the
+  // element's natural height). Seeded with the min so the first dropdown-open
+  // never flashes an undefined value.
+  const [mobileHeight, setMobileHeight] = useState(EXPORT_SIZES.mobile.height);
+  useEffect(() => {
+    const el = mobileRef.current;
+    if (!el) return;
+    const update = () => setMobileHeight(Math.round(el.offsetHeight));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Tracks the last messages state that did NOT overflow, used for rollback
   const lastSafeMessagesRef = useRef(messages);
@@ -325,18 +339,14 @@ export function EditorShell({ template }: { template: Template }) {
               <Menu.Portal>
                 <Menu.Positioner side="top" align="end" sideOffset={8}>
                   <Menu.Popup className="z-50 min-w-[220px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-2 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-                    {/* PNG · Both (Desktop + Mobile) — headline */}
-                    <Menu.Item
-                      onClick={() => handleExport("both")}
-                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
-                    >
-                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                        <ImageDown size={16} className="text-studio-text" />
-                      </span>
-                      <span className="flex-1">PNG · Both</span>
-                      <span className="text-[11px] text-studio-muted">Desktop + Mobile</span>
-                    </Menu.Item>
-                    {/* PNG · Desktop */}
+                    {/* Header — non-interactive label */}
+                    <div className="flex items-center gap-1 px-3 pt-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-studio-text select-none">
+                      Export as PNG
+                      <span className="text-studio-muted font-semibold">· @2x</span>
+                    </div>
+                    <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
+
+                    {/* Desktop */}
                     <Menu.Item
                       onClick={() => handleExport("desktop")}
                       className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
@@ -344,10 +354,10 @@ export function EditorShell({ template }: { template: Template }) {
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                         <Monitor size={16} className="text-studio-text" />
                       </span>
-                      <span className="flex-1">PNG · Desktop</span>
-                      <span className="text-[11px] text-studio-muted">{desktopSize.width}×{desktopSize.height}</span>
+                      <span className="flex-1">Desktop</span>
+                      <span className="text-[11px] text-studio-muted tabular-nums">{desktopSize.width}×{desktopSize.height}</span>
                     </Menu.Item>
-                    {/* PNG · Mobile */}
+                    {/* Mobile — height tracks the live mobile canvas */}
                     <Menu.Item
                       onClick={() => handleExport("mobile")}
                       className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
@@ -355,9 +365,23 @@ export function EditorShell({ template }: { template: Template }) {
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                         <Smartphone size={16} className="text-studio-text" />
                       </span>
-                      <span className="flex-1">PNG · Mobile</span>
-                      <span className="text-[11px] text-studio-muted">{mobileSize.width}w</span>
+                      <span className="flex-1">Mobile</span>
+                      <span className="text-[11px] text-studio-muted tabular-nums">{mobileSize.width}×{mobileHeight}</span>
                     </Menu.Item>
+                    {/* Both */}
+                    <Menu.Item
+                      onClick={() => handleExport("both")}
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                        <Images size={16} className="text-studio-text" />
+                      </span>
+                      <span className="flex-1">Both</span>
+                      <span className="text-[11px] text-studio-muted">2 files</span>
+                    </Menu.Item>
+
+                    <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
+
                     {/* Copy for Figma — coming soon */}
                     <Menu.Item
                       disabled
@@ -371,7 +395,7 @@ export function EditorShell({ template }: { template: Template }) {
                         Soon
                       </span>
                     </Menu.Item>
-                    {/* Export to AI page builder — coming soon */}
+                    {/* Export to AI builder — coming soon */}
                     <Menu.Item
                       disabled
                       className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text outline-none rounded-lg mx-1 opacity-50 cursor-not-allowed data-[disabled]:pointer-events-none"
@@ -379,7 +403,7 @@ export function EditorShell({ template }: { template: Template }) {
                       <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                         <Blocks size={16} className="text-studio-text" />
                       </span>
-                      <span className="flex-1">Export to AI page builder</span>
+                      <span className="flex-1">Export to AI builder</span>
                       <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
                         Soon
                       </span>
