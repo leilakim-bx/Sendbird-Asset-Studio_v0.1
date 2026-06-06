@@ -578,17 +578,29 @@ const PhoneFrame = memo(function PhoneFrame({
   }, []); // mount-only: DOM size changes handled by ResizeObserver
 
   return (
+    // 클리핑 래퍼: border-radius + overflow:hidden 으로 자식(backdrop-filter 포함)을
+    // 라운드 모서리에 맞춰 클리핑. element 자신의 backdrop-filter는 overflow로 못 막지만
+    // (export 시 사각형으로 샘), 부모가 자식으로서 클리핑하면 제대로 잘린다.
+    // box-shadow는 클립 밖에 그려져야 하므로 래퍼에 둔다.
+    <div
+      style={{
+        width,
+        borderRadius: frameR,
+        overflow: "hidden",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+        ...(maxHeight !== undefined ? { maxHeight } : {}),
+      }}
+    >
     <div
       ref={frameRef}
       style={{
-        width,
-        ...(maxHeight !== undefined ? { maxHeight, overflow: "hidden" } : {}),
+        width: "100%",
+        ...(maxHeight !== undefined ? { maxHeight, overflow: "hidden" } : { overflow: "hidden" }),
         borderRadius: frameR,
         background: "rgba(255,255,255,0.25)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
         border: "1px solid rgba(255,255,255,0.3)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
         display: "flex",
         flexDirection: "column",
       }}
@@ -639,6 +651,7 @@ const PhoneFrame = memo(function PhoneFrame({
         })}
       </div>
 
+    </div>
     </div>
   );
 });
