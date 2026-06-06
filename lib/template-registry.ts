@@ -35,7 +35,7 @@ export type Template = {
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
   desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
-  mobile:  { id: "mobile",  label: "Mobile",  width: 400, height: 385 },
+  mobile:  { id: "mobile",  label: "Mobile",  width: 343, height: 385 },
 };
 
 // ── Templates ─────────────────────────────────────────────

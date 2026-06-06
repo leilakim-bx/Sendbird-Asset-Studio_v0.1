@@ -3,6 +3,7 @@
 import { useRef, useEffect, memo } from "react";
 import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock } from "@/lib/store";
 import { computeCapacity } from "@/lib/canvas-capacity";
+import { EXPORT_SIZES } from "@/lib/template-registry";
 import { ChecklistStatusIcon } from "./checklist-status-icon";
 
 // ── Props ─────────────────────────────────────────────────
@@ -24,11 +25,8 @@ export type FeatureMockupProps = {
 };
 
 // ── Canvas dimensions ─────────────────────────────────────
-
-const SIZES = {
-  desktop: { width: 866, height: 660 },
-  mobile:  { width: 344, height: 385 },
-};
+// 단일 소스: lib/template-registry 의 EXPORT_SIZES (preview/export 치수 불일치 방지)
+const SIZES = EXPORT_SIZES;
 
 // ── ChatBubble — user 오른쪽 / ai 왼쪽 ───────────────────
 
