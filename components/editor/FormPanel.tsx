@@ -189,18 +189,23 @@ function Section({
   title,
   info,
   action,
+  defaultCollapsed = false,
   children,
 }: {
   title: string;
   /** Optional hover hint shown via an ℹ️ icon next to the title */
   info?: string;
   action?: React.ReactNode;
+  /** 첫 진입(저장값 없음) 시 접힘 여부. 정적 prop이라 SSR/CSR 초기 렌더 일치 → 하이드레이션 안전 */
+  defaultCollapsed?: boolean;
   children: React.ReactNode;
 }) {
-  // SSR/CSR 하이드레이션 불일치 방지: 항상 펼친 상태로 시작 후 마운트 시 저장값 반영
-  const [collapsed, setCollapsed] = useState(false);
+  // 일회성 기본값: 저장값이 없으면 defaultCollapsed를 따르고, 사용자가 한 번이라도
+  // 토글하면 그 값이 영속되어 기본값을 덮어쓴다.
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   useEffect(() => {
-    if (readCollapsedMap()[title]) setCollapsed(true);
+    const stored = readCollapsedMap()[title];
+    if (stored !== undefined) setCollapsed(stored);
   }, [title]);
 
   const toggle = () =>
@@ -1040,71 +1045,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
       <div className="flex-1 overflow-y-auto p-5">
 
-      <Section title="Export Size">
-        <ToggleGroup
-          value={exportSize}
-          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
-          onChange={setExportSize}
-        />
-      </Section>
-
-      <Section title="App Name">
-        <Input
-          value={appName}
-          onChange={(e) => setAppName(e.target.value)}
-          placeholder="e.g. sendbird.ai"
-          className="h-8 text-sm bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
-        />
-      </Section>
-
-      <Section title="Background">
-        <div className="grid grid-cols-3 gap-2">
-          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
-            <button
-              key={bg.id}
-              onClick={() => setBackgroundId(bg.id)}
-              className={[
-                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
-                backgroundId === bg.id
-                  ? "border-studio-accent"
-                  : "border-transparent hover:border-studio-muted",
-              ].join(" ")}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
-            </button>
-          ))}
-        </div>
-        {/* Browse / upload more — placed below the grid like "+ Add message" */}
-        <button
-          onClick={() => setShowBgModal(true)}
-          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
-        >
-          Background Library
-        </button>
-      </Section>
-
-      <Section title="Layout">
-        <ToggleGroup
-          value={layout}
-          options={[
-            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
-            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
-          ]}
-          onChange={setLayout}
-        />
-      </Section>
-
-      {showBgModal && (
-        <BackgroundPickerModal
-          currentId={backgroundId}
-          customBackgrounds={customBackgrounds}
-          onSelect={(bg) => setBackgroundId(bg.id)}
-          onUpload={(bg) => addCustomBackground(bg)}
-          onClose={() => setShowBgModal(false)}
-        />
-      )}
-
       <Section title="Scenario">
         {/* Dropdown */}
         <Select
@@ -1188,44 +1128,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       </Section>
 
-      <Section title="User Profile">
-        <div className="flex items-center gap-2">
-          {/* Avatar preview */}
-          {userAvatarUrl && !avatarLoadError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={userAvatarUrl}
-              src={userAvatarUrl}
-              alt={userName}
-              className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
-              onError={() => setAvatarLoadError(true)}
-              onLoad={() => setAvatarLoadError(false)}
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
-          )}
-          {/* Name input */}
-          <Input
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="User name"
-            className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
-          {/* Shuffle button */}
-          <div className="relative group/tip shrink-0">
-            <button
-              onClick={shuffleUserProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
-            >
-              <RotateCcw size={13} />
-            </button>
-            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-              Shuffle name &amp; avatar
-            </span>
-          </div>
-        </div>
-      </Section>
-
       <Section title="Messages" info="Messages that exceed the frame height won't be added to the preview">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
@@ -1300,6 +1202,109 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             </Menu.Positioner>
           </Menu.Portal>
         </Menu.Root>
+      </Section>
+
+      <Section title="Background" defaultCollapsed>
+        <div className="grid grid-cols-3 gap-2">
+          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
+            <button
+              key={bg.id}
+              onClick={() => setBackgroundId(bg.id)}
+              className={[
+                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
+                backgroundId === bg.id
+                  ? "border-studio-accent"
+                  : "border-transparent hover:border-studio-muted",
+              ].join(" ")}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+        {/* Browse / upload more — placed below the grid like "+ Add message" */}
+        <button
+          onClick={() => setShowBgModal(true)}
+          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
+        >
+          Background Library
+        </button>
+      </Section>
+
+      {showBgModal && (
+        <BackgroundPickerModal
+          currentId={backgroundId}
+          customBackgrounds={customBackgrounds}
+          onSelect={(bg) => setBackgroundId(bg.id)}
+          onUpload={(bg) => addCustomBackground(bg)}
+          onClose={() => setShowBgModal(false)}
+        />
+      )}
+
+      <Section title="User Profile" defaultCollapsed>
+        <div className="flex items-center gap-2">
+          {/* Avatar preview */}
+          {userAvatarUrl && !avatarLoadError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={userAvatarUrl}
+              src={userAvatarUrl}
+              alt={userName}
+              className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
+              onError={() => setAvatarLoadError(true)}
+              onLoad={() => setAvatarLoadError(false)}
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
+          )}
+          {/* Name input */}
+          <Input
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="User name"
+            className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+          {/* Shuffle button */}
+          <div className="relative group/tip shrink-0">
+            <button
+              onClick={shuffleUserProfile}
+              className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+            >
+              <RotateCcw size={13} />
+            </button>
+            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+              Shuffle name &amp; avatar
+            </span>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Layout" defaultCollapsed>
+        <ToggleGroup
+          value={layout}
+          options={[
+            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
+            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
+          ]}
+          onChange={setLayout}
+        />
+      </Section>
+
+      <Section title="Export Size" defaultCollapsed>
+        <ToggleGroup
+          value={exportSize}
+          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
+          onChange={setExportSize}
+        />
+      </Section>
+
+      <Section title="App Name" defaultCollapsed>
+        <Input
+          value={appName}
+          onChange={(e) => setAppName(e.target.value)}
+          placeholder="e.g. sendbird.ai"
+          className="h-8 text-sm bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+        />
       </Section>
 
       {/* Scenario switch confirm modal */}
