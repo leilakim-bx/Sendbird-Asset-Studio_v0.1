@@ -149,6 +149,8 @@ export type SavedAsset = {
   /** User profile snapshot — present for assets saved after v1.2 */
   userName?: string;
   userAvatarUrl?: string;
+  /** Infographic content snapshot — present for infographic assets (v1.3+) */
+  infographic?: InfographicContent;
 };
 
 // ── Editor State ──────────────────────────────────────────

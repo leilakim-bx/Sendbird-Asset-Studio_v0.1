@@ -5,8 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Home, ChevronDown, AppWindow, FileText } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
-import { useEditorStore } from "@/lib/store";
-import { exportImage } from "@/lib/export";
+import { useEditorStore, type SavedAsset } from "@/lib/store";
+import { exportImage, captureThumbnail } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
 import type { InfographicTemplate } from "@/lib/template-registry";
@@ -19,11 +19,21 @@ const BLOG_MIN_H = 480;
 const MAX_PREVIEW_W = 580;
 
 export function InfographicShell({ template }: { template: InfographicTemplate }) {
-  const { infographicContent, setInfographicContent } = useEditorStore();
+  const {
+    infographicContent, setInfographicContent,
+    saveAsset, pendingAssetRestore, setPendingAssetRestore,
+  } = useEditorStore();
 
-  // Seed session content from the template on mount.
+  // On mount: restore a saved infographic asset if one is pending (opened from
+  // "My files"), otherwise seed session content from the template default.
   useEffect(() => {
-    setInfographicContent(template.defaultContent);
+    const pending = pendingAssetRestore;
+    if (pending && pending.templateId === template.id && pending.infographic) {
+      setInfographicContent(pending.infographic);
+      setPendingAssetRestore(null);
+    } else {
+      setInfographicContent(template.defaultContent);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
 
@@ -34,6 +44,33 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const blogRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  async function handleSave() {
+    const ref = format === "product" ? productRef.current : blogRef.current;
+    if (!ref || saveState !== "idle") return;
+    setSaveState("saving");
+    try {
+      const previewDataUrl = await captureThumbnail(ref);
+      const now = Date.now();
+      const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const appName = content.title?.trim() || "Infographic";
+      const asset: SavedAsset = {
+        id:             `asset-${now}`,
+        templateId:     template.id,
+        appName,
+        name:           `${appName} · ${dateStr}`,
+        previewDataUrl,
+        savedAt:        now,
+        infographic:    content,
+      };
+      saveAsset(asset);
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("idle");
+    }
+  }
 
   // Live height of the off-screen blog canvas — this IS the exported blog PNG
   // height (blog export passes no height). Seeded with the min so the first
@@ -125,11 +162,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
               <button
-                disabled
-                title="Saving infographics comes in a later step"
-                className="font-semibold text-sm px-5 py-2.5 rounded-xl border border-studio-border text-studio-muted opacity-50 cursor-not-allowed"
+                onClick={handleSave}
+                disabled={saveState !== "idle"}
+                className="font-semibold text-sm px-5 py-2.5 rounded-xl border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save
+                {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : "Save"}
               </button>
 
               {/* Export dropdown */}
