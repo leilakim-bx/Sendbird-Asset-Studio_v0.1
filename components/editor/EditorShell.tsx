@@ -7,7 +7,7 @@ import { BookOpen, Home, ChevronDown, Images, Clipboard, Blocks, Monitor, Smartp
 import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { useEditorStore } from "@/lib/store";
-import { SCENARIOS } from "@/lib/scenarios";
+import { DEFAULT_SCENARIO } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
@@ -47,8 +47,8 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
       setPendingAssetRestore(null);
     } else {
       const d = template.defaultContent;
-      // Fresh session → load the first scenario as default (hotel concierge)
-      setMessages(SCENARIOS[0].messages);
+      // Fresh session → load the default scenario (Omnipresence)
+      setMessages(DEFAULT_SCENARIO.messages);
       setLayout(template.defaultLayout);
       setBackgroundId(d.backgroundId);
       setAppName(d.appName);

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
 import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, Plus, X, MousePointerClick } from "lucide-react";
-import { SCENARIOS } from "@/lib/scenarios";
+import { SCENARIOS, DEFAULT_SCENARIO_ID } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock, ItineraryBlock, ItineraryGroup, ItineraryIcon } from "@/lib/store";
 import { ITINERARY_ICONS, itineraryIcon } from "@/components/templates/itinerary-icons";
@@ -848,7 +848,7 @@ const MessageItem = memo(function MessageItem({
           value={statusBlock.label}
           onChange={(e) => onUpdate(msg.id, { block: { ...statusBlock, label: e.target.value } })}
           placeholder="Status label"
-          className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
         />
       </div>
     );
@@ -936,7 +936,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   // ── Scenario ───────────────────────────────────────────
   // Default: first scenario pre-selected (matches EditorShell's seed on fresh load)
-  const [activeScenario,    setActiveScenario]    = useState<string | null>(SCENARIOS[0].id);
+  const [activeScenario,    setActiveScenario]    = useState<string | null>(DEFAULT_SCENARIO_ID);
   const [genPrompt,  setGenPrompt]  = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);

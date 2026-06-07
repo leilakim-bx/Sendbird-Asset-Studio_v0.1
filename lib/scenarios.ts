@@ -221,3 +221,8 @@ export const SCENARIOS: Scenario[] = [
   },
 
 ];
+
+/** Scenario shown by default when first entering the chat editor. */
+export const DEFAULT_SCENARIO_ID = "omnichannel-pickup";
+export const DEFAULT_SCENARIO =
+  SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0];

@@ -347,8 +347,10 @@ export const useEditorStore = create<EditorState>()(
       userAvatarUrl:   "",
       userProfileSeed: 0,
 
-      // Active scenario — transient, never persisted
-      activeScenarioId:    "memory-recall",
+      // Active scenario — transient, never persisted.
+      // Default scenario id (kept in sync with scenarios.ts DEFAULT_SCENARIO_ID;
+      // hardcoded here to avoid a store↔scenarios circular import).
+      activeScenarioId:    "omnichannel-pickup",
       setActiveScenarioId: (id) => set({ activeScenarioId: id }),
 
       // Migration warning — set by onRehydrateStorage, never persisted
