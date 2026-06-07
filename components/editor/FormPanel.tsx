@@ -18,6 +18,15 @@ import { AiMagicButton } from "@/components/ui/ai-magic-button";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+/** Solid red circle-with-exclamation badge used for "full"/"max" warnings. */
+const AlertCircleSolid = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="#ef4444" />
+    <rect x="11" y="6.5" width="2" height="7" rx="1" fill="#ffffff" />
+    <circle cx="12" cy="16.75" r="1.25" fill="#ffffff" />
+  </svg>
+);
+
 // 고정 예시 프롬프트 — 롤링 대신 가장 결과가 잘 나오는 대표 예시 하나로 고정
 const EXAMPLE_PROMPT = "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly";
 
@@ -596,8 +605,9 @@ const MessageItem = memo(function MessageItem({
           + Add product
         </button>
         {canvasIsFull && count < 3 && (
-          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1">
-            ⚠️ Max items — Remove an item to add more
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5">
+            <AlertCircleSolid />
+            Max items — Remove an item to add more
           </p>
         )}
       </div>
@@ -711,8 +721,9 @@ const MessageItem = memo(function MessageItem({
           + Add item
         </button>
         {canvasIsFull && (
-          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1">
-            ⚠️ Max items — Remove an item to add more
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5">
+            <AlertCircleSolid />
+            Max items — Remove an item to add more
           </p>
         )}
       </div>
@@ -739,7 +750,7 @@ const MessageItem = memo(function MessageItem({
                   value={g.label}
                   onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi ? { ...x, label: e.target.value } : x))}
                   placeholder="Day / section (e.g. MON)"
-                  className="flex-1 h-7 text-xs font-semibold bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:font-normal"
+                  className="flex-1 h-7 text-xs md:text-xs font-semibold bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:font-normal"
                 />
                 <button
                   onClick={() => setGroups((gs) => gs.filter((_, i) => i !== gi))}
@@ -765,14 +776,14 @@ const MessageItem = memo(function MessageItem({
                       onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
                         ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, title: e.target.value } : y) } : x))}
                       placeholder="Title"
-                      className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                      className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
                     />
                     <Input
                       value={it.sub ?? ""}
                       onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
                         ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, sub: e.target.value || undefined } : y) } : x))}
                       placeholder="Detail (optional)"
-                      className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                      className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
                     />
                   </div>
                   <button
@@ -817,7 +828,7 @@ const MessageItem = memo(function MessageItem({
             onChange={(e) => commit(itin.groups, e.target.value)}
             placeholder="e.g. Start booking"
             maxLength={24}
-            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
           />
         </div>
       </div>
@@ -1294,8 +1305,9 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             <ChevronDown size={11} />
           </Menu.Trigger>
           {canvasIsFull && (
-            <p className="text-[10px] text-red-400 leading-none flex items-center gap-1 mt-1">
-              ⚠️ Canvas is full — Remove or shorten a message to add more
+            <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5 mt-3">
+              <AlertCircleSolid />
+              Canvas is full — Remove or shorten a message to add more
             </p>
           )}
           <Menu.Portal>
