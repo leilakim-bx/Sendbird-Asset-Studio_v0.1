@@ -3,10 +3,11 @@
 import {
   Brain,
   Zap,
-  RefreshCw,
+  Globe,
   ListChecks,
   ShieldCheck,
   Mic,
+  Map,
   Ban,
   type LucideIcon,
 } from "lucide-react";
@@ -20,10 +21,11 @@ type ScenarioMeta = { Icon: LucideIcon; typeLabel: string };
 const SCENARIO_META: Record<string, ScenarioMeta> = {
   "memory-recall":      { Icon: Brain,       typeLabel: "products" },
   "proactive-outreach": { Icon: Zap,         typeLabel: "actions" },
-  "omnichannel-pickup": { Icon: RefreshCw,   typeLabel: "status" },
+  "omnichannel-pickup": { Icon: Globe,       typeLabel: "status" },
   "agent-steward":      { Icon: ListChecks,  typeLabel: "checklist" },
   "trust-governance":   { Icon: ShieldCheck, typeLabel: "verified" },
   "voice-ai":           { Icon: Mic,         typeLabel: "voice" },
+  "travel-itinerary":   { Icon: Map,         typeLabel: "itinerary" },
 };
 
 const FALLBACK: ScenarioMeta = { Icon: Ban, typeLabel: "scenario" };

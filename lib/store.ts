@@ -20,8 +20,16 @@ export type TextBlock    = {
    * bot bubble as a footer ("AI agent activity log"). Bot messages only.
    */
   verifications?: string[];
+  /**
+   * Optional action buttons, rendered below the text inside the bot bubble
+   * (an add-on, like `verifications`). Bot messages only — by convention, not
+   * type: a user message carrying `buttons` simply doesn't render them.
+   */
+  buttons?: string[];
 };
-export type ActionsBlock = { type: "actions";  buttons: string[]; text?: string };
+/** Standalone action buttons (buttons-only). For text + buttons in one bubble,
+ *  use TextBlock.buttons instead. */
+export type ActionsBlock = { type: "actions";  buttons: string[] };
 export type ProductsBlock = { type: "products"; items: ProductItem[] };
 
 export type ChecklistItem = {
@@ -51,7 +59,35 @@ export type VoiceBlock = {
   eyebrow?: string;
 };
 
-export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock | VoiceBlock;
+/** Curated icon keys for itinerary rows. UI maps these to lucide icons in
+ *  components/templates/itinerary-icons.tsx. */
+export type ItineraryIcon =
+  | "lodging" | "dining" | "activity" | "sightseeing"
+  | "flight" | "transport" | "place" | "time";
+
+export type ItineraryItem = {
+  id: string;
+  icon: ItineraryIcon;
+  title: string;
+  /** Optional second line, e.g. place / time */
+  sub?: string;
+};
+export type ItineraryGroup = {
+  id: string;
+  /** Free-text section header, e.g. "MON", "Day 1", "Morning" */
+  label: string;
+  items: ItineraryItem[];
+};
+/** A grouped schedule card (day-grouped rows + optional footer CTA). Distinct
+ *  from checklist (task progress): this is an agenda/itinerary. Bot only. */
+export type ItineraryBlock = {
+  type: "itinerary";
+  groups: ItineraryGroup[];
+  /** Optional footer button label (rendered black, inside the card). */
+  cta?: string;
+};
+
+export type Block = TextBlock | ActionsBlock | ProductsBlock | ChecklistBlock | StatusBlock | VoiceBlock | ItineraryBlock;
 
 // ── Product item ──────────────────────────────────────────
 

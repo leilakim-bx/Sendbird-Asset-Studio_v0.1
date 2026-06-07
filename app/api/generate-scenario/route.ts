@@ -26,10 +26,15 @@ Each element must be exactly one of these shapes:
 
 1. Text message (the only shape a user may send):
 { "type": "text", "role": "user" | "bot", "sender": "First name or bot", "text": "message content",
-  "verifications": ["optional bot-only activity log lines"] }
+  "verifications": ["optional bot-only activity log lines"],
+  "buttons": ["optional bot-only action buttons, 1-3"] }
+  → PREFERRED way to offer buttons: attach them to the bot's text so the reply and
+    its options render as ONE bubble. (Ignored on a user message.)
 
-2. Action buttons (bot only, 1-3 buttons):
+2. Action buttons — standalone, buttons only (bot only, 1-3 buttons):
 { "type": "actions", "buttons": ["Label A", "Label B"] }
+  → Use ONLY when buttons follow a non-text block (e.g. after "products"). For a
+    bot reply with text + buttons, use shape 1's "buttons" instead.
 
 3. Product cards (bot only, 1-2 items):
 { "type": "products", "items": [{ "name": "Product name", "sub": "Price or subtitle", "cta": "Button label", "imageQuery": "2-3 word photo search term" }] }
@@ -43,10 +48,14 @@ Each element must be exactly one of these shapes:
 6. Voice card (bot only — a spoken line). A voice card is a STANDALONE hero: if you use it, return it as the ONLY element in the array (no text/actions around it):
 { "type": "voice", "style": "quote" | "player", "transcript": "the spoken line", "caption": "optional caption", "eyebrow": "optional bold label" }
 
+7. Itinerary (bot only — a grouped schedule/agenda: day-grouped rows + optional footer button). Best for travel plans, trip itineraries, multi-day agendas. 1-4 groups, 1-5 rows each. "icon" MUST be one of: lodging, dining, activity, sightseeing, flight, transport, place, time:
+{ "type": "itinerary", "groups": [{ "label": "MON" (or "Day 1"/"Morning"), "items": [{ "icon": "lodging", "title": "Check in at 4pm", "sub": "InterContinental Thalasso" }] }], "cta": "optional footer button e.g. Start booking" }
+  → The itinerary card is tall. Keep this scenario compact: just the user's question followed directly by the itinerary card — do NOT add a separate bot intro line (e.g. "Here is your itinerary") before it.
+
 Interpreting the marketer's prompt:
 - The prompt may be short, vague, or just a few keywords. Treat it as the INTENT, not a script to copy.
 - Infer a concrete, credible scenario that best showcases the capability: invent specific names, products, prices, numbers, and steps that fit. Do NOT echo the prompt verbatim and never ask for clarification — always produce a finished scenario.
-- Proactively choose the bubble types that make the strongest demo for that intent (checklist, status, products, voice, actions) — don't fall back to plain text when a richer card would land better.
+- Proactively choose the bubble types that make the strongest demo for that intent (checklist, status, products, voice, actions, itinerary) — don't fall back to plain text when a richer card would land better.
 - Stay within the domain the marketer implied and respect any explicit detail they gave; fill in everything else with realistic specifics.
 
 Rules:
@@ -66,23 +75,39 @@ type AnthropicResponse = {
 
 // ── Mock mode ─────────────────────────────────────────────
 // Set ANTHROPIC_API_KEY=mock in .env.local to test the UI without a real key.
-// The mock exercises ALL SIX bubble types across its keyword flavors so the
+// The mock exercises ALL SEVEN bubble types across its keyword flavors so the
 // render path for every block can be verified end-to-end without a live key.
 
 function mockMessages(prompt: string): unknown[] {
   const lower = prompt.toLowerCase();
   const short = prompt.length < 80 ? prompt : "";
 
-  const hasVoice    = /voice|call|phone|speak|spoke|talk|hotline/i.test(lower);
-  const hasTask     = /task|workflow|automat|multi-step|step|onboard|provision|migrat/i.test(lower);
-  const hasStatus   = /order|track|status|deliver|refund|confirm|payment|booking/i.test(lower);
-  const hasProduct  = /hotel|flight|book|shop|product|buy|item|recommend|store|cart/i.test(lower);
-  const hasHandoff  = /human|agent|escalat|support|handoff/i.test(lower);
+  const hasVoice     = /voice|call|phone|speak|spoke|talk|hotline/i.test(lower);
+  const hasItinerary = /itinerary|trip|travel|vacation|tour|things to do|agenda|plan (a|my|the)?\s*(trip|day|week|visit)/i.test(lower);
+  const hasTask      = /task|workflow|automat|multi-step|step|onboard|provision|migrat/i.test(lower);
+  const hasStatus    = /order|track|status|deliver|refund|confirm|payment|booking/i.test(lower);
+  const hasProduct   = /hotel|flight|book|shop|product|buy|item|recommend|store|cart/i.test(lower);
+  const hasHandoff   = /human|agent|escalat|support|handoff/i.test(lower);
 
   if (hasVoice) {
     // Voice renders as a standalone hero card — a single voice message only.
     return [
       { type: "voice", style: "player", eyebrow: "Voice AI", transcript: "Your reservation is confirmed for Friday at 7 PM. I've texted you the details.", caption: "Spoken in a natural, on-brand voice" },
+    ];
+  }
+
+  if (hasItinerary) {
+    return [
+      { type: "text", role: "user", sender: "Eloy", text: short || "What is there to do in Bora Bora?" },
+      { type: "itinerary", cta: "Start booking", groups: [
+        { label: "MON", items: [
+          { icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso" },
+          { icon: "dining",  title: "Dinner",          sub: "Bora Bora Beach Club Restaurant" },
+        ]},
+        { label: "TUE", items: [
+          { icon: "activity", title: "Snorkeling", sub: "Matira Lagoon · 9:00 AM" },
+        ]},
+      ]},
     ];
   }
 
@@ -112,9 +137,8 @@ function mockMessages(prompt: string): unknown[] {
   if (hasHandoff) {
     return [
       { type: "text", role: "user", sender: "Morgan", text: short || "I have an urgent issue with my recent purchase." },
-      { type: "text", sender: "bot", text: "I understand this is urgent. Let me connect you with a specialist — typical wait is under 2 minutes." },
+      { type: "text", sender: "bot", text: "I understand this is urgent. Let me connect you with a specialist — typical wait is under 2 minutes.", buttons: ["Connect to agent", "Schedule callback", "Continue with AI"] },
       { type: "status", label: "Connecting you to a live agent", variant: "warning" },
-      { type: "actions", buttons: ["Connect to agent", "Schedule callback", "Continue with AI"] },
     ];
   }
 
@@ -133,8 +157,7 @@ function mockMessages(prompt: string): unknown[] {
   // Generic fallback
   return [
     { type: "text", role: "user", sender: "Sam", text: short || "Can you help me with this?" },
-    { type: "text", sender: "bot", text: "Of course! I've got everything handled. Here's what I recommend." },
-    { type: "actions", buttons: ["Get started", "Learn more"] },
+    { type: "text", sender: "bot", text: "Of course! I've got everything handled. Here's what I recommend.", buttons: ["Get started", "Learn more"] },
   ];
 }
 

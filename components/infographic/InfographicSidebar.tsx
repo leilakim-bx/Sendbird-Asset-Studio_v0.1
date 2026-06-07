@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Plus, Pencil, Trash2, ChevronDown, AppWindow, FileText } from "lucide-react";
+import { Sparkles, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -31,9 +31,9 @@ const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
 ];
 const ACCENT_OPTIONS: InfographicAccent[] = ["lime", "blue", "red", "green"];
 
-const FORMAT_OPTIONS: { id: InfographicFormat; label: string; Icon: typeof FileText }[] = [
-  { id: "product", label: "Product feature", Icon: AppWindow },
-  { id: "blog", label: "Blog/Perspective", Icon: FileText },
+const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
+  { id: "product", label: "Product feature" },
+  { id: "blog", label: "Blog/Perspective" },
 ];
 
 const ADD_TYPES: { type: InfographicBlockType; label: string }[] = [
@@ -187,8 +187,8 @@ export function InfographicSidebar() {
 
       {/* Format */}
       <Section title="Format">
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E] border border-studio-border">
-          {FORMAT_OPTIONS.map(({ id, label, Icon }) => (
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+          {FORMAT_OPTIONS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setInfographicFormat(id)}
@@ -200,7 +200,6 @@ export function InfographicSidebar() {
                   : "text-studio-muted hover:text-studio-text",
               ].join(" ")}
             >
-              <Icon size={13} className="shrink-0" />
               {label}
             </button>
           ))}
@@ -303,8 +302,8 @@ export function InfographicSidebar() {
         </div>
       </Section>
 
-      {/* Blocks */}
-      <Section title="Blocks">
+      {/* Blocks — disabled for now (feature to be developed) */}
+      <Section title="Blocks" badge="Soon" disabled>
         <div className="flex flex-col gap-1.5 mb-2">
           {content.blocks.length === 0 && (
             <p className="text-[11px] text-studio-muted py-2">No blocks yet. Add one below.</p>

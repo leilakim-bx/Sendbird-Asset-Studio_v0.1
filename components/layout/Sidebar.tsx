@@ -182,7 +182,18 @@ export function GuideModal({ onClose, initialSection = "getting-started" }: { on
 
 // ── New Asset Modal ───────────────────────────────────────
 
-const ASSET_TYPES = [
+type AssetType = {
+  id: string;
+  icon: typeof MessageSquare;
+  title: string;
+  description: string;
+  /** Clickable + navigable. */
+  ready: boolean;
+  /** Usable but still being developed → shows an "In progress" badge. */
+  inProgress?: boolean;
+};
+
+const ASSET_TYPES: AssetType[] = [
   {
     id: "feature-mockup",
     icon: MessageSquare,
@@ -195,7 +206,8 @@ const ASSET_TYPES = [
     icon: BarChart3,
     title: "Infographic",
     description: "Data-driven infographics and visual summaries for reports, overviews, and marketing decks.",
-    ready: false,
+    ready: true,
+    inProgress: true,
   },
   {
     id: "product-ui",
@@ -261,12 +273,15 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-studio-text text-sm font-medium">{type.title}</p>
-                    {!type.ready && (
+                    {!type.ready ? (
                       <span className="text-[10px] text-studio-muted border border-studio-border rounded-full px-2 py-0.5">
                         Soon
                       </span>
-                    )}
-                    {type.ready && (
+                    ) : type.inProgress ? (
+                      <span className="text-[10px] bg-studio-accent/[0.12] border border-studio-accent/30 text-studio-accent rounded-full px-2 py-0.5 font-medium">
+                        In progress
+                      </span>
+                    ) : (
                       <span className="text-[10px] bg-studio-accent text-studio-accent-fg rounded-full px-2 py-0.5 font-medium">
                         Ready
                       </span>

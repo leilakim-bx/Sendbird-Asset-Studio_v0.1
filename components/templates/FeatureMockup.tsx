@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useEffect, memo } from "react";
-import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock } from "@/lib/store";
+import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock, ItineraryBlock } from "@/lib/store";
 import { computeCapacity } from "@/lib/canvas-capacity";
 import { EXPORT_SIZES } from "@/lib/template-registry";
 import { ChecklistStatusIcon } from "./checklist-status-icon";
+import { itineraryIcon } from "./itinerary-icons";
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -28,6 +29,30 @@ export type FeatureMockupProps = {
 // 단일 소스: lib/template-registry 의 EXPORT_SIZES (preview/export 치수 불일치 방지)
 const SIZES = EXPORT_SIZES;
 
+// ── ActionPills — shared button column ───────────────────
+// Used by BOTH the bot text bubble (TextBlock.buttons add-on) and the
+// standalone ActionButtons card, so the two never visually diverge.
+function ActionPills({ buttons, scale, mt = 0 }: { buttons: string[]; scale: number; mt?: number }) {
+  const fs = Math.min(1, scale);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale), marginTop: mt }}>
+      {buttons.map((btn, i) => (
+        <div key={i} style={{
+          borderRadius: 12,
+          padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
+          textAlign: "center",
+          fontSize: 14 * fs,
+          color: "#3B3530",
+          background: "#E5E3DF",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}>{btn}</div>
+      ))}
+    </div>
+  );
+}
+
 // ── ChatBubble — user 오른쪽 / ai 왼쪽 ───────────────────
 
 const ChatBubble = memo(function ChatBubble({
@@ -37,7 +62,6 @@ const ChatBubble = memo(function ChatBubble({
   userAvatarUrl,
   scale,
   br = 18,
-  inlineButtons,
 }: {
   msg: ChatMessage;   // caller guarantees block.type === "text"
   appName: string;
@@ -46,12 +70,13 @@ const ChatBubble = memo(function ChatBubble({
   scale: number;
   /** bubble border-radius factor (default 18; pass 14 for mobile) */
   br?: number;
-  inlineButtons?: string[];  // bot 버블에 합쳐질 action buttons
 }) {
   const isUser = msg.role === "user";
   const text = (msg.block as TextBlock).text;
   // Internal AI activity log — bot bubbles only
   const verifications = !isUser ? (msg.block as TextBlock).verifications : undefined;
+  // Action buttons add-on — bot bubbles only
+  const buttons = !isUser ? (msg.block as TextBlock).buttons : undefined;
   // Global profile takes priority; fall back to per-message values
   const displayName   = isUser ? (userName   || msg.sender) : appName;
   const displayAvatar = isUser ? (userAvatarUrl || msg.avatar) : undefined;
@@ -67,6 +92,10 @@ const ChatBubble = memo(function ChatBubble({
     }}>
       <div style={{
         maxWidth: "75%",
+        // With buttons, match the standalone ActionButtons card's fixed 75% width
+        // so "text + buttons" and a standalone buttons card read identically even
+        // when the text is short.
+        ...(buttons && buttons.length > 0 ? { width: "75%", minWidth: "75%" } : {}),
         borderRadius: Math.round(br * scale),
         padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
         background: "#ffffff",
@@ -111,23 +140,9 @@ const ChatBubble = memo(function ChatBubble({
             </div>
           </div>
         )}
-        {/* Inline action buttons (bot 전용) */}
-        {inlineButtons && (
-          <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale), marginTop: Math.round(10 * scale) }}>
-            {inlineButtons.map((btn, i) => (
-              <div key={i} style={{
-                borderRadius: 12,
-                padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
-                textAlign: "center",
-                fontSize: 14 * fs,
-                color: "#3B3530",
-                background: "#E5E3DF",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}>{btn}</div>
-            ))}
-          </div>
+        {/* Action buttons add-on (bot 전용) */}
+        {buttons && buttons.length > 0 && (
+          <ActionPills buttons={buttons} scale={scale} mt={Math.round(10 * scale)} />
         )}
       </div>
     </div>
@@ -137,7 +152,7 @@ const ChatBubble = memo(function ChatBubble({
 // ── ActionButtons ─────────────────────────────────────────
 
 const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18 }: { msg: ChatMessage; scale: number; appName: string; br?: number }) {
-  const { buttons, text } = msg.block as ActionsBlock;
+  const { buttons } = msg.block as ActionsBlock;
   const fs = Math.min(1, scale);
   return (
     <div style={{
@@ -159,30 +174,8 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18
           <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
           <span style={{ fontSize: 12 * fs, color: "#8C867E", lineHeight: 1 }}>{appName}</span>
         </div>
-        {/* Text (optional) */}
-        {text && (
-          <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: `0 0 ${Math.round(8 * scale)}px`, overflowWrap: "anywhere", wordBreak: "break-word" }}>
-            {text}
-          </p>
-        )}
-        {/* Buttons */}
-        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale) }}>
-          {buttons.map((btn, i) => (
-            <div key={i} style={{
-              borderRadius: 12,
-              padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
-              textAlign: "center",
-              fontSize: 14 * fs,
-              color: "#3B3530",
-              background: "#E5E3DF",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}>
-              {btn}
-            </div>
-          ))}
-        </div>
+        {/* Buttons (shared with the bot text bubble's add-on) */}
+        <ActionPills buttons={buttons} scale={scale} />
       </div>
     </div>
   );
@@ -451,6 +444,76 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
   );
 });
 
+// ── ItineraryCard — grouped schedule ──────────────────────
+
+const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobile = false }: { msg: ChatMessage; scale: number; br?: number; isMobile?: boolean }) {
+  const { groups, cta } = msg.block as ItineraryBlock;
+  const fs = Math.min(1, scale);
+  const iconSize = Math.round(24 * scale);
+
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
+      <div style={{
+        width: "85%",
+        borderRadius: Math.round(br * scale),
+        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(10 * scale)}px`,
+        background: "#ffffff",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      }}>
+        {groups.map((g, gi) => {
+          const last = gi === groups.length - 1;
+          return (
+            <div key={g.id} style={{ marginBottom: last ? Math.round(10 * scale) : Math.round(12 * scale) }}>
+              {/* Group header */}
+              <div style={{ fontSize: 13 * fs, fontWeight: 700, color: "#111", marginBottom: Math.round(7 * scale) }}>
+                {g.label}
+              </div>
+              {/* Rows */}
+              <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale) }}>
+                {g.items.map((it) => {
+                  const Icon = itineraryIcon(it.icon);
+                  return (
+                    <div key={it.id} style={{
+                      display: "flex", alignItems: "center", gap: Math.round(13 * scale),
+                      background: "#F3F1ED", borderRadius: Math.round(12 * scale),
+                      padding: `${Math.round(11 * scale)}px ${Math.round(15 * scale)}px`,
+                    }}>
+                      <Icon size={iconSize} strokeWidth={1.6} color="#5B554E" style={{ flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{
+                          fontSize: (isMobile ? 13 : 15) * fs, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.25,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        }}>{it.title}</div>
+                        {it.sub && (
+                          <div style={{
+                            fontSize: 13 * fs, color: "#8C867E", lineHeight: 1.3, marginTop: Math.round(2 * scale),
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>{it.sub}</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Footer CTA — black, inside the card (itinerary only) */}
+        {cta && cta.trim() && (
+          <div style={{
+            background: "#111111", color: "#ffffff",
+            borderRadius: Math.round(10 * scale),
+            padding: `${Math.round((isMobile ? 10 : 12) * scale)}px 0`, textAlign: "center",
+            fontSize: isMobile ? 11 : 15 * fs, fontWeight: 700,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>{cta}</div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 // ── VoiceCard — voice AI mockup ───────────────────────────
 
 const VoiceCard = memo(function VoiceCard({ block, width, isMobile }: { block: VoiceBlock; width: number; isMobile: boolean }) {
@@ -547,7 +610,7 @@ const PhoneFrame = memo(function PhoneFrame({
     : Math.min(1.08, width / 329);
   // 모바일(가변 높이)은 살짝 작은 r값 사용
   const isMobileFrame = maxHeight === undefined;
-  const bubbleR = isMobileFrame ? 14 : 18;
+  const bubbleR = isMobileFrame ? 17 : 18;
   const frameR  = isMobileFrame ? 26 : 32;
 
   const frameRef = useRef<HTMLDivElement>(null);
@@ -593,7 +656,7 @@ const PhoneFrame = memo(function PhoneFrame({
         width,
         borderRadius: frameR,
         overflow: "hidden",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
         ...(maxHeight !== undefined ? { maxHeight } : {}),
       }}
     >
@@ -653,6 +716,7 @@ const PhoneFrame = memo(function PhoneFrame({
           if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "status")    return <StatusPill     key={msg.id} msg={msg} scale={scale} />;
+          if (type === "itinerary") return <ItineraryCard  key={msg.id} msg={msg} scale={scale} br={bubbleR} isMobile={isMobileFrame} />;
           return null;
         })}
       </div>
@@ -708,12 +772,13 @@ export const FeatureMockup = memo(function FeatureMockup({
     : MIN_PAD;                                                   // center/mobile
 
   // 프레임 너비
+  // 비율 × 고정 캔버스 = 목표 px: mobile 343×0.73≈250, desktop center 866×0.4273≈370
   const maxFrameW = canvasW - hPadL - MIN_PAD;
   const frameW = Math.min(
     isMobile
-      ? Math.round(canvasW * 0.72)
+      ? Math.round(canvasW * 0.73)
       : isCenter
-        ? Math.round(canvasW * 0.42)
+        ? Math.round(canvasW * 0.4273)
         : Math.round(canvasW * 0.39),
     maxFrameW,
   );

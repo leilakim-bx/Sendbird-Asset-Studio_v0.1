@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, ShieldCheck, Plus, X } from "lucide-react";
+import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, Plus, X, MousePointerClick } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock } from "@/lib/store";
+import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock, ItineraryBlock, ItineraryGroup, ItineraryIcon } from "@/lib/store";
+import { ITINERARY_ICONS, itineraryIcon } from "@/components/templates/itinerary-icons";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { ChecklistStatusIcon } from "@/components/templates/checklist-status-icon";
@@ -38,6 +39,38 @@ const SectionLabel = ({ children, required }: { children: React.ReactNode; requi
     {children}{required && <span className="text-red-400 ml-0.5">*</span>}
   </p>
 );
+
+// Per-row icon dropdown for itinerary rows (curated set from itinerary-icons).
+function ItineraryIconPicker({ value, onChange }: { value: ItineraryIcon; onChange: (v: ItineraryIcon) => void }) {
+  const Current = itineraryIcon(value);
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        title="Choose icon"
+        className="shrink-0 w-10 h-7 flex items-center justify-center gap-0.5 rounded-md border border-studio-border bg-studio-sidebar text-studio-text hover:bg-studio-hover transition-colors"
+      >
+        <Current size={14} />
+        <ChevronDown size={10} className="text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={4}>
+          <Menu.Popup className="z-50 min-w-[150px] rounded-lg border border-studio-border bg-studio-sidebar shadow-xl py-1 outline-none">
+            {ITINERARY_ICONS.map(({ key, label, Icon }) => (
+              <Menu.Item
+                key={key}
+                onClick={() => onChange(key)}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover"
+              >
+                <Icon size={14} className="text-studio-muted" />
+                {label}
+              </Menu.Item>
+            ))}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
 
 type ProductItemRowProps = {
   item: ProductItem;
@@ -342,11 +375,19 @@ const MessageItem = memo(function MessageItem({
   // ── Text message ───────────────────────────────────────
   if (msg.block.type === "text") {
     const hasActivityLog = msg.role === "bot" && !!msg.block.verifications?.length;
+    const hasButtons = msg.role === "bot" && !!msg.block.buttons?.length;
+    // bot-only add-ons present → lock the sender toggle (can't become a user msg)
+    const lockSender = hasActivityLog || hasButtons;
+    const cardTitle =
+      hasActivityLog && hasButtons ? "Text + Log + Buttons"
+      : hasActivityLog ? "Text + Activity log"
+      : hasButtons ? "Text + Buttons"
+      : "Text";
     return (
       <div {...dragProps} className={wrapCls}>
         <CardHeader
-          title={hasActivityLog ? "Text + Activity log" : "Text"}
-          extra={hasActivityLog ? undefined : <SenderToggle />}
+          title={cardTitle}
+          extra={lockSender ? undefined : <SenderToggle />}
         />
         <textarea
           value={localText}
@@ -366,16 +407,10 @@ const MessageItem = memo(function MessageItem({
             onUpdate(msg.id, {
               block: { ...(msg.block as TextBlock), verifications: next.length ? next : undefined },
             });
+          // "Add AI activity log" entry point removed by request — existing logs
+          // (presets / "Text + Activity log" menu / AI-generated) stay editable below.
           if (!verifications || verifications.length === 0) {
-            return (
-              <button
-                onClick={() => setVerifications(["Verified"])}
-                className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
-              >
-                <ShieldCheck size={12} />
-                Add AI activity log
-              </button>
-            );
+            return null;
           }
           return (
             <div className="mt-1 pt-2 border-t border-studio-border flex flex-col gap-1.5">
@@ -414,6 +449,61 @@ const MessageItem = memo(function MessageItem({
             </div>
           );
         })()}
+        {msg.role === "bot" && (() => {
+          const buttons = (msg.block as TextBlock).buttons;
+          const setButtons = (next: string[]) =>
+            onUpdate(msg.id, {
+              block: { ...(msg.block as TextBlock), buttons: next.length ? next : undefined },
+            });
+          if (!buttons || buttons.length === 0) {
+            return (
+              <button
+                onClick={() => setButtons(["Option A"])}
+                className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+              >
+                <MousePointerClick size={12} />
+                Add buttons
+              </button>
+            );
+          }
+          return (
+            <div className="mt-1 pt-2 border-t border-studio-border flex flex-col gap-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-muted">
+                Action buttons
+              </div>
+              {buttons.map((b, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <Input
+                    value={b}
+                    onChange={(e) => {
+                      const next = [...buttons];
+                      next[i] = e.target.value;
+                      setButtons(next);
+                    }}
+                    placeholder={`Button ${i + 1}`}
+                    className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                  />
+                  <button
+                    onClick={() => setButtons(buttons.filter((_, idx) => idx !== i))}
+                    className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+                    aria-label="Remove button"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {buttons.length < 6 && (
+                <button
+                  onClick={() => setButtons([...buttons, ""])}
+                  className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+                >
+                  <Plus size={12} />
+                  Add button
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -424,13 +514,6 @@ const MessageItem = memo(function MessageItem({
     return (
       <div {...dragProps} className={wrapCls}>
         <CardHeader title="Action Buttons" />
-        <textarea
-          value={actionsBlock.text ?? ""}
-          onChange={(e) => onUpdate(msg.id, { block: { ...actionsBlock, text: e.target.value } })}
-          placeholder="Message text"
-          rows={2}
-          className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
-        />
         {actionsBlock.buttons.map((btn, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <Input
@@ -632,6 +715,111 @@ const MessageItem = memo(function MessageItem({
             ⚠️ Max items — Remove an item to add more
           </p>
         )}
+      </div>
+    );
+  }
+
+  // ── Itinerary ──────────────────────────────────────────
+  if (msg.block.type === "itinerary") {
+    const itin = msg.block as ItineraryBlock;
+    const commit = (groups: ItineraryGroup[], cta: string | undefined = itin.cta) =>
+      onUpdate(msg.id, { block: { type: "itinerary", groups, ...(cta && cta.trim() ? { cta } : {}) } });
+    const setGroups = (fn: (gs: ItineraryGroup[]) => ItineraryGroup[]) => commit(fn(itin.groups));
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <CardHeader title="Itinerary" />
+
+        <div className="flex flex-col gap-2.5">
+          {itin.groups.map((g, gi) => (
+            <div key={g.id} className="rounded-md border border-studio-border p-2 flex flex-col gap-1.5">
+              {/* Group label + remove group */}
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={g.label}
+                  onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi ? { ...x, label: e.target.value } : x))}
+                  placeholder="Day / section (e.g. MON)"
+                  className="flex-1 h-7 text-xs font-semibold bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:font-normal"
+                />
+                <button
+                  onClick={() => setGroups((gs) => gs.filter((_, i) => i !== gi))}
+                  disabled={itin.groups.length <= 1}
+                  aria-label="Remove group"
+                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+
+              {/* Rows */}
+              {g.items.map((it, ii) => (
+                <div key={it.id} className="flex items-start gap-1.5">
+                  <ItineraryIconPicker
+                    value={it.icon}
+                    onChange={(icon) => setGroups((gs) => gs.map((x, i) => i === gi
+                      ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, icon } : y) } : x))}
+                  />
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <Input
+                      value={it.title}
+                      onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                        ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, title: e.target.value } : y) } : x))}
+                      placeholder="Title"
+                      className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                    />
+                    <Input
+                      value={it.sub ?? ""}
+                      onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                        ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, sub: e.target.value || undefined } : y) } : x))}
+                      placeholder="Detail (optional)"
+                      className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
+                      ? { ...x, items: x.items.filter((_, j) => j !== ii) } : x))}
+                    disabled={g.items.length <= 1}
+                    aria-label="Remove row"
+                    className="shrink-0 w-5 h-5 mt-1 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add row */}
+              <button
+                onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
+                  ? { ...x, items: [...x.items, { id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined }] } : x))}
+                disabled={g.items.length >= 5}
+                className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Plus size={12} /> Add row
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add group */}
+        <button
+          onClick={() => setGroups((gs) => [...gs, { id: uid(), label: "", items: [{ id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined }] }])}
+          disabled={itin.groups.length >= 4 || canvasIsFull}
+          className="mt-1 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
+        >
+          + Add day
+        </button>
+
+        {/* Footer CTA */}
+        <div className="mt-1">
+          <SectionLabel>Footer button (optional)</SectionLabel>
+          <Input
+            value={itin.cta ?? ""}
+            onChange={(e) => commit(itin.groups, e.target.value)}
+            placeholder="e.g. Start booking"
+            maxLength={24}
+            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+        </div>
       </div>
     );
   }
@@ -1131,6 +1319,15 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
                     { id: uid(), label: "Task three", status: "pending" },
                   ]}})},
                   { label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
+                  { label: "Itinerary",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "itinerary", cta: "Start booking", groups: [
+                    { id: uid(), label: "Day 1", items: [
+                      { id: uid(), icon: "lodging", title: "Hotel check-in", sub: "4:00 PM" },
+                      { id: uid(), icon: "dining",  title: "Dinner",         sub: "Beach Club Restaurant" },
+                    ]},
+                    { id: uid(), label: "Day 2", items: [
+                      { id: uid(), icon: "activity", title: "Snorkeling", sub: "Lagoon · 9:00 AM" },
+                    ]},
+                  ]}})},
                 ] as const).map(({ label, add }) => (
                   <Menu.Item
                     key={label}

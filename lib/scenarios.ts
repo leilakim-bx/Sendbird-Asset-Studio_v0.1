@@ -80,19 +80,11 @@ export const SCENARIOS: Scenario[] = [
         id: "s2-1",
         role: "bot",
         sender: "bot",
-        block: { type: "text", text: "Your NYC flight tomorrow may be delayed. Want to rebook?" },
-      },
-      {
-        id: "s2-2",
-        role: "user",
-        sender: "James",
-        block: { type: "text", text: "Yes please." },
-      },
-      {
-        id: "s2-3",
-        role: "bot",
-        sender: "bot",
-        block: { type: "actions", buttons: ["Rebook morning", "Keep current", "Refund"] },
+        block: {
+          type: "text",
+          text: "Your NYC flight tomorrow may be delayed. Want to rebook?",
+          buttons: ["Rebook morning", "Keep current", "Refund"],
+        },
       },
     ],
   },
@@ -181,6 +173,47 @@ export const SCENARIOS: Scenario[] = [
             "Identity verified",
             "PII redacted from logs",
             "Source: live banking API",
+          ],
+        },
+      },
+    ],
+  },
+
+  // 7. Travel Itinerary
+  {
+    id: "travel-itinerary",
+    name: "Travel Planner",
+    tagline: "AI that plans your trip",
+    messages: [
+      {
+        id: "s6-1",
+        role: "user",
+        sender: "Eloy",
+        block: { type: "text", text: "What is there to do in Bora Bora?" },
+      },
+      {
+        id: "s6-3",
+        role: "bot",
+        sender: "bot",
+        block: {
+          type: "itinerary",
+          cta: "Start booking",
+          groups: [
+            {
+              id: "s6-g1",
+              label: "MON",
+              items: [
+                { id: "s6-g1-i1", icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso" },
+                { id: "s6-g1-i2", icon: "dining",  title: "Dinner",          sub: "Bora Bora Beach Club Restaurant" },
+              ],
+            },
+            {
+              id: "s6-g2",
+              label: "TUE",
+              items: [
+                { id: "s6-g2-i1", icon: "activity", title: "Snorkeling", sub: "Matira Lagoon · 9:00 AM" },
+              ],
+            },
           ],
         },
       },

@@ -30,12 +30,13 @@ const textMsg = z.object({
   sender: z.string().optional(),
   text: z.string().min(1),
   verifications: z.array(z.string().min(1)).optional(),
+  // Action buttons attached to a bot text bubble (add-on). Dropped for users.
+  buttons: z.array(z.string().min(1)).min(1).max(6).optional(),
 });
 
 const actionsMsg = z.object({
   type: z.literal("actions"),
   buttons: z.array(z.string().min(1)).min(1).max(6),
-  text: z.string().optional(),
 });
 
 const productItem = z.object({
@@ -74,6 +75,21 @@ const voiceMsg = z.object({
   eyebrow: z.string().optional(),
 });
 
+const itineraryItem = z.object({
+  icon: z.enum(["lodging", "dining", "activity", "sightseeing", "flight", "transport", "place", "time"]),
+  title: z.string().min(1),
+  sub: z.string().optional(),
+});
+const itineraryGroup = z.object({
+  label: z.string().min(1),
+  items: z.array(itineraryItem).min(1).max(5),
+});
+const itineraryMsg = z.object({
+  type: z.literal("itinerary"),
+  groups: z.array(itineraryGroup).min(1).max(4),
+  cta: z.string().optional(),
+});
+
 const scenarioMsg = z.discriminatedUnion("type", [
   textMsg,
   actionsMsg,
@@ -81,6 +97,7 @@ const scenarioMsg = z.discriminatedUnion("type", [
   checklistMsg,
   statusMsg,
   voiceMsg,
+  itineraryMsg,
 ]);
 
 export type ScenarioMsg = z.infer<typeof scenarioMsg>;
@@ -100,6 +117,8 @@ function toMessage(p: ScenarioMsg, id: string): ChatMessage {
         type: "text",
         text: p.text,
         ...(p.verifications?.length ? { verifications: p.verifications } : {}),
+        // buttons are bot-only — drop them on a user message
+        ...(role === "bot" && p.buttons?.length ? { buttons: p.buttons } : {}),
       };
       return role === "user"
         ? { id, role: "user", sender, block }
@@ -110,7 +129,7 @@ function toMessage(p: ScenarioMsg, id: string): ChatMessage {
         id,
         role: "bot",
         sender: "bot",
-        block: { type: "actions", buttons: p.buttons, ...(p.text ? { text: p.text } : {}) },
+        block: { type: "actions", buttons: p.buttons },
       };
     case "products":
       return {
@@ -145,6 +164,26 @@ function toMessage(p: ScenarioMsg, id: string): ChatMessage {
       };
     case "status":
       return { id, role: "bot", sender: "bot", block: { type: "status", label: p.label, variant: p.variant } };
+    case "itinerary":
+      return {
+        id,
+        role: "bot",
+        sender: "bot",
+        block: {
+          type: "itinerary",
+          groups: p.groups.map((g, gi) => ({
+            id: `${id}-g${gi}`,
+            label: g.label,
+            items: g.items.map((it, j) => ({
+              id: `${id}-g${gi}-i${j}`,
+              icon: it.icon,
+              title: it.title,
+              ...(it.sub ? { sub: it.sub } : {}),
+            })),
+          })),
+          ...(p.cta ? { cta: p.cta } : {}),
+        },
+      };
     case "voice":
       return {
         id,
