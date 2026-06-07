@@ -453,9 +453,13 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
 
 // ── VoiceCard — voice AI mockup ───────────────────────────
 
-const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock; width: number }) {
+const VoiceCard = memo(function VoiceCard({ block, width, isMobile }: { block: VoiceBlock; width: number; isMobile: boolean }) {
   const scale = Math.min(1.1, width / 520);
   const fs = Math.min(1, scale);
+
+  // 텍스트 base 크기 — 모바일은 키운 값(28/18), 데스크탑은 원래 값(24/15). fs로 폭에 맞춰 추가 스케일.
+  const tBase = isMobile ? 28 : 24; // transcript / eyebrow
+  const cBase = isMobile ? 18 : 15; // caption
 
   const cardBase = {
     width,
@@ -479,10 +483,10 @@ const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock;
         {/* Body */}
         <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(4 * scale)}px ${Math.round(16 * scale)}px ${Math.round(8 * scale)}px` }}>
           {block.eyebrow && (
-            <span style={{ fontSize: 24 * fs, fontWeight: 500, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
+            <span style={{ fontSize: tBase * fs, fontWeight: 500, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
           )}
           <span style={{
-            fontSize: 24 * fs, fontWeight: 400, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em",
+            fontSize: tBase * fs, fontWeight: 400, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em",
             overflowWrap: "anywhere", wordBreak: "break-word",
             display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
           }}>{block.transcript}</span>
@@ -498,14 +502,14 @@ const VoiceCard = memo(function VoiceCard({ block, width }: { block: VoiceBlock;
       <img src="/preview/voice_icon.png" alt="" width={Math.round(56 * scale)} height={Math.round(56 * scale)} style={{ borderRadius: "50%", display: "block" }} />
       <span style={{
         fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
-        fontSize: 24 * fs, fontWeight: 500, color: "#292016", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
+        fontSize: tBase * fs, fontWeight: 500, color: "#292016", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
         maxWidth: "100%", overflowWrap: "anywhere", wordBreak: "break-word",
         display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
       }}>
         {"“" + block.transcript + "”"}
       </span>
       {block.caption && (
-        <span style={{ fontSize: 15 * fs, color: "#4a4a4a", textAlign: "center" }}>{block.caption}</span>
+        <span style={{ fontSize: cBase * fs, color: "#4a4a4a", textAlign: "center" }}>{block.caption}</span>
       )}
     </div>
   );
@@ -714,10 +718,11 @@ export const FeatureMockup = memo(function FeatureMockup({
     maxFrameW,
   );
 
-  // 보이스 카드는 고정 width 530, 항상 중앙 정렬 (캔버스를 넘지 않게 cap)
-  const voiceFrameW = Math.min(530, canvasW - MIN_PAD * 2);
+  // 보이스 카드 폭: 모바일은 270 고정, 데스크탑은 530 (캔버스를 넘지 않게 cap)
+  const voiceFrameW = isMobile ? 270 : Math.min(530, canvasW - MIN_PAD * 2);
 
-  const justifyContent = isVoice ? "center" : isSplit ? "flex-start" : "center";
+  // 정렬: split은 좌하단, 그 외(center/mobile)는 중앙. 보이스 카드도 다른 카드와 동일하게 따름.
+  const justifyContent = isSplit ? "flex-start" : "center";
   // 모바일은 가변 높이 — maxFrameH 제약 없음
   const maxFrameH = isMobile ? undefined : canvasH - vPad * 2;
 
@@ -772,12 +777,12 @@ export const FeatureMockup = memo(function FeatureMockup({
           ? { gridArea: "1/1", position: "relative", zIndex: 1, minHeight: canvasH, boxSizing: "border-box" as const }
           : { position: "absolute", inset: 0 }),
         display: "flex",
-        alignItems: isVoice ? "center" : isSplit ? "flex-end" : "center",
+        alignItems: isSplit ? "flex-end" : "center",
         justifyContent,
         padding: contentPadding,
       }}>
         {voice ? (
-          <VoiceCard block={voice} width={voiceFrameW} />
+          <VoiceCard block={voice} width={voiceFrameW} isMobile={isMobile} />
         ) : isEmpty ? null : (
           <PhoneFrame
             appName={appName}

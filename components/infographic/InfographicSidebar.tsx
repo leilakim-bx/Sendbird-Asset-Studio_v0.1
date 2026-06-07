@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Sparkles, Plus, Pencil, Trash2, ChevronDown, AppWindow, FileText } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -11,10 +11,18 @@ import {
   type InfographicAccent,
   type InfographicBlock,
   type InfographicBlockType,
+  type InfographicFormat,
 } from "@/lib/types/infographic";
 import { INFOGRAPHIC_PRESETS, PRESET_META, createBlock } from "@/lib/infographic-presets";
+import {
+  validateSuggestions,
+  suggestionToBlock,
+  type Suggestion,
+} from "@/lib/ai/validate-suggestions";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
+import { SuggestionsModal } from "./SuggestionsModal";
 
 const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
   { id: "sky", name: "Sky" },
@@ -22,6 +30,11 @@ const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
   { id: "warmgray", name: "Warm gray" },
 ];
 const ACCENT_OPTIONS: InfographicAccent[] = ["lime", "blue", "red", "green"];
+
+const FORMAT_OPTIONS: { id: InfographicFormat; label: string; Icon: typeof FileText }[] = [
+  { id: "product", label: "Product feature", Icon: AppWindow },
+  { id: "blog", label: "Blog/Perspective", Icon: FileText },
+];
 
 const ADD_TYPES: { type: InfographicBlockType; label: string }[] = [
   { type: "stat", label: "Stat" },
@@ -53,6 +66,7 @@ export function InfographicSidebar() {
   const {
     infographicContent: content,
     setInfographicContent,
+    setInfographicFormat,
     setInfographicBg,
     setInfographicAccent,
     setInfographicTitle,
@@ -64,9 +78,58 @@ export function InfographicSidebar() {
 
   const [activePreset, setActivePreset] = useState("brand-stat");
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
-  const [aiHint, setAiHint] = useState(false);
+
+  // ── AI Magic state ──
+  const [article, setArticle] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [applyNotice, setApplyNotice] = useState<string | null>(null);
 
   if (!content) return null;
+
+  async function handleAnalyze() {
+    const text = article.trim();
+    if (!text || analyzing) return;
+    setAnalyzing(true);
+    setAnalyzeError(null);
+    setApplyNotice(null);
+    try {
+      const res = await fetch("/api/analyze-article", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ article: text }),
+      });
+      const data = (await res.json()) as { suggestions?: unknown; error?: string };
+      if (!res.ok) throw new Error(data?.error || `Analysis failed (${res.status})`);
+      // Re-validate client-side as defense-in-depth: the modal only ever
+      // receives suggestions that pass our schema.
+      setSuggestions(validateSuggestions(data));
+      setModalOpen(true);
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Analysis failed");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  function applySuggestions(picked: Suggestion[]) {
+    if (!content || picked.length === 0) return;
+    const first = picked[0];
+    // Fill the title only if the canvas doesn't already have one (don't clobber
+    // text the marketer typed).
+    if (first.suggestedTitle && !content.title?.trim()) {
+      setInfographicTitle(first.suggestedTitle);
+    }
+    addInfographicBlock(suggestionToBlock(first));
+    setModalOpen(false);
+    setApplyNotice(
+      picked.length > 1
+        ? "Applied the first suggestion. Creating multiple infographics at once is coming later."
+        : "Added to your canvas.",
+    );
+  }
 
   function loadPreset(id: string) {
     const meta = PRESET_META[id];
@@ -92,33 +155,57 @@ export function InfographicSidebar() {
   return (
     <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
       {/* AI Magic */}
-      <div
-        className="m-4 rounded-xl p-3.5 border"
-        style={{
-          background: "linear-gradient(135deg, rgba(212,255,77,0.12), rgba(39,166,247,0.08))",
-          borderColor: "rgba(212,255,77,0.25)",
-        }}
-      >
-        <div className="flex items-center gap-1.5 mb-2">
-          <Sparkles size={14} className="text-studio-accent" />
-          <span className="text-[11px] font-semibold text-studio-text tracking-tight">AI MAGIC</span>
+      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
+            <Sparkles size={13} className="text-studio-text" fill="currentColor" />
+          </span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
         </div>
-        <p className="text-[10.5px] text-studio-muted leading-snug mb-2.5">
-          Paste your article and AI will suggest infographics that fit your data.
-        </p>
+        {/* Composer — borderless textarea with a bottom-right send button */}
         <textarea
+          value={article}
+          onChange={(e) => setArticle(e.target.value)}
+          disabled={analyzing}
           placeholder="Paste article text here…"
-          className="w-full bg-black/30 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] text-studio-text outline-none focus:border-studio-accent transition-colors resize-none min-h-16 placeholder:text-[#555]"
+          rows={5}
+          className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] disabled:opacity-60 min-h-[96px]"
         />
-        <button
-          onClick={() => setAiHint(true)}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 bg-studio-accent text-studio-accent-fg rounded-md text-[11px] font-semibold hover:opacity-90 transition-opacity"
-        >
-          <Sparkles size={12} />
-          Analyze
-        </button>
-        {aiHint && <p className="mt-1.5 text-[9.5px] text-studio-muted">✨ AI suggestions arrive in step 4.</p>}
+        <div className="flex justify-end">
+          <AiMagicButton
+            label="Analyze"
+            loading={analyzing}
+            disabled={analyzing || !article.trim()}
+            onClick={handleAnalyze}
+          />
+        </div>
+        {analyzeError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{analyzeError}</p>}
+        {applyNotice && !analyzeError && (
+          <p className="mt-1.5 text-[10px] text-studio-muted leading-snug">{applyNotice}</p>
+        )}
       </div>
+
+      {/* Format */}
+      <Section title="Format">
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E] border border-studio-border">
+          {FORMAT_OPTIONS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setInfographicFormat(id)}
+              aria-pressed={content.format === id}
+              className={[
+                "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap",
+                content.format === id
+                  ? "bg-studio-hover text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              <Icon size={13} className="shrink-0" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </Section>
 
       {/* Preset */}
       <Section title="Preset">
@@ -127,6 +214,7 @@ export function InfographicSidebar() {
             const meta = PRESET_META[p.id];
             const soon = meta?.soon;
             const active = activePreset === p.id && !soon;
+            const Icon = meta?.Icon;
             return (
               <button
                 key={p.id}
@@ -135,25 +223,25 @@ export function InfographicSidebar() {
                 className={[
                   "flex items-center gap-2.5 rounded-lg px-2.5 py-2 border text-left transition-colors",
                   soon
-                    ? "border-studio-border opacity-50 cursor-not-allowed"
+                    ? "border-transparent opacity-50 cursor-not-allowed"
                     : active
-                      ? "border-studio-accent bg-studio-accent/[0.06] cursor-pointer"
-                      : "border-studio-border hover:border-studio-muted cursor-pointer",
+                      ? "border-studio-accent cursor-pointer hover:bg-white/[0.06]"
+                      : "border-transparent cursor-pointer hover:bg-white/[0.06]",
                 ].join(" ")}
               >
                 <span
-                  className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center text-xs"
-                  style={{ background: INFOGRAPHIC_BG_HEX[p.bg], color: "#1C1917", border: "1px solid rgba(255,255,255,0.06)" }}
+                  className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center"
+                  style={{ background: "#2E2E2E", color: "#FFFFFF" }}
                 >
-                  {meta?.icon}
+                  {Icon && <Icon size={14} />}
                 </span>
                 <span className="flex-1 text-[11.5px] font-medium text-studio-text">{p.name}</span>
                 {soon ? (
-                  <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-studio-accent/[0.12] border border-studio-accent/30 text-studio-accent">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/[0.12] border border-studio-accent/30 text-studio-accent">
                     Soon
                   </span>
                 ) : (
-                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/[0.04] text-studio-muted">
+                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-white/[0.04] text-studio-muted">
                     {meta?.typeLabel}
                   </span>
                 )}
@@ -164,7 +252,7 @@ export function InfographicSidebar() {
       </Section>
 
       {/* Background */}
-      <Section title="Background" defaultCollapsed>
+      <Section title="Background">
         <div className="flex gap-1.5 flex-wrap">
           {BG_OPTIONS.map((bg) => (
             <button
@@ -182,7 +270,7 @@ export function InfographicSidebar() {
       </Section>
 
       {/* Accent */}
-      <Section title="Accent" defaultCollapsed>
+      <Section title="Accent">
         <div className="flex gap-1.5 flex-wrap">
           {ACCENT_OPTIONS.map((ac) => (
             <button
@@ -282,6 +370,15 @@ export function InfographicSidebar() {
           </Menu.Portal>
         </Menu.Root>
       </Section>
+
+      <SuggestionsModal
+        open={modalOpen}
+        suggestions={suggestions}
+        bg={content.bg}
+        accent={content.accent}
+        onClose={() => setModalOpen(false)}
+        onCreate={applySuggestions}
+      />
     </div>
   );
 }

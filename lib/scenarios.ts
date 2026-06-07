@@ -49,7 +49,28 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 2. Proactive Outreach
+  // 2. Voice AI
+  {
+    id: "voice-ai",
+    name: "Voice AI",
+    tagline: "AI that speaks",
+    messages: [
+      {
+        id: "v1-1",
+        role: "bot",
+        sender: "bot",
+        block: {
+          type: "voice",
+          style: "quote",
+          transcript: "Your order is ready for pickup. Use code 7291 to skip the line — we're holding it until 8pm.",
+          caption: "Order notification",
+          eyebrow: "Voice AI agents:",
+        },
+      },
+    ],
+  },
+
+  // 3. Proactive Outreach
   {
     id: "proactive-outreach",
     name: "Proactive Chat",
@@ -76,7 +97,7 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 3. Omnichannel Pickup
+  // 4. Omnichannel Pickup
   {
     id: "omnichannel-pickup",
     name: "Omnipresence",
@@ -103,7 +124,7 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 4. Agent Steward
+  // 5. Agent Steward
   {
     id: "agent-steward",
     name: "Agent Steward",
@@ -137,7 +158,7 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 5. Trust & Governance
+  // 6. Trust & Governance
   {
     id: "trust-governance",
     name: "Trust & Governance",
@@ -166,66 +187,4 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 6. Personalization
-  {
-    id: "personalization",
-    name: "Personalization",
-    tagline: "Knows your taste",
-    imageCategory: "fashion clothing",
-    messages: [
-      {
-        id: "s6-1",
-        role: "user",
-        sender: "Emma",
-        block: { type: "text", text: "Anything new in stock?" },
-      },
-      {
-        id: "s6-2",
-        role: "bot",
-        sender: "bot",
-        block: { type: "text", text: "You like minimal beige tones. These just arrived:" },
-      },
-      {
-        id: "s6-3",
-        role: "bot",
-        sender: "bot",
-        block: {
-          type: "products",
-          items: [
-            { img: "", name: "Linen Coat",    sub: "$189", cta: "Buy now", imageQuery: "linen coat" },
-            { img: "", name: "Oversized Tee", sub: "$54",  cta: "Buy now", imageQuery: "oversized t-shirt" },
-          ],
-        },
-      },
-    ],
-  },
-
-  // 7. Voice AI
-  {
-    id: "voice-ai",
-    name: "Voice AI",
-    tagline: "AI that speaks",
-    messages: [
-      {
-        id: "v1-1",
-        role: "bot",
-        sender: "bot",
-        block: {
-          type: "voice",
-          style: "quote",
-          transcript: "Your order is ready for pickup. Use code 7291 to skip the line — we're holding it until 8pm.",
-          caption: "Order notification",
-          eyebrow: "Voice AI agents:",
-        },
-      },
-    ],
-  },
-
-  // 8. None — background only (no chat frame)
-  {
-    id: "none",
-    name: "None",
-    tagline: "Background only — no chat frame",
-    messages: [],
-  },
 ];

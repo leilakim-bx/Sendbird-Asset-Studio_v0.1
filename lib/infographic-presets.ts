@@ -1,3 +1,12 @@
+import {
+  TrendingUp,
+  LayoutGrid,
+  BarChart3,
+  ListOrdered,
+  Workflow,
+  Plus,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   InfographicBlock,
   InfographicBlockType,
@@ -15,15 +24,15 @@ export type InfographicPreset = {
   blocks: InfographicBlock[];
 };
 
-export type PresetMeta = { icon: string; typeLabel: string; soon: boolean };
+export type PresetMeta = { Icon: LucideIcon; typeLabel: string; soon: boolean };
 
 export const PRESET_META: Record<string, PresetMeta> = {
-  "brand-stat": { icon: "◉", typeLabel: "stat", soon: false },
-  "impact-metrics": { icon: "▦", typeLabel: "kpi", soon: true },
-  "channel-comparison": { icon: "▬", typeLabel: "bar", soon: true },
-  "how-it-works": { icon: "↓", typeLabel: "step", soon: true },
-  "agent-overview": { icon: "✱", typeLabel: "node", soon: true },
-  empty: { icon: "+", typeLabel: "blank", soon: false },
+  "brand-stat": { Icon: TrendingUp, typeLabel: "stat", soon: false },
+  "impact-metrics": { Icon: LayoutGrid, typeLabel: "kpi", soon: true },
+  "channel-comparison": { Icon: BarChart3, typeLabel: "bar", soon: true },
+  "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: true },
+  "agent-overview": { Icon: Workflow, typeLabel: "node", soon: true },
+  empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
 
 export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
@@ -133,7 +142,8 @@ export function getPreset(id: string): InfographicPreset | undefined {
 }
 
 let blockSeq = 0;
-function newBlockId() {
+/** Unique id for a freshly created block (shared by "+ Add block" and AI apply). */
+export function newBlockId() {
   blockSeq += 1;
   return `blk-${Date.now().toString(36)}-${blockSeq}`;
 }

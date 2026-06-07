@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Home, ChevronDown, LayoutTemplate, FileText } from "lucide-react";
+import { Home, ChevronDown, AppWindow, FileText } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import { exportImage } from "@/lib/export";
@@ -19,7 +19,7 @@ const BLOG_MIN_H = 480;
 const MAX_PREVIEW_W = 580;
 
 export function InfographicShell({ template }: { template: InfographicTemplate }) {
-  const { infographicContent, setInfographicContent, setInfographicFormat } = useEditorStore();
+  const { infographicContent, setInfographicContent } = useEditorStore();
 
   // Seed session content from the template on mount.
   useEffect(() => {
@@ -87,11 +87,6 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const previewH = format === "product" ? PRODUCT_H : blogHeight;
   const scale = Math.min(1, MAX_PREVIEW_W / previewW);
 
-  const FORMAT_TABS: { id: InfographicFormat; label: string; Icon: typeof LayoutTemplate }[] = [
-    { id: "product", label: "Product", Icon: LayoutTemplate },
-    { id: "blog", label: "Blog", Icon: FileText },
-  ];
-
   return (
     <div className="flex flex-col h-full">
       {/* Top bar */}
@@ -108,25 +103,12 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       <div className="flex flex-1 min-h-0">
         {/* Left: preview */}
         <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-studio-bg overflow-auto py-8">
-          {/* Format tabs */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-studio-sidebar">
-            {FORMAT_TABS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                onClick={() => setInfographicFormat(id)}
-                aria-pressed={format === id}
-                className={[
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                  format === id
-                    ? "bg-studio-hover text-studio-text"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                <Icon size={14} />
-                {label}
-              </button>
-            ))}
-          </div>
+          {/* Preview label — format + dimensions (toggle lives in the sidebar) */}
+          <p className="text-studio-muted text-xs uppercase tracking-wider">
+            Preview — {format === "product"
+              ? `Product feature ${PRODUCT_W}×${PRODUCT_H}`
+              : `Blog/Perspective ${BLOG_W}×${blogHeight}`}
+          </p>
 
           {/* Scaled preview */}
           <div
@@ -173,9 +155,9 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                       >
                         <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                          <LayoutTemplate size={16} className="text-studio-text" />
+                          <AppWindow size={16} className="text-studio-text" />
                         </span>
-                        <span className="flex-1">Product</span>
+                        <span className="flex-1">Product feature</span>
                         <span className="text-[11px] text-studio-muted tabular-nums">{PRODUCT_W}×{PRODUCT_H}</span>
                       </Menu.Item>
 
@@ -186,7 +168,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
                         <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                           <FileText size={16} className="text-studio-text" />
                         </span>
-                        <span className="flex-1">Blog</span>
+                        <span className="flex-1">Blog/Perspective</span>
                         <span className="text-[11px] text-studio-muted tabular-nums">{BLOG_W}×{blogHeight}</span>
                       </Menu.Item>
                     </Menu.Popup>

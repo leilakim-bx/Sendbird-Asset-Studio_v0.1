@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { Sparkles, Search, RotateCcw, ChevronDown, Copy, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, MessageSquare, MousePointerClick, ShoppingBag, ListChecks, Activity, Mic, UserRound, Bot, ShieldCheck, Plus, X } from "lucide-react";
+import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, ShieldCheck, Plus, X } from "lucide-react";
 import { SCENARIOS } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
 import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock } from "@/lib/store";
@@ -10,21 +10,15 @@ import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { ChecklistStatusIcon } from "@/components/templates/checklist-status-icon";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Menu } from "@base-ui/react/menu";
+import { ScenarioList } from "./ScenarioList";
+import { ScenarioLibraryModal } from "./ScenarioLibraryModal";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-const SCENARIO_PLACEHOLDERS = [
-  "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly",
-  "e.g. Agent checks flight prices and books the cheapest option",
-  "e.g. User asks for today's weather, AI replies with outfit suggestion",
-  "e.g. AI greets new user, asks 3 questions, then shows a personalized plan",
-  "e.g. Support agent detects an issue and proactively offers a refund",
-  "e.g. AI recommends a product, user taps to buy in one step",
-];
+// 고정 예시 프롬프트 — 롤링 대신 가장 결과가 잘 나오는 대표 예시 하나로 고정
+const EXAMPLE_PROMPT = "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly";
 
 /** Search Pexels for a product photo matching the keyword.
  *  Returns a proxy-wrapped image URL, or empty string on failure. */
@@ -50,10 +44,9 @@ type ProductItemRowProps = {
   index: number;
   onUpdate: (patch: Partial<ProductItem>) => void;
   onRemove: () => void;
-  onDuplicate: () => void;
 };
 
-function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: ProductItemRowProps) {
+function ProductItemRow({ item, index, onUpdate, onRemove }: ProductItemRowProps) {
   const [loading, setLoading] = useState(false);
   const [imageQuery, setImageQuery] = useState(item.imageQuery || item.name);
 
@@ -74,10 +67,7 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
     <div className="bg-studio-bg border border-studio-border rounded-lg overflow-hidden">
       {/* Card header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-studio-border">
-        <span className="text-xs font-medium text-studio-text flex-1">Product {index + 1}</span>
-        <button onClick={onDuplicate} title="Duplicate" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors">
-          <Copy size={12} />
-        </button>
+        <span className="text-xs font-medium text-studio-muted flex-1">Product {index + 1}</span>
         <button onClick={onRemove} title="Delete" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-red-400 hover:bg-studio-hover transition-colors">
           <Trash2 size={12} />
         </button>
@@ -118,20 +108,33 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
           </div>
         </div>
 
-        {/* IMAGE section — 컴팩트 한 줄: 썸네일 + 검색(Enter) + 재검색(↻) */}
+        {/* IMAGE — 라벨 없이 한 줄: 썸네일(hover 시 새로고침) + 검색(Enter). 검색창 확장 */}
         <div>
-          <SectionLabel>Image</SectionLabel>
           <div className="flex items-center gap-2">
-            {/* Thumbnail */}
-            {item.img ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.img} alt={item.name}
-                className="w-11 h-11 rounded-md object-cover border border-studio-border shrink-0" />
-            ) : (
-              <div className="w-11 h-11 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center shrink-0">
-                <Search size={14} className="text-studio-muted opacity-40" />
-              </div>
-            )}
+            {/* Thumbnail — hover 시 새로고침 버튼 오버레이 */}
+            <div className="group/thumb relative w-11 h-11 shrink-0">
+              {item.img ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.img} alt={item.name}
+                  className="w-11 h-11 rounded-md object-cover border border-studio-border" />
+              ) : (
+                <div className="w-11 h-11 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center">
+                  <Search size={14} className="text-studio-muted opacity-40" />
+                </div>
+              )}
+              <button
+                onClick={applyImage}
+                disabled={loading || !imageQuery.trim()}
+                title="Try another image"
+                aria-label="Try another image"
+                className={[
+                  "absolute inset-0 flex items-center justify-center rounded-md bg-black/55 text-white transition-opacity disabled:cursor-not-allowed",
+                  loading ? "opacity-100" : "opacity-0 group-hover/thumb:opacity-100",
+                ].join(" ")}
+              >
+                <RotateCcw size={15} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
             {/* Search query — Enter to fetch */}
             <div className="relative flex-1 min-w-0">
               <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
@@ -143,16 +146,6 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
                 className="h-8 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
               />
             </div>
-            {/* Re-fetch another image */}
-            <button
-              onClick={applyImage}
-              disabled={loading || !imageQuery.trim()}
-              title="Try another image"
-              aria-label="Try another image"
-              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-studio-muted"
-            >
-              <RotateCcw size={13} className={loading ? "animate-spin" : ""} />
-            </button>
           </div>
         </div>
       </div>
@@ -162,90 +155,35 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
 
 // ── Section wrapper ───────────────────────────────────────
 
-// 섹션 접힘 상태 영속화 — 에디터 스토어와 분리된 별도 localStorage 키 (마이그레이션 불필요)
-const SECTION_COLLAPSE_KEY = "sendbird-section-collapsed-v1";
-
-function readCollapsedMap(): Record<string, boolean> {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || "{}") as Record<string, boolean>;
-  } catch {
-    return {};
-  }
-}
-
-function writeCollapsed(title: string, collapsed: boolean) {
-  if (typeof window === "undefined") return;
-  try {
-    const map = readCollapsedMap();
-    map[title] = collapsed;
-    localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(map));
-  } catch {
-    // 쿼터 초과 등은 조용히 무시
-  }
-}
-
 function Section({
   title,
   info,
   action,
-  defaultCollapsed = false,
   children,
 }: {
   title: string;
   /** Optional hover hint shown via an ℹ️ icon next to the title */
   info?: string;
   action?: React.ReactNode;
-  /** 첫 진입(저장값 없음) 시 접힘 여부. 정적 prop이라 SSR/CSR 초기 렌더 일치 → 하이드레이션 안전 */
-  defaultCollapsed?: boolean;
   children: React.ReactNode;
 }) {
-  // 일회성 기본값: 저장값이 없으면 defaultCollapsed를 따르고, 사용자가 한 번이라도
-  // 토글하면 그 값이 영속되어 기본값을 덮어쓴다.
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  useEffect(() => {
-    const stored = readCollapsedMap()[title];
-    if (stored !== undefined) setCollapsed(stored);
-  }, [title]);
-
-  const toggle = () =>
-    setCollapsed((c) => {
-      const next = !c;
-      writeCollapsed(title, next);
-      return next;
-    });
-
   return (
-    <div className="pb-5 mb-5">
-      <div className={`flex items-center justify-between ${collapsed ? "" : "mb-3"}`}>
-        <div className="flex items-center gap-1.5">
-          {/* chevron+타이틀 영역만 토글 (info / action 버튼과 충돌 방지) */}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={!collapsed}
-            className="flex items-center gap-1.5 -ml-0.5 group/sec"
-          >
-            <ChevronDown
-              size={13}
-              className={`shrink-0 text-studio-muted transition-transform group-hover/sec:text-studio-text ${collapsed ? "-rotate-90" : ""}`}
-            />
-            <p className="text-xs font-semibold text-studio-muted uppercase tracking-wider group-hover/sec:text-studio-text transition-colors">
-              {title}
-            </p>
-          </button>
-          {info && (
-            <span className="relative group/tip flex items-center">
-              <Info size={14} className="text-studio-muted cursor-help" />
-              <span className="pointer-events-none absolute top-full left-0 mt-1.5 z-20 w-52 px-2 py-1 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug normal-case tracking-normal font-normal opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                {info}
-              </span>
+    <div className="border-b border-studio-border">
+      <div className="flex items-center gap-1.5 px-[18px] py-3.5">
+        <span className="text-[10px] font-semibold text-studio-muted uppercase tracking-[0.12em]">
+          {title}
+        </span>
+        {info && (
+          <span className="relative group/tip flex items-center">
+            <Info size={14} className="text-studio-muted cursor-help" />
+            <span className="pointer-events-none absolute top-full left-0 mt-1.5 z-20 w-52 px-2 py-1 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug normal-case tracking-normal font-normal opacity-0 group-hover/tip:opacity-100 transition-opacity">
+              {info}
             </span>
-          )}
-        </div>
-        {action}
+          </span>
+        )}
+        {action && <span className="ml-auto flex items-center">{action}</span>}
       </div>
-      {!collapsed && children}
+      <div className="px-[18px] pb-4">{children}</div>
     </div>
   );
 }
@@ -358,15 +296,11 @@ const MessageItem = memo(function MessageItem({
   const showLineAbove = isDragOver && dragFrom !== null && dragFrom > index;
   const showLineBelow = isDragOver && dragFrom !== null && dragFrom < index;
   const wrapCls = [
-    "relative bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
+    "relative bg-studio-hover rounded-lg p-2.5 flex flex-col gap-1.5 transition-opacity",
     dragFrom === index ? "opacity-40" : "",
     showLineAbove ? "before:content-[''] before:absolute before:left-0 before:right-0 before:-top-1 before:h-0.5 before:bg-studio-accent before:rounded-full" : "",
     showLineBelow ? "after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-0.5 after:bg-studio-accent after:rounded-full" : "",
   ].join(" ");
-
-  // 역할별 왼쪽 색 띠: User = 민트, Bot(delight.ai) = 브랜드 라임
-  const roleColor = msg.role === "user" ? "#D0F3E6" : "#D4FF4D";
-  const wrapStyle = { borderLeft: `3px solid ${roleColor}` };
 
   const dragProps = {
     draggable: true as const,
@@ -389,11 +323,10 @@ const MessageItem = memo(function MessageItem({
   );
 
   // 카드 헤더: 1줄 = 아이콘 + 타입 타이틀 + (우측 extra) + ✕, (선택) 2줄 = 발신자
-  const CardHeader = ({ icon: Icon, title, extra, sender }: { icon: typeof MessageSquare; title: string; extra?: React.ReactNode; sender?: React.ReactNode }) => (
+  const CardHeader = ({ title, extra, sender }: { title: string; extra?: React.ReactNode; sender?: React.ReactNode }) => (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
-        <Icon size={13} className="shrink-0 text-studio-muted" />
-        <span className="text-xs text-studio-muted flex-1">{title}</span>
+        <span className="text-xs font-medium text-studio-text flex-1">{title}</span>
         {extra}
         <button
           onClick={() => onRemove(msg.id)}
@@ -410,9 +343,8 @@ const MessageItem = memo(function MessageItem({
   if (msg.block.type === "text") {
     const hasActivityLog = msg.role === "bot" && !!msg.block.verifications?.length;
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+      <div {...dragProps} className={wrapCls}>
         <CardHeader
-          icon={hasActivityLog ? ShieldCheck : MessageSquare}
           title={hasActivityLog ? "Text + Activity log" : "Text"}
           extra={hasActivityLog ? undefined : <SenderToggle />}
         />
@@ -490,8 +422,8 @@ const MessageItem = memo(function MessageItem({
   if (msg.block.type === "actions") {
     const actionsBlock = msg.block as ActionsBlock;
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
-        <CardHeader icon={MousePointerClick} title="Action Buttons" />
+      <div {...dragProps} className={wrapCls}>
+        <CardHeader title="Action Buttons" />
         <textarea
           value={actionsBlock.text ?? ""}
           onChange={(e) => onUpdate(msg.id, { block: { ...actionsBlock, text: e.target.value } })}
@@ -541,20 +473,12 @@ const MessageItem = memo(function MessageItem({
     const productsBlock = msg.block as ProductsBlock;
     const count = productsBlock.items.length;
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+      <div {...dragProps} className={wrapCls}>
         {/* Block header */}
-        <CardHeader
-          icon={ShoppingBag}
-          title="Product Cards"
-          extra={
-            <span className="shrink-0 text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
-              {count}
-            </span>
-          }
-        />
+        <CardHeader title="Product Cards" />
 
         {/* Per-card rows */}
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="flex flex-col gap-2 mt-2">
           {productsBlock.items.map((item, i) => (
             <ProductItemRow
               key={item.imageQuery ? `${item.imageQuery}-${i}` : i}
@@ -567,11 +491,6 @@ const MessageItem = memo(function MessageItem({
               }}
               onRemove={() => {
                 const items = productsBlock.items.filter((_, idx) => idx !== i);
-                onUpdate(msg.id, { block: { type: "products", items } });
-              }}
-              onDuplicate={() => {
-                const items = [...productsBlock.items];
-                items.splice(i + 1, 0, { ...item });
                 onUpdate(msg.id, { block: { type: "products", items } });
               }}
             />
@@ -616,8 +535,8 @@ const MessageItem = memo(function MessageItem({
       done: "Done",
     };
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
-        <CardHeader icon={ListChecks} title="Checklist" />
+      <div {...dragProps} className={wrapCls}>
+        <CardHeader title="Checklist" />
         <div className="flex flex-col gap-1.5">
           {checklistBlock.items.map((item, i) => (
             <div key={item.id} className="flex items-center gap-1.5">
@@ -722,9 +641,8 @@ const MessageItem = memo(function MessageItem({
     const statusBlock = msg.block as StatusBlock;
 
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+      <div {...dragProps} className={wrapCls}>
         <CardHeader
-          icon={Activity}
           title="Status"
           extra={
             <IconSegmentToggle
@@ -758,9 +676,8 @@ const MessageItem = memo(function MessageItem({
     const patch = (p: Partial<VoiceBlock>) => onUpdate(msg.id, { block: { ...voiceBlock, ...p } });
 
     return (
-      <div {...dragProps} className={wrapCls} style={wrapStyle}>
+      <div {...dragProps} className={wrapCls}>
         <CardHeader
-          icon={Mic}
           title="Voice"
           extra={
             <IconSegmentToggle
@@ -816,6 +733,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   const [avatarLoadError, setAvatarLoadError] = useState(false);
   const {
     layout, setLayout,
+    exportSize, setExportSize,
     backgroundId, setBackgroundId,
     appName, setAppName,
     messages, addMessage, updateMessage, removeMessage, setMessages,
@@ -826,30 +744,17 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
+  const [showScenarioModal, setShowScenarioModal] = useState(false);
 
   // ── Scenario ───────────────────────────────────────────
   // Default: first scenario pre-selected (matches EditorShell's seed on fresh load)
   const [activeScenario,    setActiveScenario]    = useState<string | null>(SCENARIOS[0].id);
-  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
   const [genPrompt,  setGenPrompt]  = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
 
-  // ── Rotating placeholder ───────────────────────────────
-  const [phIdx,     setPhIdx]     = useState(0);
-  const [phOpacity, setPhOpacity] = useState(1);
+  // ── Placeholder (focus 시 숨김) ─────────────────────────
   const [phFocused, setPhFocused] = useState(false);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhOpacity(0);
-      setTimeout(() => {
-        setPhIdx((i) => (i + 1) % SCENARIO_PLACEHOLDERS.length);
-        setPhOpacity(1);
-      }, 300);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
 
   /** product cards 중 imageQuery 있고 img 없는 항목 자동 fetch */
   function autoFetchImages(msgs: ChatMessage[]) {
@@ -891,13 +796,9 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** 드롭다운 변경 시 — 메시지가 있으면 confirm, 없으면 즉시 적용 */
+  /** 시나리오 선택 시 즉시 적용 (확인 모달 없음 — 빠른 전환 우선) */
   function handleScenarioChange(id: string) {
-    if (messages.length > 0) {
-      setPendingScenarioId(id);
-    } else {
-      applyScenario(id);
-    }
+    applyScenario(id);
   }
 
   async function handleGenerate() {
@@ -914,8 +815,16 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         body:    JSON.stringify({ prompt }),
       });
       const data = await res.json() as { messages?: unknown[]; error?: string };
-      if (!res.ok) { setGenError(data.error ?? "Generation failed"); return; }
-      setMessages(data.messages as Parameters<typeof setMessages>[0]);
+      if (!res.ok || !data.messages?.length) {
+        setGenError(data.error ?? "Couldn't generate a scenario — try rephrasing.");
+        return;
+      }
+      // Server already validated + converted to ChatMessage[]. Apply, then
+      // fetch product photos (parity with applyScenario — handleGenerate used
+      // to skip this, so generated product cards rendered with no images).
+      const msgs = data.messages as Parameters<typeof setMessages>[0];
+      setMessages(msgs);
+      autoFetchImages(msgs);
     } catch {
       setGenError("Network error — please try again");
     } finally {
@@ -1042,9 +951,85 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         title="Drag to resize panel"
       />
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto">
 
-      <Section title="Background" defaultCollapsed>
+      {/* AI MAGIC — generate a chat scenario from a description */}
+      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
+            <Sparkles size={13} className="text-studio-text" fill="currentColor" />
+          </span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
+        </div>
+        {/* Composer — borderless textarea with a bottom-right send button */}
+        <div className="relative">
+          <textarea
+            value={genPrompt}
+            onChange={(e) => setGenPrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+            onFocus={() => setPhFocused(true)}
+            onBlur={() => setPhFocused(false)}
+            placeholder=""
+            rows={5}
+            disabled={genLoading}
+            className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] disabled:opacity-60 disabled:cursor-not-allowed min-h-[96px]"
+          />
+          {/* Fixed example prompt — hidden when typing or focused */}
+          {!genPrompt && !phFocused && (
+            <p className="absolute top-0 left-0 right-0 text-xs text-studio-muted pointer-events-none leading-snug">
+              {EXAMPLE_PROMPT}
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end">
+          <AiMagicButton
+            label="Create with AI"
+            loading={genLoading}
+            disabled={genLoading || !genPrompt.trim()}
+            onClick={handleGenerate}
+          />
+        </div>
+        {genError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{genError}</p>}
+      </div>
+
+      {/* Scenario — preset-style list (mirrors infographic Preset cards) */}
+      <Section
+        title="Scenario"
+        action={
+          <button
+            onClick={() => setShowScenarioModal(true)}
+            title="All scenarios"
+            aria-label="All scenarios"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+          >
+            <Plus size={15} />
+          </button>
+        }
+      >
+        <ScenarioList activeId={activeScenario} onPick={handleScenarioChange} limit={4} />
+      </Section>
+
+      {showScenarioModal && (
+        <ScenarioLibraryModal
+          activeId={activeScenario}
+          onSelect={handleScenarioChange}
+          onClose={() => setShowScenarioModal(false)}
+        />
+      )}
+
+      <Section
+        title="Background"
+        action={
+          <button
+            onClick={() => setShowBgModal(true)}
+            title="Background Library"
+            aria-label="Background Library"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+          >
+            <Plus size={15} />
+          </button>
+        }
+      >
         <div className="grid grid-cols-3 gap-2">
           {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
             <button
@@ -1062,13 +1047,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             </button>
           ))}
         </div>
-        {/* Browse / upload more — placed below the grid like "+ Add message" */}
-        <button
-          onClick={() => setShowBgModal(true)}
-          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors"
-        >
-          Background Library
-        </button>
       </Section>
 
       {showBgModal && (
@@ -1081,7 +1059,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       )}
 
-      <Section title="Layout" defaultCollapsed>
+      <Section title="Layout">
         <ToggleGroup
           value={layout}
           options={[
@@ -1090,89 +1068,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           ]}
           onChange={setLayout}
         />
-      </Section>
-
-      <Section title="Scenario">
-        {/* Dropdown */}
-        <Select
-          value={activeScenario ?? ""}
-          onValueChange={(val) => handleScenarioChange(String(val))}
-        >
-          <SelectTrigger className="w-full h-8 border-studio-border bg-studio-hover text-studio-text text-sm rounded-lg">
-            <span className="flex-1 text-left truncate">
-              {SCENARIOS.find((s) => s.id === activeScenario)?.name ?? "Select a scenario"}
-            </span>
-          </SelectTrigger>
-          <SelectContent className="bg-studio-sidebar border border-studio-border shadow-lg rounded-lg py-1">
-            {SCENARIOS.map((s) => (
-              <SelectItem
-                key={s.id}
-                value={s.id}
-                className="text-xs text-studio-text rounded-none px-3 py-1.5 cursor-default focus:bg-studio-hover focus:text-white! focus:**:text-white! data-[highlighted]:bg-studio-hover data-[highlighted]:text-white! data-[highlighted]:**:text-white!"
-              >
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Tagline */}
-        {activeScenario && (() => {
-          const s = SCENARIOS.find((s) => s.id === activeScenario);
-          return s ? (
-            <p className="text-[11px] text-studio-muted mt-1.5 leading-relaxed">
-              &ldquo;{s.tagline}&rdquo;
-            </p>
-          ) : null;
-        })()}
-
-        {/* ─── or ─── */}
-        <div className="flex items-center gap-2 my-3">
-          <div className="flex-1 h-px bg-studio-border" />
-          <span className="text-[10px] text-studio-muted uppercase tracking-widest">or</span>
-          <div className="flex-1 h-px bg-studio-border" />
-        </div>
-
-        {/* AI generate */}
-        <div className="flex flex-col gap-2">
-          <div className="relative">
-            <textarea
-              value={genPrompt}
-              onChange={(e) => setGenPrompt(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-              onFocus={() => setPhFocused(true)}
-              onBlur={() => setPhFocused(false)}
-              placeholder=""
-              rows={4}
-              disabled
-              className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent opacity-50 cursor-not-allowed"
-            />
-            {/* Rotating placeholder overlay — hidden when typing or focused */}
-            {!genPrompt && !phFocused && (
-              <p
-                style={{ opacity: phOpacity, transition: "opacity 300ms" }}
-                className="absolute inset-0 px-3 py-2 text-xs text-studio-muted pointer-events-none leading-relaxed"
-              >
-                {SCENARIO_PLACEHOLDERS[phIdx]}
-              </p>
-            )}
-          </div>
-          {/* Generate with AI — coming soon */}
-          <button
-            onClick={handleGenerate}
-            disabled
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-hover border border-studio-border text-studio-text text-xs font-medium opacity-50 cursor-not-allowed transition-colors"
-          >
-            <Sparkles size={12} />
-            {genLoading ? "Generating…" : "Generate with AI"}
-            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
-              Soon
-            </span>
-          </button>
-          {genError && (
-            <p className="text-xs text-red-400">{genError}</p>
-          )}
-        </div>
       </Section>
 
       <Section title="Messages" info="Once the frame is full, you can't add more messages — remove or shorten one to make room.">
@@ -1251,22 +1146,32 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </Menu.Root>
       </Section>
 
-      <Section title="User Profile" defaultCollapsed>
+      <Section title="User Profile">
         <div className="flex items-center gap-2">
-          {/* Avatar preview */}
-          {userAvatarUrl && !avatarLoadError ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={userAvatarUrl}
-              src={userAvatarUrl}
-              alt={userName}
-              className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
-              onError={() => setAvatarLoadError(true)}
-              onLoad={() => setAvatarLoadError(false)}
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
-          )}
+          {/* Avatar — hover 시 shuffle 버튼 오버레이 */}
+          <div className="group/avatar relative w-8 h-8 shrink-0">
+            {userAvatarUrl && !avatarLoadError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={userAvatarUrl}
+                src={userAvatarUrl}
+                alt={userName}
+                className="w-8 h-8 rounded-full object-cover border border-studio-border"
+                onError={() => setAvatarLoadError(true)}
+                onLoad={() => setAvatarLoadError(false)}
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border" />
+            )}
+            <button
+              onClick={shuffleUserProfile}
+              title="Shuffle name & avatar"
+              aria-label="Shuffle name & avatar"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity"
+            >
+              <RotateCcw size={13} />
+            </button>
+          </div>
           {/* Name input */}
           <Input
             value={userName}
@@ -1274,22 +1179,10 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             placeholder="User name"
             className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
           />
-          {/* Shuffle button */}
-          <div className="relative group/tip shrink-0">
-            <button
-              onClick={shuffleUserProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
-            >
-              <RotateCcw size={13} />
-            </button>
-            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-              Shuffle name &amp; avatar
-            </span>
-          </div>
         </div>
       </Section>
 
-      <Section title="App Name" defaultCollapsed>
+      <Section title="App Name">
         <Input
           value={appName}
           onChange={(e) => setAppName(e.target.value)}
@@ -1298,36 +1191,13 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       </Section>
 
-      {/* Scenario switch confirm modal */}
-      {pendingScenarioId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-studio-sidebar border border-studio-border rounded-2xl p-5 w-64 shadow-xl flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-semibold text-studio-text mb-1">Replace current messages?</p>
-              <p className="text-xs text-studio-muted">
-                Switching to &ldquo;{SCENARIOS.find((s) => s.id === pendingScenarioId)?.name}&rdquo; will overwrite your current messages.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPendingScenarioId(null)}
-                className="flex-1 h-8 rounded-lg border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  applyScenario(pendingScenarioId);
-                  setPendingScenarioId(null);
-                }}
-                className="flex-1 h-8 rounded-lg bg-studio-accent text-studio-accent-fg text-xs font-semibold hover:opacity-90 transition-opacity"
-              >
-                Replace
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Section title="Export Size">
+        <ToggleGroup
+          value={exportSize}
+          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
+          onChange={setExportSize}
+        />
+      </Section>
 
       </div> {/* /p-5 */}
     </div>

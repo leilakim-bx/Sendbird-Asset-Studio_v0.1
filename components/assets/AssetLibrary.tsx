@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutList, LayoutGrid, Search, Trash2, Pencil } from "lucide-react";
+import { Menu, LayoutGrid, Search, Trash2, Pencil } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import type { SavedAsset } from "@/lib/store";
 
@@ -183,7 +183,7 @@ export function AssetLibrary({ title, mounted }: Props) {
               onClick={() => setViewMode("list")}
               className={["p-1.5 rounded-md transition-colors", viewMode === "list" ? "bg-studio-sidebar text-studio-text" : "text-studio-muted hover:text-studio-text"].join(" ")}
             >
-              <LayoutList size={14} />
+              <Menu size={14} />
             </button>
             <button
               onClick={() => setViewMode("grid")}
