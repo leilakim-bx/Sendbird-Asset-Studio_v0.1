@@ -7,12 +7,15 @@ import { type ReactNode } from "react";
 export function Section({
   title,
   badge,
+  action,
   disabled = false,
   children,
 }: {
   title: string;
   /** Optional pill next to the title (e.g. "Soon"). */
   badge?: string;
+  /** Optional control rendered at the header's right edge (e.g. a toggle). */
+  action?: ReactNode;
   /** Dim + block interaction with the section body (feature not ready yet). */
   disabled?: boolean;
   /** Kept for call-site compatibility; no longer collapses. */
@@ -28,6 +31,7 @@ export function Section({
             {badge}
           </span>
         )}
+        {action && <span className="ml-auto flex items-center">{action}</span>}
       </div>
       <div
         className={["px-[18px] pb-4", disabled ? "opacity-50 pointer-events-none select-none" : ""].join(" ")}

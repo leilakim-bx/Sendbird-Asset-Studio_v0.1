@@ -4,6 +4,8 @@ import { KpiGroupBlock } from "./KpiGroupBlock";
 import { BarGroupBlock } from "./BarGroupBlock";
 import { StepBlock } from "./StepBlock";
 import { NodeListBlock } from "./NodeListBlock";
+import { CompareBlock } from "./CompareBlock";
+import { LineChartBlock } from "./LineChartBlock";
 
 /** Renders a single infographic block by type. */
 export function BlockRenderer({ block }: { block: InfographicBlock }) {
@@ -18,5 +20,9 @@ export function BlockRenderer({ block }: { block: InfographicBlock }) {
       return <StepBlock block={block} />;
     case "node-list":
       return <NodeListBlock block={block} />;
+    case "compare":
+      return <CompareBlock block={block} />;
+    case "line-chart":
+      return <LineChartBlock block={block} />;
   }
 }

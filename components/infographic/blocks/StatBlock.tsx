@@ -1,8 +1,5 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
-import {
-  INFOGRAPHIC_INK,
-  INFOGRAPHIC_INK_MUTED,
-} from "@/lib/types/infographic";
+import { INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
 
 type Props = { block: Extract<InfographicBlock, { type: "stat" }> };
 
@@ -19,11 +16,14 @@ export function StatBlock({ block }: Props) {
       {eyebrow && (
         <span
           style={{
+            alignSelf: "center",
             fontSize: 14,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
+            fontWeight: 500,
+            letterSpacing: "-0.015em",
             color: INFOGRAPHIC_INK_MUTED,
+            background: "rgba(0,0,0,0.05)",
+            padding: "6px 14px",
+            borderRadius: 8,
           }}
         >
           {eyebrow}
@@ -33,11 +33,12 @@ export function StatBlock({ block }: Props) {
       <span
         style={{
           fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
-          fontSize: 140,
+          fontSize: 116,
           lineHeight: 0.95,
           letterSpacing: "-0.05em",
-          color: INFOGRAPHIC_INK,
+          color: "#292016",
           width: "fit-content",
+          alignSelf: "center",
           ...(highlightNumber
             ? {
                 background: "var(--ig-accent)",
@@ -51,7 +52,21 @@ export function StatBlock({ block }: Props) {
       </span>
 
       {label && (
-        <span style={{ fontSize: 16, color: INFOGRAPHIC_INK_MUTED, maxWidth: 480 }}>
+        <span
+          style={{
+            alignSelf: "center",
+            textAlign: "center",
+            fontSize: 15,
+            lineHeight: 1.4,
+            color: INFOGRAPHIC_INK_MUTED,
+            maxWidth: 480,
+            // max 3 lines, ellipsis on overflow
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 3,
+            overflow: "hidden",
+          }}
+        >
           {label}
         </span>
       )}

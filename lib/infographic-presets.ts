@@ -28,23 +28,29 @@ export type PresetMeta = { Icon: LucideIcon; typeLabel: string; soon: boolean };
 
 export const PRESET_META: Record<string, PresetMeta> = {
   "brand-stat": { Icon: TrendingUp, typeLabel: "stat", soon: false },
-  "impact-metrics": { Icon: LayoutGrid, typeLabel: "kpi", soon: true },
-  "channel-comparison": { Icon: BarChart3, typeLabel: "bar", soon: true },
-  "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: true },
-  "agent-overview": { Icon: Workflow, typeLabel: "node", soon: true },
+  "impact-metrics": { Icon: LayoutGrid, typeLabel: "kpi", soon: false },
+  "channel-comparison": { Icon: BarChart3, typeLabel: "bar", soon: false },
+  "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: false },
+  "agent-overview": { Icon: Workflow, typeLabel: "node", soon: false },
   empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
 
 export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
   {
     id: "brand-stat",
-    name: "Brand stat",
+    name: "Big number",
     bg: "warmgray",
-    title: "AI is brand equity now.",
-    footnote:
-      "83% of consumers credit the brand, reading AI as a sign the company is modern, competent, and respects their time.",
+    title: "",
+    footnote: "",
     blocks: [
-      { id: "p-stat-1", type: "stat", eyebrow: "RETAIL", number: "83%", highlightNumber: true, label: "link AI to brand trust" },
+      {
+        id: "p-stat-1",
+        type: "stat",
+        eyebrow: "💸 CX technology spend per year",
+        number: "$22B",
+        highlightNumber: false,
+        label: "All of it managing the fact that companies are organized around functions, not customers",
+      },
     ],
   },
   {
@@ -169,5 +175,27 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       return { id, type: "step", items: [{ title: "Step", desc: "" }] };
     case "node-list":
       return { id, type: "node-list", hubTitle: "Hub", hubSub: "", items: [{ label: "Node" }] };
+    case "compare":
+      return {
+        id,
+        type: "compare",
+        layout: "cards",
+        columnA: "Before",
+        columnB: "After",
+        highlightB: true,
+        rows: [
+          { a: "Manual, slow", b: "Automated, instant" },
+          { a: "Reactive", b: "Proactive" },
+          { a: "Costly", b: "Efficient" },
+        ],
+      };
+    case "line-chart":
+      return {
+        id,
+        type: "line-chart",
+        xLabels: ["Wk 1", "Wk 4", "Wk 8", "Wk 12"],
+        seriesA: { label: "With AI", values: [40, 58, 74, 90] },
+        fill: true,
+      };
   }
 }

@@ -217,6 +217,7 @@ export type EditorState = {
   setInfographicAccent: (accent: InfographicAccent) => void;
   setInfographicTitle: (title: string) => void;
   setInfographicFootnote: (footnote: string) => void;
+  setInfographicShowTitle: (show: boolean) => void;
   addInfographicBlock: (block: InfographicBlock) => void;
   updateInfographicBlock: (id: string, block: InfographicBlock) => void;
   removeInfographicBlock: (id: string) => void;
@@ -378,6 +379,8 @@ export const useEditorStore = create<EditorState>()(
         set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, title } } : s)),
       setInfographicFootnote: (footnote) =>
         set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, footnote } } : s)),
+      setInfographicShowTitle: (showTitle) =>
+        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, showTitle } } : s)),
       addInfographicBlock: (block) =>
         set((s) =>
           s.infographicContent

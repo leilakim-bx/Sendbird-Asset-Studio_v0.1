@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, Plus, Pencil, Trash2, ChevronDown } from "lucide-react";
-import { Menu } from "@base-ui/react/menu";
+import {
+  Sparkles,
+  TrendingUp,
+  LayoutGrid,
+  BarChart3,
+  ListOrdered,
+  Workflow,
+  Columns2,
+  LineChart,
+  type LucideIcon,
+} from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import {
   INFOGRAPHIC_BG_HEX,
@@ -36,31 +45,37 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
   { id: "blog", label: "Blog/Perspective" },
 ];
 
-const ADD_TYPES: { type: InfographicBlockType; label: string }[] = [
-  { type: "stat", label: "Stat" },
-  { type: "kpi-group", label: "KPI group" },
-  { type: "bar-group", label: "Bar comparison" },
-  { type: "step", label: "Steps" },
-  { type: "node-list", label: "Node list" },
+/** Content types. One image holds exactly one of these. */
+const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: LucideIcon }[] = [
+  { type: "stat", label: "Stat", Icon: TrendingUp },
+  { type: "kpi-group", label: "KPI", Icon: LayoutGrid },
+  { type: "bar-group", label: "Bars", Icon: BarChart3 },
+  { type: "step", label: "Steps", Icon: ListOrdered },
+  { type: "node-list", label: "Nodes", Icon: Workflow },
+  { type: "compare", label: "Compare", Icon: Columns2 },
+  { type: "line-chart", label: "Line", Icon: LineChart },
 ];
-
-function blockLabel(b: InfographicBlock): string {
-  switch (b.type) {
-    case "stat":
-      return b.label || b.number || "—";
-    case "kpi-group":
-      return `${b.items.length} KPIs`;
-    case "bar-group":
-      return `${b.items.length} bars`;
-    case "step":
-      return `${b.items.length} steps`;
-    case "node-list":
-      return b.hubTitle || `${b.items.length} nodes`;
-  }
-}
 
 const inputCls =
   "w-full bg-[#0E0E0E] border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text outline-none focus:border-studio-accent transition-colors placeholder:text-[#555]";
+
+/** Small on/off switch (studio accent track when on). */
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className={[
+        "flex items-center w-8 h-[18px] rounded-full p-[2px] transition-colors shrink-0",
+        on ? "bg-studio-accent justify-end" : "bg-studio-border justify-start",
+      ].join(" ")}
+    >
+      <span className="w-3.5 h-3.5 rounded-full bg-white" />
+    </button>
+  );
+}
 
 export function InfographicSidebar() {
   const {
@@ -71,13 +86,11 @@ export function InfographicSidebar() {
     setInfographicAccent,
     setInfographicTitle,
     setInfographicFootnote,
-    addInfographicBlock,
+    setInfographicShowTitle,
     updateInfographicBlock,
-    removeInfographicBlock,
   } = useEditorStore();
 
   const [activePreset, setActivePreset] = useState("brand-stat");
-  const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
 
   // ── AI Magic state ──
   const [article, setArticle] = useState("");
@@ -117,12 +130,14 @@ export function InfographicSidebar() {
   function applySuggestions(picked: Suggestion[]) {
     if (!content || picked.length === 0) return;
     const first = picked[0];
-    // Fill the title only if the canvas doesn't already have one (don't clobber
-    // text the marketer typed).
-    if (first.suggestedTitle && !content.title?.trim()) {
-      setInfographicTitle(first.suggestedTitle);
-    }
-    addInfographicBlock(suggestionToBlock(first));
+    // One image = one content: the suggestion REPLACES the current block. Fill
+    // the title only if the canvas doesn't already have one (don't clobber text
+    // the marketer typed).
+    setInfographicContent({
+      ...content,
+      title: first.suggestedTitle && !content.title?.trim() ? first.suggestedTitle : content.title,
+      blocks: [suggestionToBlock(first)],
+    });
     setModalOpen(false);
     setApplyNotice(
       picked.length > 1
@@ -146,11 +161,14 @@ export function InfographicSidebar() {
     });
   }
 
-  function addBlock(type: InfographicBlockType) {
-    const block = createBlock(type);
-    addInfographicBlock(block);
-    setExpandedBlock(block.id);
+  /** Swap the single content block to a fresh default of the chosen type. */
+  function pickType(type: InfographicBlockType) {
+    if (!content) return;
+    if (content.blocks[0]?.type === type) return; // already this type
+    setInfographicContent({ ...content, blocks: [createBlock(type)] });
   }
+
+  const block = content.blocks[0];
 
   return (
     <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
@@ -287,87 +305,76 @@ export function InfographicSidebar() {
       </Section>
 
       {/* Title & footnote */}
-      <Section title="Title & footnote">
-        <div className="mb-2.5">
-          <label className="block text-[10px] text-studio-muted mb-1">Title</label>
-          <input className={inputCls} value={content.title ?? ""} onChange={(e) => setInfographicTitle(e.target.value)} />
-        </div>
-        <div>
-          <label className="block text-[10px] text-studio-muted mb-1">Footnote</label>
-          <textarea
-            className={inputCls + " resize-none min-h-12"}
-            value={content.footnote ?? ""}
-            onChange={(e) => setInfographicFootnote(e.target.value)}
-          />
-        </div>
-      </Section>
-
-      {/* Blocks — disabled for now (feature to be developed) */}
-      <Section title="Blocks" badge="Soon" disabled>
-        <div className="flex flex-col gap-1.5 mb-2">
-          {content.blocks.length === 0 && (
-            <p className="text-[11px] text-studio-muted py-2">No blocks yet. Add one below.</p>
-          )}
-          {content.blocks.map((b) => {
-            const open = expandedBlock === b.id;
-            return (
-              <div key={b.id} className="rounded-lg border border-studio-border overflow-hidden bg-[#0E0E0E]">
-                <div className="flex items-center gap-2 px-2.5 py-2">
-                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/[0.05] text-studio-muted font-medium">
-                    {b.type}
-                  </span>
-                  <span className="flex-1 text-[11px] text-studio-text truncate">{blockLabel(b)}</span>
-                  <button
-                    onClick={() => setExpandedBlock(open ? null : b.id)}
-                    className="text-studio-muted hover:text-studio-text transition-colors p-0.5"
-                    title="Edit"
-                  >
-                    <Pencil size={13} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (open) setExpandedBlock(null);
-                      removeInfographicBlock(b.id);
-                    }}
-                    className="text-studio-muted hover:text-studio-text transition-colors p-0.5"
-                    title="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+      {(() => {
+        const showTitle = content.showTitle !== false;
+        return (
+          <Section
+            title="Title & footnote"
+            action={<Toggle on={showTitle} onChange={setInfographicShowTitle} />}
+          >
+            {showTitle ? (
+              <>
+                <div className="mb-2.5">
+                  <label className="block text-[10px] text-studio-muted mb-1">Title</label>
+                  <input className={inputCls} value={content.title ?? ""} onChange={(e) => setInfographicTitle(e.target.value)} />
                 </div>
-                {open && (
-                  <div className="px-2.5 pb-2.5 pt-1 border-t border-studio-border">
-                    <BlockEditor block={b} onChange={(nb) => updateInfographicBlock(b.id, nb)} />
-                  </div>
-                )}
-              </div>
+                <div>
+                  <label className="block text-[10px] text-studio-muted mb-1">Footnote</label>
+                  <textarea
+                    className={inputCls + " resize-none min-h-12"}
+                    value={content.footnote ?? ""}
+                    onChange={(e) => setInfographicFootnote(e.target.value)}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="text-[11px] text-studio-muted leading-relaxed">
+                Hidden — graph / centered content only. Toggle on to add a title &amp; footnote.
+              </p>
+            )}
+          </Section>
+        );
+      })()}
+
+      {/* Content — one image holds exactly one content block */}
+      <Section title="Content">
+        {/* Type picker — small icon grid; selecting one replaces the content */}
+        <div className="grid grid-cols-3 gap-1.5 mb-3">
+          {BLOCK_TYPE_META.map(({ type, label, Icon }) => {
+            const active = block?.type === type;
+            return (
+              <button
+                key={type}
+                onClick={() => pickType(type)}
+                aria-pressed={active}
+                title={label}
+                className={[
+                  "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg border transition-colors",
+                  active
+                    ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                    : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
+                ].join(" ")}
+              >
+                <Icon size={16} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </button>
             );
           })}
         </div>
 
-        {/* Add block */}
-        <Menu.Root>
-          <Menu.Trigger className="w-full flex items-center justify-center gap-1.5 py-2 border border-dashed border-studio-border rounded-lg text-[11px] text-studio-muted hover:border-studio-accent hover:text-studio-accent transition-colors">
-            <Plus size={12} />
-            Add block
-            <ChevronDown size={12} />
-          </Menu.Trigger>
-          <Menu.Portal>
-            <Menu.Positioner side="bottom" align="center" sideOffset={6}>
-              <Menu.Popup className="z-50 min-w-[180px] rounded-xl border border-studio-border bg-studio-sidebar shadow-xl py-1.5 outline-none">
-                {ADD_TYPES.map((t) => (
-                  <Menu.Item
-                    key={t.type}
-                    onClick={() => addBlock(t.type)}
-                    className="flex items-center px-3 py-2 text-xs text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
-                  >
-                    {t.label}
-                  </Menu.Item>
-                ))}
-              </Menu.Popup>
-            </Menu.Positioner>
-          </Menu.Portal>
-        </Menu.Root>
+        {block ? (
+          <>
+            <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} />
+            <button
+              onClick={() => setInfographicContent({ ...content, blocks: [] })}
+              className="mt-1 w-full text-[11px] text-studio-muted hover:text-red-400 transition-colors py-1.5"
+            >
+              Clear content
+            </button>
+          </>
+        ) : (
+          <p className="text-[11px] text-studio-muted py-2">Pick a content type above to start.</p>
+        )}
       </Section>
 
       <SuggestionsModal

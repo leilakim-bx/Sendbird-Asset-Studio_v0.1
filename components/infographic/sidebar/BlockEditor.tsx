@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Lightbulb } from "lucide-react";
 import type { InfographicBlock } from "@/lib/types/infographic";
 
 const inputCls =
@@ -241,6 +241,193 @@ export function BlockEditor({ block, onChange }: EditorProps) {
             </ItemCard>
           ))}
           <AddRow onClick={() => setItems([...b.items, { label: "Node" }])}>Add node</AddRow>
+        </>
+      );
+    }
+
+    case "compare": {
+      const b = block;
+      const layout = b.layout ?? "cards";
+      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+      const setRows = (rows: typeof b.rows) => onChange({ ...b, rows });
+      return (
+        <>
+          <Field label="Layout">
+            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E] border border-studio-border">
+              {(["cards", "table"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => set({ layout: opt })}
+                  aria-pressed={layout === opt}
+                  className={[
+                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    layout === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Column A">
+              <input className={inputCls} value={b.columnA} onChange={(e) => set({ columnA: e.target.value })} />
+            </Field>
+            <Field label="Column B">
+              <input className={inputCls} value={b.columnB} onChange={(e) => set({ columnB: e.target.value })} />
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={!!b.highlightB}
+              onChange={(e) => set({ highlightB: e.target.checked })}
+              className="accent-studio-accent"
+            />
+            Highlight column B
+          </label>
+          {b.rows.map((r, i) => (
+            <ItemCard key={i} idx={i} onRemove={() => setRows(b.rows.filter((_, j) => j !== i))}>
+              {layout === "table" && (
+                <input
+                  className={inputCls + " mb-1.5"}
+                  placeholder="Row label"
+                  value={r.label ?? ""}
+                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                />
+              )}
+              <div className="grid grid-cols-2 gap-1.5">
+                <input
+                  className={inputCls}
+                  placeholder={b.columnA || "A"}
+                  value={r.a}
+                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
+                />
+                <input
+                  className={inputCls}
+                  placeholder={b.columnB || "B"}
+                  value={r.b}
+                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, b: e.target.value } : x)))}
+                />
+              </div>
+            </ItemCard>
+          ))}
+          <AddRow onClick={() => setRows([...b.rows, { label: "", a: "", b: "" }])}>Add row</AddRow>
+        </>
+      );
+    }
+
+    case "line-chart": {
+      const b = block;
+      const hasB = !!b.seriesB;
+      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+      const setPoint = (i: number, patch: { x?: string; a?: number; bv?: number }) => {
+        const xLabels = patch.x !== undefined ? b.xLabels.map((v, j) => (j === i ? patch.x! : v)) : b.xLabels;
+        const aVals =
+          patch.a !== undefined ? b.seriesA.values.map((v, j) => (j === i ? patch.a! : v)) : b.seriesA.values;
+        const bVals =
+          b.seriesB && patch.bv !== undefined
+            ? b.seriesB.values.map((v, j) => (j === i ? patch.bv! : v))
+            : b.seriesB?.values;
+        onChange({
+          ...b,
+          xLabels,
+          seriesA: { ...b.seriesA, values: aVals },
+          seriesB: b.seriesB && bVals ? { ...b.seriesB, values: bVals } : b.seriesB,
+        });
+      };
+      const removePoint = (i: number) =>
+        onChange({
+          ...b,
+          xLabels: b.xLabels.filter((_, j) => j !== i),
+          seriesA: { ...b.seriesA, values: b.seriesA.values.filter((_, j) => j !== i) },
+          seriesB: b.seriesB
+            ? { ...b.seriesB, values: b.seriesB.values.filter((_, j) => j !== i) }
+            : undefined,
+        });
+      const addPoint = () =>
+        onChange({
+          ...b,
+          xLabels: [...b.xLabels, ""],
+          seriesA: { ...b.seriesA, values: [...b.seriesA.values, 0] },
+          seriesB: b.seriesB ? { ...b.seriesB, values: [...b.seriesB.values, 0] } : undefined,
+        });
+      const toggleB = (on: boolean) =>
+        onChange({
+          ...b,
+          seriesB: on ? { label: "Line B", values: b.xLabels.map(() => 0) } : undefined,
+        });
+      return (
+        <>
+          <div className="mb-3 flex items-start gap-2 rounded-md border border-studio-accent/30 bg-studio-accent/[0.08] px-2.5 py-2">
+            <Lightbulb size={13} className="text-studio-accent shrink-0 mt-px" />
+            <span className="text-[11px] text-studio-text leading-snug">
+              <span className="font-semibold">Tip!</span> Line charts look best on the 3rd background (Warm gray).
+            </span>
+          </div>
+          <Field label="Line A label">
+            <input
+              className={inputCls}
+              value={b.seriesA.label}
+              onChange={(e) => set({ seriesA: { ...b.seriesA, label: e.target.value } })}
+            />
+          </Field>
+          <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={hasB}
+              onChange={(e) => toggleB(e.target.checked)}
+              className="accent-studio-accent"
+            />
+            Compare a second line
+          </label>
+          {b.seriesB && (
+            <Field label="Line B label">
+              <input
+                className={inputCls}
+                value={b.seriesB.label}
+                onChange={(e) => set({ seriesB: { ...b.seriesB!, label: e.target.value } })}
+              />
+            </Field>
+          )}
+          <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={b.fill !== false}
+              onChange={(e) => set({ fill: e.target.checked })}
+              className="accent-studio-accent"
+            />
+            Area fill under line A
+          </label>
+          {b.xLabels.map((x, i) => (
+            <ItemCard key={i} idx={i} onRemove={() => removePoint(i)}>
+              <input
+                className={inputCls + " mb-1.5"}
+                placeholder="X label (e.g. Wk 1)"
+                value={x}
+                onChange={(e) => setPoint(i, { x: e.target.value })}
+              />
+              <div className={hasB ? "grid grid-cols-2 gap-1.5" : ""}>
+                <input
+                  className={inputCls}
+                  type="number"
+                  placeholder={b.seriesA.label || "A"}
+                  value={b.seriesA.values[i] ?? 0}
+                  onChange={(e) => setPoint(i, { a: num(e.target.value) })}
+                />
+                {hasB && (
+                  <input
+                    className={inputCls}
+                    type="number"
+                    placeholder={b.seriesB!.label || "B"}
+                    value={b.seriesB!.values[i] ?? 0}
+                    onChange={(e) => setPoint(i, { bv: num(e.target.value) })}
+                  />
+                )}
+              </div>
+            </ItemCard>
+          ))}
+          <AddRow onClick={addPoint}>Add point</AddRow>
         </>
       );
     }

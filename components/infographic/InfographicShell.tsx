@@ -15,7 +15,7 @@ import type { InfographicFormat } from "@/lib/types/infographic";
 const PRODUCT_W = 866;
 const PRODUCT_H = 660;
 const BLOG_W = 664;
-const BLOG_MIN_H = 480;
+const BLOG_MIN_H = 360;
 const MAX_PREVIEW_W = 580;
 
 export function InfographicShell({ template }: { template: InfographicTemplate }) {
@@ -147,15 +147,14 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
               : `Blog/Perspective ${BLOG_W}×${blogHeight}`}
           </p>
 
-          {/* Scaled preview */}
-          <div
-            style={{
-              transform: `scale(${scale})`,
-              transformOrigin: "top center",
-              marginBottom: `${previewH * scale - previewH}px`,
-            }}
-          >
-            <InfographicCanvas content={content} />
+          {/* Scaled preview. The outer box reserves the *scaled* footprint on
+              both axes — transform:scale alone doesn't shrink layout size, so
+              without this the wrapper keeps the canvas's full 866px width and a
+              pane narrower than that clips the left edge under items-center. */}
+          <div style={{ width: previewW * scale, height: previewH * scale }}>
+            <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
+              <InfographicCanvas content={content} />
+            </div>
           </div>
 
           {/* Action buttons */}

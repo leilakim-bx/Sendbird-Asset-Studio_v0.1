@@ -43,6 +43,30 @@ export type InfographicBlock =
       hubTitle: string;
       hubSub?: string;
       items: Array<{ label: string; tag?: string; desc?: string }>;
+    }
+  | {
+      id: string;
+      type: "compare";
+      /** "cards" = two side-by-side panels (default); "table" = aligned grid with row labels. */
+      layout?: "table" | "cards";
+      columnA: string;
+      columnB: string;
+      /** Accent-highlight column B (the "new / better" side). */
+      highlightB?: boolean;
+      rows: Array<{ label?: string; a: string; b: string }>;
+    }
+  | {
+      id: string;
+      type: "line-chart";
+      /** Shared x-axis category labels; series values align by index. */
+      xLabels: string[];
+      seriesA: { label: string; values: number[] };
+      /** Optional second line for comparison. */
+      seriesB?: { label: string; values: number[] };
+      /** Accent area fill under line A (default true). */
+      fill?: boolean;
+      /** Y-axis max; auto-computed from the data when omitted. */
+      yMax?: number;
     };
 
 export type InfographicBlockType = InfographicBlock["type"];
@@ -60,6 +84,9 @@ export type InfographicContent = {
   accent: InfographicAccent;
   title?: string;
   footnote?: string;
+  /** Toggle the Title & footnote section. undefined/true = shown; false = hidden
+   *  (graph-only / single centered content). */
+  showTitle?: boolean;
   blocks: InfographicBlock[];
 };
 
@@ -68,7 +95,7 @@ export type InfographicContent = {
 export const INFOGRAPHIC_BG_HEX: Record<InfographicBg, string> = {
   sky: "#D8F0FF",
   stone: "#D9D6D2",
-  warmgray: "#E5E3DF",
+  warmgray: "#F7F5F0",
 };
 
 export const INFOGRAPHIC_ACCENT_HEX: Record<InfographicAccent, string> = {
@@ -84,3 +111,6 @@ export const INFOGRAPHIC_INK_MUTED = "#7C7166";
 
 /** Serif display stack (brand "Serrif") — titles + big numbers. */
 export const INFOGRAPHIC_SERIF = '"Serrif", Georgia, "Times New Roman", serif';
+
+/** Sans body stack (Helvetica Now Text) — default text, title & footnote. */
+export const INFOGRAPHIC_SANS = '"Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
