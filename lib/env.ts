@@ -6,8 +6,6 @@ const baseSchema = z.object({
   NODE_ENV:          z.enum(["development", "test", "production"]).default("development"),
   ANTHROPIC_API_KEY: z.string().default("mock"),
   PEXELS_API_KEY:    z.string().optional(),
-  // 사이트 비밀번호 게이트 (proxy.ts에서 검증). 미설정 시 인증 우회.
-  SITE_PASSWORD:     z.string().optional(),
 });
 
 const r2Schema = z.object({
@@ -37,7 +35,6 @@ export const env = {
   isProd,
   anthropicApiKey: _base.ANTHROPIC_API_KEY,
   pexelsApiKey:    _base.PEXELS_API_KEY,
-  sitePassword:    _base.SITE_PASSWORD,
   r2: _r2
     ? {
         accountId:       _r2.R2_ACCOUNT_ID,
