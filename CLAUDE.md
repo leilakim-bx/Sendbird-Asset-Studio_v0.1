@@ -27,10 +27,10 @@
 ## 데이터 저장 (현재)
 - 배경 이미지: /public/background (⚠️ Vercel 배포 시 R2로 이전 예정)
 - 에셋: localStorage (Zustand persist) (⚠️ DB로 이전 예정)
-- 인증: 없음 (⚠️ 배포 전 추가 필요)
+- 인증: Vercel Password Protection (Enterprise) — production 보호. 로컬 dev는 게이트 없음. 자체 비번 게이트(proxy.ts/SITE_PASSWORD)는 제거됨.
 
 ## 마이그레이션 로드맵
-Phase 1: R2 이전, Vercel Password Protection
+Phase 1: R2 이전 (예정), Vercel Password Protection (✅ 완료)
 Phase 2: Supabase 도입, 에셋/배경 메타데이터 저장
 Phase 3: Clerk 인증, 사용자별 자산 관리
 
