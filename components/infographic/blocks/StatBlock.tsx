@@ -1,15 +1,16 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
 
-type Props = { block: Extract<InfographicBlock, { type: "stat" }> };
+type Props = { block: Extract<InfographicBlock, { type: "stat" }>; scale?: number };
 
 /**
  * Big-number stat. The accent highlight reads `var(--ig-accent)`, which the
  * parent canvas sets to a resolved hex (see InfographicCanvas) — so the export
  * clone never depends on CSS custom properties resolving against :root.
  */
-export function StatBlock({ block }: Props) {
+export function StatBlock({ block, scale = 1 }: Props) {
   const { eyebrow, number, highlightNumber, label } = block;
+  const fs = (n: number) => Math.round(n * scale);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -17,7 +18,7 @@ export function StatBlock({ block }: Props) {
         <span
           style={{
             alignSelf: "center",
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: 500,
             letterSpacing: "-0.015em",
             color: INFOGRAPHIC_INK_MUTED,
@@ -33,7 +34,7 @@ export function StatBlock({ block }: Props) {
       <span
         style={{
           fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
-          fontSize: 116,
+          fontSize: fs(116),
           lineHeight: 0.95,
           letterSpacing: "-0.05em",
           color: "#292016",
@@ -56,7 +57,7 @@ export function StatBlock({ block }: Props) {
           style={{
             alignSelf: "center",
             textAlign: "center",
-            fontSize: 15,
+            fontSize: fs(15),
             lineHeight: 1.4,
             color: INFOGRAPHIC_INK_MUTED,
             maxWidth: 480,

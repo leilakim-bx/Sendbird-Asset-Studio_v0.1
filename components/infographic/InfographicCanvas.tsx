@@ -30,8 +30,13 @@ const BLOG = { width: 664, minHeight: 360 };
 export function InfographicCanvas({ content, className, exportMode }: Props) {
   const { format, bg, accent, title, footnote, blocks } = content;
   const isProduct = format === "product";
+  // Product format always uses the fixed warm-gray background (#F7F5F0),
+  // regardless of the stored bg (which only applies to the blog format).
+  const effectiveBg = isProduct ? "warmgray" : bg;
+  // Stat is a centered standalone number — it never carries a title/footnote.
+  const isStat = blocks[0]?.type === "stat";
   // Title & footnote section toggle (undefined/true = shown)
-  const showHeader = content.showTitle !== false;
+  const showHeader = content.showTitle !== false && !isStat;
   const showTitle = showHeader && !!title;
   const showFootnote = showHeader && !!footnote;
 
@@ -39,7 +44,7 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
     boxSizing: "border-box",
     width: isProduct ? PRODUCT.width : BLOG.width,
     ...(isProduct ? { height: PRODUCT.height } : { minHeight: BLOG.minHeight }),
-    background: INFOGRAPHIC_BG_HEX[bg],
+    background: INFOGRAPHIC_BG_HEX[effectiveBg],
     color: INFOGRAPHIC_INK,
     // Blog format trims vertical padding (free height) so short content sits tighter.
     paddingLeft: 56,
@@ -60,9 +65,13 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
         <h1
           style={{
             fontFamily: INFOGRAPHIC_SANS,
-            fontSize: 36,
+            // Blog title is 2px smaller than product.
+            fontSize: isProduct ? 26 : 24,
             lineHeight: 1.1,
-            fontWeight: 600,
+            // 500/Medium: the brand "Helvetica Now Text" isn't loaded (no
+            // @font-face), so this falls back to system Helvetica — where 600
+            // snaps up to Bold(700). 500 maps to Medium for a true semibold look.
+            fontWeight: 500,
             letterSpacing: "-0.01em",
             color: "#0E1017",
             margin: 0,
@@ -92,7 +101,7 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
         }}
       >
         {blocks.map((block) => (
-          <BlockRenderer key={block.id} block={block} />
+          <BlockRenderer key={block.id} block={block} scale={isProduct ? 1.15 : 1} />
         ))}
       </div>
 

@@ -285,7 +285,7 @@
   --studio-text:       #FFFFFF;
   --studio-text-muted: #888888;
   --studio-hover:      #2E2E2E;
-  --studio-accent:     #D4FF4D;
+  --studio-accent:     #F2FF66;
   --studio-accent-fg:  #000000;
 }
 
@@ -298,7 +298,7 @@
   --ig-bg-warmgray:  #E5E3DF;
 
   /* Accents */
-  --ig-accent-lime:  #CBFF4D;
+  --ig-accent-lime:  #F2FF66;
   --ig-accent-blue:  #27A6F7;
   --ig-accent-red:   #FF5E69;
   --ig-accent-green: #25BD85;
@@ -316,7 +316,7 @@
   --color-studio-text:      #FFFFFF;
   --color-studio-muted:     #888888;
   --color-studio-hover:     #2E2E2E;
-  --color-studio-accent:    #D4FF4D;
+  --color-studio-accent:    #F2FF66;
   --color-studio-accent-fg: #000000;
 }
 

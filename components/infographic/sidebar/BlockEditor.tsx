@@ -109,51 +109,89 @@ export function BlockEditor({ block, onChange }: EditorProps) {
 
     case "bar-group": {
       const b = block;
+      const variant = b.variant ?? "bars";
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
       const setItems = (items: typeof b.items) => onChange({ ...b, items });
       return (
         <>
-          <div className="grid grid-cols-3 gap-2">
-            <Field label="Label A">
-              <input className={inputCls} value={b.labelA ?? ""} onChange={(e) => set({ labelA: e.target.value })} />
-            </Field>
-            <Field label="Label B">
-              <input className={inputCls} value={b.labelB ?? ""} onChange={(e) => set({ labelB: e.target.value })} />
-            </Field>
+          <Field label="Shape">
+            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E] border border-studio-border">
+              {(["bars", "split", "columns"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => set({ variant: opt })}
+                  aria-pressed={variant === opt}
+                  className={[
+                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    variant === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {variant !== "columns" && (
             <Field label="Unit">
               <input className={inputCls} value={b.unit ?? ""} onChange={(e) => set({ unit: e.target.value })} />
             </Field>
-          </div>
+          )}
           {b.items.map((it, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setItems(b.items.filter((_, j) => j !== i))}>
+              {variant === "columns" && (
+                <input
+                  className={inputCls + " mb-1.5"}
+                  placeholder="Heading inside (e.g. Lv.1)"
+                  value={it.heading ?? ""}
+                  onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))}
+                />
+              )}
               <input
                 className={inputCls + " mb-1.5"}
                 placeholder="Label"
                 value={it.label}
                 onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
               />
-              <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+              <div className={(variant === "bars" ? "grid grid-cols-2 gap-1.5" : "") + " mb-1.5"}>
                 <input
                   className={inputCls}
                   type="number"
-                  placeholder="Value A"
+                  placeholder={variant === "bars" ? "Value A" : variant === "columns" ? "Height" : "Value"}
                   value={it.valueA}
                   onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, valueA: num(e.target.value) } : x)))}
                 />
-                <input
-                  className={inputCls}
-                  type="number"
-                  placeholder="Value B"
-                  value={it.valueB ?? ""}
-                  onChange={(e) =>
-                    setItems(
-                      b.items.map((x, j) =>
-                        j === i ? { ...x, valueB: e.target.value === "" ? undefined : num(e.target.value) } : x,
-                      ),
-                    )
-                  }
-                />
+                {variant === "bars" && (
+                  <input
+                    className={inputCls}
+                    type="number"
+                    placeholder="Value B"
+                    value={it.valueB ?? ""}
+                    onChange={(e) =>
+                      setItems(
+                        b.items.map((x, j) =>
+                          j === i ? { ...x, valueB: e.target.value === "" ? undefined : num(e.target.value) } : x,
+                        ),
+                      )
+                    }
+                  />
+                )}
               </div>
+              {variant === "columns" && (
+                <>
+                  <input
+                    className={inputCls + " mb-1.5"}
+                    placeholder="Chip (optional)"
+                    value={it.tag ?? ""}
+                    onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, tag: e.target.value } : x)))}
+                  />
+                  <input
+                    className={inputCls + " mb-1.5"}
+                    placeholder="Description (optional)"
+                    value={it.desc ?? ""}
+                    onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
+                  />
+                </>
+              )}
               <label className="flex items-center gap-2 text-[11px] text-studio-text cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -161,11 +199,13 @@ export function BlockEditor({ block, onChange }: EditorProps) {
                   onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, highlight: e.target.checked } : x)))}
                   className="accent-studio-accent"
                 />
-                Highlight row
+                {variant === "split" ? "Highlight number" : variant === "columns" ? "Highlight column" : "Highlight row"}
               </label>
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { label: "Row", valueA: 50 }])}>Add bar</AddRow>
+          <AddRow onClick={() => setItems([...b.items, { label: "Row", valueA: 50 }])}>
+            {variant === "split" ? "Add segment" : variant === "columns" ? "Add column" : "Add bar"}
+          </AddRow>
         </>
       );
     }

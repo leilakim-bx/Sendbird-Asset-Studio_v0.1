@@ -22,6 +22,9 @@ export type InfographicBlock =
   | {
       id: string;
       type: "bar-group";
+      /** Bar shape. "bars" = horizontal A/B rows (default); "split" = one bar
+       *  divided into proportional segments; "columns" = vertical columns. */
+      variant?: "bars" | "split" | "columns";
       labelA?: string;
       labelB?: string;
       unit?: string;
@@ -30,6 +33,12 @@ export type InfographicBlock =
         valueA: number;
         valueB?: number;
         highlight?: boolean;
+        /** "columns" only: big serif heading inside the column (e.g. "Lv.1"). */
+        heading?: string;
+        /** "columns" only: small chip inside the column (e.g. "Steward"). */
+        tag?: string;
+        /** "columns" only: caption under the column label. */
+        desc?: string;
       }>;
     }
   | {
@@ -99,7 +108,7 @@ export const INFOGRAPHIC_BG_HEX: Record<InfographicBg, string> = {
 };
 
 export const INFOGRAPHIC_ACCENT_HEX: Record<InfographicAccent, string> = {
-  lime: "#CBFF4D",
+  lime: "#F2FF66",
   blue: "#27A6F7",
   red: "#FF5E69",
   green: "#25BD85",

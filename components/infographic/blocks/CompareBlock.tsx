@@ -1,7 +1,7 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
 
-type Props = { block: Extract<InfographicBlock, { type: "compare" }> };
+type Props = { block: Extract<InfographicBlock, { type: "compare" }>; scale?: number };
 
 const CARD_BG = "rgba(255,255,255,0.5)";
 const HAIRLINE = "rgba(0,0,0,0.08)";
@@ -12,9 +12,10 @@ const HAIRLINE = "rgba(0,0,0,0.08)";
  * side. Accent reads var(--ig-accent) (set by the canvas), so the export clone
  * never depends on :root CSS variables.
  */
-export function CompareBlock({ block }: Props) {
+export function CompareBlock({ block, scale = 1 }: Props) {
   const { columnA, columnB, rows, highlightB } = block;
   const layout = block.layout ?? "cards";
+  const fs = (n: number) => Math.round(n * scale);
 
   if (layout === "table") {
     return (
@@ -29,8 +30,8 @@ export function CompareBlock({ block }: Props) {
           }}
         >
           <span />
-          <ColHeader label={columnA} highlight={false} />
-          <ColHeader label={columnB} highlight={!!highlightB} />
+          <ColHeader label={columnA} highlight={false} fs={fs} />
+          <ColHeader label={columnB} highlight={!!highlightB} fs={fs} />
         </div>
         {rows.map((r, i) => (
           <div
@@ -44,9 +45,9 @@ export function CompareBlock({ block }: Props) {
               borderTop: `1px solid ${HAIRLINE}`,
             }}
           >
-            <span style={{ fontSize: 18, fontWeight: 600, color: INFOGRAPHIC_INK }}>{r.label}</span>
-            <span style={{ fontSize: 18, color: INFOGRAPHIC_INK_MUTED }}>{r.a}</span>
-            <span style={{ fontSize: 18, fontWeight: highlightB ? 600 : 400, color: INFOGRAPHIC_INK }}>{r.b}</span>
+            <span style={{ fontSize: fs(18), fontWeight: 600, color: INFOGRAPHIC_INK }}>{r.label}</span>
+            <span style={{ fontSize: fs(18), color: INFOGRAPHIC_INK_MUTED }}>{r.a}</span>
+            <span style={{ fontSize: fs(18), fontWeight: highlightB ? 600 : 400, color: INFOGRAPHIC_INK }}>{r.b}</span>
           </div>
         ))}
       </div>
@@ -55,18 +56,18 @@ export function CompareBlock({ block }: Props) {
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}>
-      <CompareCard title={columnA} items={rows.map((r) => r.a)} highlight={false} />
-      <CompareCard title={columnB} items={rows.map((r) => r.b)} highlight={!!highlightB} />
+      <CompareCard title={columnA} items={rows.map((r) => r.a)} highlight={false} fs={fs} />
+      <CompareCard title={columnB} items={rows.map((r) => r.b)} highlight={!!highlightB} fs={fs} />
     </div>
   );
 }
 
-function ColHeader({ label, highlight }: { label: string; highlight: boolean }) {
+function ColHeader({ label, highlight, fs }: { label: string; highlight: boolean; fs: (n: number) => number }) {
   return (
     <span
       style={{
         justifySelf: "start",
-        fontSize: 13,
+        fontSize: fs(13),
         fontWeight: 700,
         letterSpacing: "0.04em",
         textTransform: "uppercase",
@@ -81,7 +82,7 @@ function ColHeader({ label, highlight }: { label: string; highlight: boolean }) 
   );
 }
 
-function CompareCard({ title, items, highlight }: { title: string; items: string[]; highlight: boolean }) {
+function CompareCard({ title, items, highlight, fs }: { title: string; items: string[]; highlight: boolean; fs: (n: number) => number }) {
   return (
     <div
       style={{
@@ -100,7 +101,7 @@ function CompareCard({ title, items, highlight }: { title: string; items: string
         )}
         <span
           style={{
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: 700,
             letterSpacing: "0.04em",
             textTransform: "uppercase",
@@ -124,7 +125,7 @@ function CompareCard({ title, items, highlight }: { title: string; items: string
                   flexShrink: 0,
                 }}
               />
-              <span style={{ fontSize: 17, lineHeight: 1.45, color: INFOGRAPHIC_INK }}>{it}</span>
+              <span style={{ fontSize: fs(17), lineHeight: 1.45, color: INFOGRAPHIC_INK }}>{it}</span>
             </div>
           ) : null,
         )}

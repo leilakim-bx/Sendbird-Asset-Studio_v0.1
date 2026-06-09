@@ -10,6 +10,7 @@ import {
   Workflow,
   Columns2,
   LineChart,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -31,7 +32,9 @@ import {
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
+import { PresetList } from "./sidebar/PresetList";
 import { SuggestionsModal } from "./SuggestionsModal";
+import { PresetLibraryModal } from "./PresetLibraryModal";
 
 const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
   { id: "sky", name: "Sky" },
@@ -91,6 +94,7 @@ export function InfographicSidebar() {
   } = useEditorStore();
 
   const [activePreset, setActivePreset] = useState("brand-stat");
+  const [presetModalOpen, setPresetModalOpen] = useState(false);
 
   // ── AI Magic state ──
   const [article, setArticle] = useState("");
@@ -152,12 +156,15 @@ export function InfographicSidebar() {
     const preset = INFOGRAPHIC_PRESETS.find((p) => p.id === id);
     if (!preset || !content) return;
     setActivePreset(id);
+    const blocks = JSON.parse(JSON.stringify(preset.blocks)) as InfographicBlock[];
     setInfographicContent({
       ...content, // keep current format + accent
       bg: preset.bg,
       title: preset.title,
       footnote: preset.footnote,
-      blocks: JSON.parse(JSON.stringify(preset.blocks)) as InfographicBlock[],
+      // Stat is a centered standalone number — never carries a title/footnote.
+      ...(blocks[0]?.type === "stat" ? { showTitle: false } : {}),
+      blocks,
     });
   }
 
@@ -165,10 +172,18 @@ export function InfographicSidebar() {
   function pickType(type: InfographicBlockType) {
     if (!content) return;
     if (content.blocks[0]?.type === type) return; // already this type
-    setInfographicContent({ ...content, blocks: [createBlock(type)] });
+    setInfographicContent({
+      ...content,
+      // Stat can't use a title/footnote (centered standalone number).
+      ...(type === "stat" ? { showTitle: false } : {}),
+      blocks: [createBlock(type)],
+    });
   }
 
   const block = content.blocks[0];
+  // Stat is a centered, standalone big number — the title & footnote section is
+  // disabled for it (and forced off above whenever stat becomes the content).
+  const titleLocked = block?.type === "stat";
 
   return (
     <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
@@ -224,66 +239,45 @@ export function InfographicSidebar() {
         </div>
       </Section>
 
-      {/* Preset */}
-      <Section title="Preset">
-        <div className="flex flex-col gap-1">
-          {INFOGRAPHIC_PRESETS.map((p) => {
-            const meta = PRESET_META[p.id];
-            const soon = meta?.soon;
-            const active = activePreset === p.id && !soon;
-            const Icon = meta?.Icon;
-            return (
-              <button
-                key={p.id}
-                onClick={() => loadPreset(p.id)}
-                disabled={soon}
-                className={[
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-2 border text-left transition-colors",
-                  soon
-                    ? "border-transparent opacity-50 cursor-not-allowed"
-                    : active
-                      ? "border-studio-accent cursor-pointer hover:bg-white/[0.06]"
-                      : "border-transparent cursor-pointer hover:bg-white/[0.06]",
-                ].join(" ")}
-              >
-                <span
-                  className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center"
-                  style={{ background: "#2E2E2E", color: "#FFFFFF" }}
-                >
-                  {Icon && <Icon size={14} />}
-                </span>
-                <span className="flex-1 text-[11.5px] font-medium text-studio-text">{p.name}</span>
-                {soon ? (
-                  <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/[0.12] border border-studio-accent/30 text-studio-accent">
-                    Soon
-                  </span>
-                ) : (
-                  <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-white/[0.04] text-studio-muted">
-                    {meta?.typeLabel}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* Preset — 4-item preview; the "+" opens a modal with the full set. */}
+      <Section
+        title="Preset"
+        action={
+          <button
+            onClick={() => setPresetModalOpen(true)}
+            title="All presets"
+            aria-label="All presets"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+          >
+            <Plus size={15} />
+          </button>
+        }
+      >
+        <PresetList activeId={activePreset} onPick={loadPreset} limit={4} />
       </Section>
 
-      {/* Background */}
+      {/* Background — product format is locked to the fixed warm-gray bg. */}
       <Section title="Background">
-        <div className="flex gap-1.5 flex-wrap">
-          {BG_OPTIONS.map((bg) => (
-            <button
-              key={bg.id}
-              onClick={() => setInfographicBg(bg.id)}
-              title={bg.name}
-              className={[
-                "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
-                content.bg === bg.id ? "border-studio-accent" : "border-transparent",
-              ].join(" ")}
-              style={{ background: INFOGRAPHIC_BG_HEX[bg.id], boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
-            />
-          ))}
-        </div>
+        {content.format === "product" ? (
+          <p className="text-[11px] text-studio-muted leading-relaxed">
+            Fixed to Warm gray for the product format.
+          </p>
+        ) : (
+          <div className="flex gap-1.5 flex-wrap">
+            {BG_OPTIONS.map((bg) => (
+              <button
+                key={bg.id}
+                onClick={() => setInfographicBg(bg.id)}
+                title={bg.name}
+                className={[
+                  "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
+                  content.bg === bg.id ? "border-studio-accent" : "border-transparent",
+                ].join(" ")}
+                style={{ background: INFOGRAPHIC_BG_HEX[bg.id], boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
+              />
+            ))}
+          </div>
+        )}
       </Section>
 
       {/* Accent */}
@@ -306,7 +300,17 @@ export function InfographicSidebar() {
 
       {/* Title & footnote */}
       {(() => {
-        const showTitle = content.showTitle !== false;
+        const showTitle = content.showTitle !== false && !titleLocked;
+        // Stat layout: no title/footnote at all — show a note instead of the toggle.
+        if (titleLocked) {
+          return (
+            <Section title="Title & footnote">
+              <p className="text-[11px] text-studio-muted leading-relaxed">
+                Not available for the Stat layout — it&apos;s a centered standalone number.
+              </p>
+            </Section>
+          );
+        }
         return (
           <Section
             title="Title & footnote"
@@ -385,6 +389,14 @@ export function InfographicSidebar() {
         onClose={() => setModalOpen(false)}
         onCreate={applySuggestions}
       />
+
+      {presetModalOpen && (
+        <PresetLibraryModal
+          activeId={activePreset}
+          onSelect={loadPreset}
+          onClose={() => setPresetModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

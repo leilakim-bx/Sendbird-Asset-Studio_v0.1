@@ -5,10 +5,11 @@ import {
   INFOGRAPHIC_SERIF,
 } from "@/lib/types/infographic";
 
-type Props = { block: Extract<InfographicBlock, { type: "node-list" }> };
+type Props = { block: Extract<InfographicBlock, { type: "node-list" }>; scale?: number };
 
 /** Hub + spokes diagram. Ports prototype .b-node-list. */
-export function NodeListBlock({ block }: Props) {
+export function NodeListBlock({ block, scale = 1 }: Props) {
+  const fs = (n: number) => Math.round(n * scale);
   return (
     <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 40, alignItems: "center" }}>
       <div
@@ -30,11 +31,11 @@ export function NodeListBlock({ block }: Props) {
           ✱
         </div>
         <div>
-          <div style={{ fontFamily: INFOGRAPHIC_SERIF, fontSize: 24, letterSpacing: "-0.01em", color: INFOGRAPHIC_INK }}>
+          <div style={{ fontFamily: INFOGRAPHIC_SERIF, fontSize: fs(24), letterSpacing: "-0.01em", color: INFOGRAPHIC_INK }}>
             {block.hubTitle}
           </div>
           {block.hubSub && (
-            <div style={{ fontSize: 11, color: INFOGRAPHIC_INK_MUTED, lineHeight: 1.4 }}>{block.hubSub}</div>
+            <div style={{ fontSize: fs(11), color: INFOGRAPHIC_INK_MUTED, lineHeight: 1.4 }}>{block.hubSub}</div>
           )}
         </div>
       </div>
@@ -70,13 +71,13 @@ export function NodeListBlock({ block }: Props) {
               ◈
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: INFOGRAPHIC_INK }}>{it.label}</div>
-              {it.desc && <div style={{ fontSize: 11, color: INFOGRAPHIC_INK_MUTED }}>{it.desc}</div>}
+              <div style={{ fontSize: fs(13), fontWeight: 600, color: INFOGRAPHIC_INK }}>{it.label}</div>
+              {it.desc && <div style={{ fontSize: fs(11), color: INFOGRAPHIC_INK_MUTED }}>{it.desc}</div>}
             </div>
             {it.tag && (
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: fs(9),
                   fontWeight: 600,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
