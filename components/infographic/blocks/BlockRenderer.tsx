@@ -3,6 +3,7 @@ import { StatBlock } from "./StatBlock";
 import { KpiGroupBlock } from "./KpiGroupBlock";
 import { BarGroupBlock } from "./BarGroupBlock";
 import { StepBlock } from "./StepBlock";
+import { StackBlock } from "./StackBlock";
 import { NodeListBlock } from "./NodeListBlock";
 import { CompareBlock } from "./CompareBlock";
 import { LineChartBlock } from "./LineChartBlock";
@@ -25,6 +26,8 @@ export function BlockRenderer({ block, scale = 1 }: { block: InfographicBlock; s
       return <BarGroupBlock block={block} scale={scale} />;
     case "step":
       return <StepBlock block={block} scale={scale} />;
+    case "stack":
+      return <StackBlock block={block} scale={scale} />;
     case "node-list":
       return <NodeListBlock block={block} scale={scale} />;
     case "compare":

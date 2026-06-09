@@ -7,6 +7,7 @@ import { type ReactNode } from "react";
 export function Section({
   title,
   badge,
+  info,
   action,
   disabled = false,
   children,
@@ -14,6 +15,8 @@ export function Section({
   title: string;
   /** Optional pill next to the title (e.g. "Soon"). */
   badge?: string;
+  /** Optional element right after the title (e.g. an info tooltip icon). */
+  info?: ReactNode;
   /** Optional control rendered at the header's right edge (e.g. a toggle). */
   action?: ReactNode;
   /** Dim + block interaction with the section body (feature not ready yet). */
@@ -26,6 +29,7 @@ export function Section({
     <div className="border-b border-studio-border">
       <div className="flex items-center gap-2 px-[18px] py-3.5">
         <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-studio-muted">{title}</span>
+        {info}
         {badge && (
           <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/[0.12] border border-studio-accent/30 text-studio-accent">
             {badge}

@@ -5,6 +5,7 @@ import {
   Percent,
   ListOrdered,
   Workflow,
+  Layers,
   Plus,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ export const PRESET_META: Record<string, PresetMeta> = {
   "split-ratio": { Icon: Percent, typeLabel: "bar", soon: false },
   "maturity-levels": { Icon: BarChart3, typeLabel: "bar", soon: false },
   "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: false },
+  "agent-stack": { Icon: Layers, typeLabel: "stack", soon: false },
   "agent-overview": { Icon: Workflow, typeLabel: "node", soon: false },
   empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
@@ -154,6 +156,34 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
     ],
   },
   {
+    id: "agent-stack",
+    name: "The stack",
+    bg: "warmgray",
+    title: "The agent era stack",
+    footnote: "",
+    blocks: [
+      {
+        id: "p-stack-1",
+        type: "stack",
+        layers: [
+          {
+            title: "Intelligence",
+            highlight: true,
+            cells: [{ title: "The agent", desc: "Does the work, compounds with every interaction" }],
+          },
+          {
+            title: "The bridge",
+            cells: [{ title: "Memory layer", desc: "Conversational intelligence" }],
+          },
+          {
+            title: "Data",
+            cells: [{ title: "System of record", desc: "CRM, databases, ERP" }],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: "agent-overview",
     name: "Agent overview",
     bg: "warmgray",
@@ -215,6 +245,16 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       };
     case "step":
       return { id, type: "step", items: [{ title: "Step", desc: "" }] };
+    case "stack":
+      return {
+        id,
+        type: "stack",
+        layers: [
+          { title: "Intelligence", highlight: true, cells: [{ title: "The agent", desc: "Does the work" }] },
+          { title: "The bridge", cells: [{ title: "Memory layer", desc: "Conversational intelligence" }] },
+          { title: "Data", cells: [{ title: "System of record", desc: "CRM, databases, ERP" }] },
+        ],
+      };
     case "node-list":
       return { id, type: "node-list", hubTitle: "Hub", hubSub: "", items: [{ label: "Node" }] };
     case "compare":

@@ -7,10 +7,12 @@ import {
   LayoutGrid,
   BarChart3,
   ListOrdered,
+  Layers,
   Workflow,
   Columns2,
   LineChart,
   Plus,
+  Info,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -54,13 +56,27 @@ const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: Lucide
   { type: "kpi-group", label: "KPI", Icon: LayoutGrid },
   { type: "bar-group", label: "Bars", Icon: BarChart3 },
   { type: "step", label: "Steps", Icon: ListOrdered },
+  { type: "stack", label: "Stack", Icon: Layers },
   { type: "node-list", label: "Nodes", Icon: Workflow },
   { type: "compare", label: "Compare", Icon: Columns2 },
   { type: "line-chart", label: "Line", Icon: LineChart },
 ];
 
+// Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
-  "w-full bg-[#0E0E0E] border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text outline-none focus:border-studio-accent transition-colors placeholder:text-[#555]";
+  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
+
+/** Info icon with a CSS hover tooltip (sidebar-only UI; never exported). */
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex items-center">
+      <Info size={13} className="text-studio-muted hover:text-studio-text cursor-help transition-colors" />
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-60 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+        {text}
+      </span>
+    </span>
+  );
+}
 
 /** Small on/off switch (studio accent track when on). */
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -219,7 +235,12 @@ export function InfographicSidebar() {
       </div>
 
       {/* Format */}
-      <Section title="Format">
+      <Section
+        title="Format"
+        info={
+          <InfoTooltip text="Formats aren't interchangeable. Don't use a Product feature image in a blog, or a Blog/Perspective image as a product feature — each is sized and laid out for its own placement." />
+        }
+      >
         <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
           {FORMAT_OPTIONS.map(({ id, label }) => (
             <button
@@ -301,6 +322,18 @@ export function InfographicSidebar() {
       {/* Title & footnote */}
       {(() => {
         const showTitle = content.showTitle !== false && !titleLocked;
+        // Blog-only feature: the product format is a fixed size, so a title &
+        // footnote would clip. Offer it only in the blog format.
+        if (content.format === "product") {
+          return (
+            <Section title="Title & footnote">
+              <p className="text-[11px] text-studio-muted leading-relaxed">
+                Available in the Blog format only — Product is a fixed size, so a title &amp; footnote would get
+                clipped. Switch to Blog to add them.
+              </p>
+            </Section>
+          );
+        }
         // Stat layout: no title/footnote at all — show a note instead of the toggle.
         if (titleLocked) {
           return (

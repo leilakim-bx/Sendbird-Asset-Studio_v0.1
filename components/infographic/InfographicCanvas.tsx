@@ -35,8 +35,9 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
   const effectiveBg = isProduct ? "warmgray" : bg;
   // Stat is a centered standalone number — it never carries a title/footnote.
   const isStat = blocks[0]?.type === "stat";
-  // Title & footnote section toggle (undefined/true = shown)
-  const showHeader = content.showTitle !== false && !isStat;
+  // Title & footnote are a Blog-only feature: the product format is a fixed
+  // height (660px), so a title/footnote on tall content would get clipped.
+  const showHeader = !isProduct && content.showTitle !== false && !isStat;
   const showTitle = showHeader && !!title;
   const showFootnote = showHeader && !!footnote;
 

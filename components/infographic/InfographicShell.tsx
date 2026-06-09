@@ -138,8 +138,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
       {/* Editor body */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: preview */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-studio-bg overflow-auto py-8">
+        {/* Left: preview. Outer scrolls; inner centers within at least the full
+            height. Centering directly on the scroll container would push the
+            content's top out of reach once it overflows (justify-center clip). */}
+        <div className="flex-1 overflow-auto bg-studio-bg">
+          <div className="min-h-full flex flex-col items-center justify-center gap-6 py-8">
           {/* Preview label — format + dimensions (toggle lives in the sidebar) */}
           <p className="text-studio-muted text-xs uppercase tracking-wider">
             Preview — {format === "product"
@@ -226,6 +229,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
             <div ref={blogRef}>
               <InfographicCanvas content={{ ...content, format: "blog" }} exportMode />
             </div>
+          </div>
           </div>
         </div>
 

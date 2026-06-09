@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { Plus, X, Lightbulb } from "lucide-react";
 import type { InfographicBlock } from "@/lib/types/infographic";
 
+// Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
-  "w-full bg-[#0E0E0E] border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text outline-none focus:border-studio-accent transition-colors placeholder:text-[#555]";
+  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
 const labelCls = "block text-[10px] text-studio-muted mb-1";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -30,11 +31,18 @@ function AddRow({ onClick, children }: { onClick: () => void; children: ReactNod
 }
 
 function ItemCard({ idx, onRemove, children }: { idx: number; onRemove: () => void; children: ReactNode }) {
+  // Mirrors the chat message card: elevated bg-studio-hover panel (no border),
+  // rounded-lg, with a title + ✕ header. Inner inputs (bg-studio-sidebar) read
+  // as the darker fields, same as chat.
   return (
-    <div className="mb-2 rounded-md border border-studio-border p-2">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] text-studio-muted">#{idx + 1}</span>
-        <button onClick={onRemove} className="text-studio-muted hover:text-studio-text transition-colors" title="Remove">
+    <div className="bg-studio-hover rounded-lg p-2.5 mb-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-xs font-medium text-studio-text flex-1">#{idx + 1}</span>
+        <button
+          onClick={onRemove}
+          title="Remove"
+          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center transition-colors"
+        >
           <X size={12} />
         </button>
       </div>
@@ -70,7 +78,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               type="checkbox"
               checked={!!b.highlightNumber}
               onChange={(e) => set({ highlightNumber: e.target.checked })}
-              className="accent-studio-accent"
+              className="sb-checkbox"
             />
             Highlight number
           </label>
@@ -115,7 +123,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
       return (
         <>
           <Field label="Shape">
-            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E] border border-studio-border">
+            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
               {(["bars", "split", "columns"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -197,7 +205,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
                   type="checkbox"
                   checked={!!it.highlight}
                   onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, highlight: e.target.checked } : x)))}
-                  className="accent-studio-accent"
+                  className="sb-checkbox"
                 />
                 {variant === "split" ? "Highlight number" : variant === "columns" ? "Highlight column" : "Highlight row"}
               </label>
@@ -240,6 +248,101 @@ export function BlockEditor({ block, onChange }: EditorProps) {
             </ItemCard>
           ))}
           <AddRow onClick={() => setItems([...b.items, { title: "Step", desc: "" }])}>Add step</AddRow>
+        </>
+      );
+    }
+
+    case "stack": {
+      const b = block;
+      const layers = b.layers ?? [];
+      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+      const setLayers = (next: typeof layers) => onChange({ ...b, layers: next });
+      const patchLayer = (i: number, patch: Partial<(typeof layers)[number]>) =>
+        setLayers(layers.map((x, k) => (k === i ? { ...x, ...patch } : x)));
+      const patchCell = (i: number, j: number, patch: { title?: string; desc?: string }) =>
+        setLayers(
+          layers.map((x, k) =>
+            k === i ? { ...x, cells: (x.cells ?? []).map((c, m) => (m === j ? { ...c, ...patch } : c)) } : x,
+          ),
+        );
+      return (
+        <>
+          {layers.map((layer, i) => {
+            const cells = layer.cells ?? [];
+            return (
+              <ItemCard key={i} idx={i} onRemove={() => setLayers(layers.filter((_, k) => k !== i))}>
+                <input
+                  className={inputCls + " mb-1.5"}
+                  placeholder="Layer header (e.g. Intelligence)"
+                  value={layer.title}
+                  onChange={(e) => patchLayer(i, { title: e.target.value })}
+                />
+                <input
+                  className={inputCls + " mb-1.5"}
+                  placeholder="Caption (optional)"
+                  value={layer.caption ?? ""}
+                  onChange={(e) => patchLayer(i, { caption: e.target.value || undefined })}
+                />
+                <label className="flex items-center gap-2 mb-2 text-[11px] text-studio-text cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={!!layer.highlight}
+                    onChange={(e) => patchLayer(i, { highlight: e.target.checked })}
+                    className="sb-checkbox"
+                  />
+                  Highlight this layer
+                </label>
+                {/* Cells — a row of boxes inside the band. Optional. */}
+                {cells.map((cell, j) => (
+                  <div key={j} className="rounded-md border border-studio-border p-2 mb-1.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-[10px] text-studio-muted flex-1">Cell {j + 1}</span>
+                      <button
+                        onClick={() =>
+                          patchLayer(i, { cells: cells.filter((_, m) => m !== j) })
+                        }
+                        title="Remove cell"
+                        className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-4 h-4 flex items-center justify-center transition-colors"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                    <input
+                      className={inputCls + " mb-1.5"}
+                      placeholder="Cell title"
+                      value={cell.title}
+                      onChange={(e) => patchCell(i, j, { title: e.target.value })}
+                    />
+                    <input
+                      className={inputCls}
+                      placeholder="Cell description (optional)"
+                      value={cell.desc ?? ""}
+                      onChange={(e) => patchCell(i, j, { desc: e.target.value || undefined })}
+                    />
+                  </div>
+                ))}
+                <AddRow onClick={() => patchLayer(i, { cells: [...cells, { title: "Item" }] })}>Add cell</AddRow>
+              </ItemCard>
+            );
+          })}
+          <AddRow onClick={() => setLayers([...layers, { title: "Layer", cells: [] }])}>Add layer</AddRow>
+          <label className="flex items-center gap-2 mt-2.5 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={b.connectors !== false}
+              onChange={(e) => set({ connectors: e.target.checked })}
+              className="sb-checkbox"
+            />
+            Connector lines
+          </label>
+          <Field label="Callout (optional)">
+            <input
+              className={inputCls}
+              placeholder="Dark box below the stack"
+              value={b.callout ?? ""}
+              onChange={(e) => set({ callout: e.target.value || undefined })}
+            />
+          </Field>
         </>
       );
     }
@@ -293,7 +396,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
       return (
         <>
           <Field label="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E] border border-studio-border">
+            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
               {(["cards", "table"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -322,10 +425,21 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               type="checkbox"
               checked={!!b.highlightB}
               onChange={(e) => set({ highlightB: e.target.checked })}
-              className="accent-studio-accent"
+              className="sb-checkbox"
             />
             Highlight column B
           </label>
+          {layout === "cards" && (
+            <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={b.bullets !== false}
+                onChange={(e) => set({ bullets: e.target.checked })}
+                className="sb-checkbox"
+              />
+              Bullet points
+            </label>
+          )}
           {b.rows.map((r, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setRows(b.rows.filter((_, j) => j !== i))}>
               {layout === "table" && (
@@ -417,7 +531,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               type="checkbox"
               checked={hasB}
               onChange={(e) => toggleB(e.target.checked)}
-              className="accent-studio-accent"
+              className="sb-checkbox"
             />
             Compare a second line
           </label>
@@ -435,7 +549,7 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               type="checkbox"
               checked={b.fill !== false}
               onChange={(e) => set({ fill: e.target.checked })}
-              className="accent-studio-accent"
+              className="sb-checkbox"
             />
             Area fill under line A
           </label>

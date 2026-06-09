@@ -44,9 +44,32 @@ export function BarGroupBlock({ block, scale = 1 }: Props) {
   const u = unit ?? "%";
   const fs = (n: number) => Math.round(n * scale);
   const maxV = Math.max(...items.flatMap((it) => [it.valueA, it.valueB ?? 0]), 1);
+  // Few bars look thin in the canvas — thicken them (1 bar > 2 bars > many).
+  // Heights also scale with the format (product is larger), so product bars
+  // aren't dwarfed by the bigger canvas; blog (scale 1) is unchanged.
+  const n = items.length;
+  const baseHA = n === 1 ? 72 : n === 2 ? 52 : BAR_H_A;
+  const baseHB = n === 1 ? 60 : n === 2 ? 44 : BAR_H_B;
+  const hA = Math.round(baseHA * scale);
+  const hB = Math.round(baseHB * scale);
+  // Label column caps at ~"Row hello hello hello"; longer labels get an ellipsis.
+  const labelW = Math.round(176 * scale);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    // Centered composition: cap the width and center the chart so a short/single
+    // bar doesn't sit edge-to-edge (label gutter left, fill to the right edge).
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 18,
+        width: "100%",
+        maxWidth: 640,
+        alignSelf: "center",
+        marginLeft: "auto",
+        marginRight: "auto",
+      }}
+    >
       {items.map((it, i) => {
         const hasB = (it.valueB ?? 0) > 0;
         // highlight emphasizes the NUMBER (accent text), not the bar fill.
@@ -54,19 +77,31 @@ export function BarGroupBlock({ block, scale = 1 }: Props) {
         return (
           <div
             key={i}
-            style={{ display: "grid", gridTemplateColumns: "170px 1fr", gap: 20, alignItems: "center" }}
+            style={{ display: "grid", gridTemplateColumns: `${labelW}px 1fr`, gap: 16, alignItems: "center" }}
           >
-            <div style={{ fontSize: fs(15), fontWeight: 600, lineHeight: 1.25, color: LABEL }}>
+            {/* Right-aligned; capped width with an ellipsis past the max length. */}
+            <div
+              style={{
+                fontSize: fs(15),
+                fontWeight: 600,
+                lineHeight: 1.25,
+                color: LABEL,
+                textAlign: "right",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               {it.label}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <Bar value={it.valueA} maxV={maxV} unit={u} height={BAR_H_A} fill={BAR_A} numColor={aNum} fs={fs} />
+              <Bar value={it.valueA} maxV={maxV} unit={u} height={hA} fill={BAR_A} numColor={aNum} fs={fs} />
               {hasB && (
                 <Bar
                   value={it.valueB as number}
                   maxV={maxV}
                   unit={u}
-                  height={BAR_H_B}
+                  height={hB}
                   fill={BAR_B}
                   numColor={NUM_ON_BAR}
                   fs={fs}
@@ -99,7 +134,7 @@ function Bar({
 }) {
   const w = Math.max(0, Math.min(value / maxV, 1)) * 100;
   return (
-    <div style={{ position: "relative", height, borderRadius: 6, background: TRACK }}>
+    <div style={{ position: "relative", height, borderRadius: 8, background: TRACK }}>
         <div
           style={{
             position: "absolute",
@@ -108,7 +143,7 @@ function Bar({
             height: "100%",
             width: `${w}%`,
             minWidth: MIN_FILL,
-            borderRadius: 6,
+            borderRadius: 8,
             background: fill,
             display: "flex",
             alignItems: "center",

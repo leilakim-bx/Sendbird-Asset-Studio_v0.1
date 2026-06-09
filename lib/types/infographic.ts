@@ -48,6 +48,25 @@ export type InfographicBlock =
     }
   | {
       id: string;
+      type: "stack";
+      /** Top-to-bottom layers (bands). Renders as a layered architecture diagram. */
+      layers: Array<{
+        /** Band header label, e.g. "ORCHESTRATION LAYER". */
+        title: string;
+        /** Optional one-line caption under the header. */
+        caption?: string;
+        /** Dark/accent emphasis for this layer (e.g. "THE AGENT"). */
+        highlight?: boolean;
+        /** Cells inside the band (a row of boxes). Omit/empty = header-only band. */
+        cells?: Array<{ title: string; desc?: string }>;
+      }>;
+      /** Draw vertical connectors between layers (default true). */
+      connectors?: boolean;
+      /** Optional dark callout box below the stack (e.g. "EXAMPLE TRIGGER"). */
+      callout?: string;
+    }
+  | {
+      id: string;
       type: "node-list";
       hubTitle: string;
       hubSub?: string;
@@ -62,6 +81,8 @@ export type InfographicBlock =
       columnB: string;
       /** Accent-highlight column B (the "new / better" side). */
       highlightB?: boolean;
+      /** Show the bullet dot before each card item (default true). */
+      bullets?: boolean;
       rows: Array<{ label?: string; a: string; b: string }>;
     }
   | {

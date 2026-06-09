@@ -380,7 +380,21 @@ export const useEditorStore = create<EditorState>()(
       setInfographicFootnote: (footnote) =>
         set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, footnote } } : s)),
       setInfographicShowTitle: (showTitle) =>
-        set((s) => (s.infographicContent ? { infographicContent: { ...s.infographicContent, showTitle } } : s)),
+        set((s) => {
+          if (!s.infographicContent) return s;
+          // Turning the section on with empty fields shows nothing — seed dummy
+          // text so the marketer sees the title/footnote slots and can edit them.
+          const seed =
+            showTitle
+              ? {
+                  title: s.infographicContent.title?.trim() ? s.infographicContent.title : "Your headline goes here",
+                  footnote: s.infographicContent.footnote?.trim()
+                    ? s.infographicContent.footnote
+                    : "Add a short footnote or source here.",
+                }
+              : {};
+          return { infographicContent: { ...s.infographicContent, ...seed, showTitle } };
+        }),
       addInfographicBlock: (block) =>
         set((s) =>
           s.infographicContent
