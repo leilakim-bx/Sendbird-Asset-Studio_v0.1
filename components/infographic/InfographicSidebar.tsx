@@ -52,14 +52,14 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
 
 /** Content types. One image holds exactly one of these. */
 const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: LucideIcon }[] = [
-  { type: "stat", label: "Stat", Icon: TrendingUp },
-  { type: "kpi-group", label: "KPI", Icon: LayoutGrid },
-  { type: "bar-group", label: "Bars", Icon: BarChart3 },
+  { type: "stat", label: "Big number", Icon: TrendingUp },
+  { type: "kpi-group", label: "Metrics", Icon: LayoutGrid },
+  { type: "bar-group", label: "Bar chart", Icon: BarChart3 },
   { type: "step", label: "Steps", Icon: ListOrdered },
-  { type: "stack", label: "Stack", Icon: Layers },
-  { type: "node-list", label: "Nodes", Icon: Workflow },
+  { type: "stack", label: "Layers", Icon: Layers },
+  { type: "node-list", label: "Network", Icon: Workflow },
   { type: "compare", label: "Compare", Icon: Columns2 },
-  { type: "line-chart", label: "Line", Icon: LineChart },
+  { type: "line-chart", label: "Trend", Icon: LineChart },
 ];
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.

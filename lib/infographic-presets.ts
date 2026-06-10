@@ -6,6 +6,8 @@ import {
   ListOrdered,
   Workflow,
   Layers,
+  LineChart,
+  Columns2,
   Plus,
   type LucideIcon,
 } from "lucide-react";
@@ -29,14 +31,16 @@ export type InfographicPreset = {
 export type PresetMeta = { Icon: LucideIcon; typeLabel: string; soon: boolean };
 
 export const PRESET_META: Record<string, PresetMeta> = {
-  "brand-stat": { Icon: TrendingUp, typeLabel: "stat", soon: false },
-  "impact-metrics": { Icon: LayoutGrid, typeLabel: "kpi", soon: false },
+  "brand-stat": { Icon: TrendingUp, typeLabel: "number", soon: false },
+  "impact-metrics": { Icon: LayoutGrid, typeLabel: "metrics", soon: false },
   "channel-comparison": { Icon: BarChart3, typeLabel: "bar", soon: false },
+  "trend-over-time": { Icon: LineChart, typeLabel: "trend", soon: false },
+  "before-after": { Icon: Columns2, typeLabel: "compare", soon: false },
   "split-ratio": { Icon: Percent, typeLabel: "bar", soon: false },
   "maturity-levels": { Icon: BarChart3, typeLabel: "bar", soon: false },
   "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: false },
-  "agent-stack": { Icon: Layers, typeLabel: "stack", soon: false },
-  "agent-overview": { Icon: Workflow, typeLabel: "node", soon: false },
+  architecture: { Icon: Layers, typeLabel: "layers", soon: false },
+  "agent-overview": { Icon: Workflow, typeLabel: "network", soon: false },
   empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
 
@@ -53,7 +57,7 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
         type: "stat",
         eyebrow: "💸 CX technology spend per year",
         number: "$22B",
-        highlightNumber: false,
+        highlightNumber: true,
         label: "All of it managing the fact that companies are organized around functions, not customers",
       },
     ],
@@ -71,6 +75,7 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
         items: [
           { number: "2,000+", label: "Bug fixes & improvements shipped" },
           { number: "30%+", label: "Reduction in misattribution rate" },
+          { number: "12", label: "New languages supported end-to-end" },
         ],
       },
     ],
@@ -137,6 +142,47 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
     ],
   },
   {
+    id: "trend-over-time",
+    name: "Trend over time",
+    bg: "warmgray",
+    title: "CSAT trend over the year",
+    footnote: "",
+    blocks: [
+      {
+        id: "p-line-1",
+        type: "line-chart",
+        xLabels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        seriesA: { label: "With AI agent", values: [65, 66, 68, 69, 71, 72, 74, 76, 77, 79, 81, 82] },
+        seriesB: { label: "Without AI agent", values: [60, 61, 60, 61, 60, 62, 61, 62, 61, 62, 62, 63] },
+        fill: true,
+        yMax: 100,
+      },
+    ],
+  },
+  {
+    id: "before-after",
+    name: "Before · After",
+    bg: "warmgray",
+    title: "Old motion vs collapsed motion",
+    footnote: "",
+    blocks: [
+      {
+        id: "p-compare-1",
+        type: "compare",
+        layout: "cards",
+        columnA: "The Old Motion",
+        columnB: "The Collapsed Motion",
+        highlightB: true,
+        rows: [
+          { a: "Step-by-step support tickets", b: "One conversation, full resolution" },
+          { a: "Customer navigates handoffs", b: "AI orchestrates behind the scenes" },
+          { a: "Hours to resolve", b: "Minutes to resolve" },
+          { a: "Reactive responses", b: "Proactive outreach" },
+        ],
+      },
+    ],
+  },
+  {
     id: "how-it-works",
     name: "How it works",
     bg: "stone",
@@ -156,10 +202,10 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
     ],
   },
   {
-    id: "agent-stack",
-    name: "The stack",
+    id: "architecture",
+    name: "Architecture",
     bg: "warmgray",
-    title: "The agent era stack",
+    title: "The Agent Era Stack",
     footnote: "",
     blocks: [
       {
@@ -167,16 +213,16 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
         type: "stack",
         layers: [
           {
-            title: "Intelligence",
+            title: "THE AGENT",
             highlight: true,
-            cells: [{ title: "The agent", desc: "Does the work, compounds with every interaction" }],
+            cells: [{ title: "Does the work", desc: "Compounds with every interaction" }],
           },
           {
-            title: "The bridge",
+            title: "THE BRIDGE",
             cells: [{ title: "Memory layer", desc: "Conversational intelligence" }],
           },
           {
-            title: "Data",
+            title: "DATA",
             cells: [{ title: "System of record", desc: "CRM, databases, ERP" }],
           },
         ],
