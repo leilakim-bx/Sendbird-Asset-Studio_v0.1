@@ -137,14 +137,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Shape">
-            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
               {(["bars", "split", "columns", "ranked"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => set({ variant: opt })}
                   aria-pressed={variant === opt}
                   className={[
-                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    "flex-1 px-2 py-1 rounded-md text-[11px] font-medium capitalize transition-colors",
                     variant === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
                   ].join(" ")}
                 >
@@ -158,7 +158,18 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               <input className={inputCls} value={b.unit ?? ""} onChange={(e) => set({ unit: e.target.value })} />
             </Field>
           )}
-          {variant === "ranked" && (
+          {variant === "bars" && (
+            <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={b.labelInside === true}
+                onChange={(e) => set({ labelInside: e.target.checked })}
+                className="sb-checkbox"
+              />
+              Labels inside bars (+ top headers)
+            </label>
+          )}
+          {(variant === "ranked" || (variant === "bars" && b.labelInside)) && (
             <div className="grid grid-cols-2 gap-2">
               <Field label="Category header (optional)">
                 <input
@@ -245,7 +256,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               </label>
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { label: "Row", valueA: 50 }])}>
+          <AddRow onClick={() => setItems([...b.items, { label: "Row", valueA: 50, valueB: 50 }])}>
             {variant === "split" ? "Add segment" : variant === "columns" ? "Add column" : "Add bar"}
           </AddRow>
         </>
@@ -435,14 +446,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
               {(["cards", "table"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => set({ layout: opt })}
                   aria-pressed={layout === opt}
                   className={[
-                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    "flex-1 px-2 py-1 rounded-md text-[11px] font-medium capitalize transition-colors",
                     layout === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
                   ].join(" ")}
                 >
@@ -679,14 +690,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
               {(["stacked", "grouped"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => set({ layout: opt })}
                   aria-pressed={layout === opt}
                   className={[
-                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    "flex-1 px-2 py-1 rounded-md text-[11px] font-medium capitalize transition-colors",
                     layout === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
                   ].join(" ")}
                 >

@@ -27,8 +27,13 @@ export type InfographicBlock =
        *  "ranked" = single-series rows with the label INSIDE each bar, value
        *  outside, and a grayscale color ramp (highlight row = accent fill). */
       variant?: "bars" | "split" | "columns" | "ranked";
-      /** Legend labels (bars). For "ranked" these double as column headers:
-       *  labelA = left/category header, labelB = right/value header. */
+      /** "bars" only: drop the left label gutter and instead show the category
+       *  label INSIDE the A (dark) bar, with labelA/labelB as ranked-style top
+       *  headers (left/right). No effect on other variants. Default false. */
+      labelInside?: boolean;
+      /** Legend labels (bars). For "ranked" — and "bars" with labelInside — these
+       *  double as column headers: labelA = left/category header, labelB =
+       *  right/value header. */
       labelA?: string;
       labelB?: string;
       unit?: string;

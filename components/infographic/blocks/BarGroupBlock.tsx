@@ -56,6 +56,18 @@ export function BarGroupBlock({ block, scale = 1 }: Props) {
   // Label column caps at ~"Row hello hello hello"; longer labels get an ellipsis.
   const labelW = Math.round(176 * scale);
 
+  // labelInside: drop the left gutter, put each category label inside its A bar,
+  // and frame the chart with ranked-style top headers (labelA left / labelB right).
+  const inside = !!block.labelInside;
+  const hasHeader = inside && !!(block.labelA || block.labelB);
+  const headerStyle = {
+    fontSize: fs(13),
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase" as const,
+    color: "#8C867E",
+  };
+
   return (
     // Centered composition: cap the width and center the chart so a short/single
     // bar doesn't sit edge-to-edge (label gutter left, fill to the right edge).
@@ -71,10 +83,38 @@ export function BarGroupBlock({ block, scale = 1 }: Props) {
         marginRight: "auto",
       }}
     >
+      {hasHeader && (
+        // Ranked-style headers flush to the chart's outer edges (labelInside only).
+        <div style={{ position: "relative", height: fs(16), marginBottom: 2 }}>
+          <span style={{ ...headerStyle, position: "absolute", left: 0, top: 0 }}>{block.labelA}</span>
+          <span style={{ ...headerStyle, position: "absolute", right: 0, top: 0 }}>{block.labelB}</span>
+        </div>
+      )}
       {items.map((it, i) => {
         const hasB = (it.valueB ?? 0) > 0;
         // highlight emphasizes the NUMBER (accent text), not the bar fill.
         const aNum = it.highlight ? "var(--ig-accent)" : NUM_ON_BAR;
+        const barStack = (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Bar
+              value={it.valueA}
+              maxV={maxV}
+              unit={u}
+              height={hA}
+              fill={BAR_A}
+              numColor={aNum}
+              fs={fs}
+              label={inside ? it.label : undefined}
+            />
+            {hasB && (
+              <Bar value={it.valueB as number} maxV={maxV} unit={u} height={hB} fill={BAR_B} numColor={NUM_ON_BAR} fs={fs} />
+            )}
+          </div>
+        );
+
+        // labelInside: full-width bars, label lives inside the A bar (no gutter).
+        if (inside) return <div key={i}>{barStack}</div>;
+
         return (
           <div
             key={i}
@@ -95,20 +135,7 @@ export function BarGroupBlock({ block, scale = 1 }: Props) {
             >
               {it.label}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <Bar value={it.valueA} maxV={maxV} unit={u} height={hA} fill={BAR_A} numColor={aNum} fs={fs} />
-              {hasB && (
-                <Bar
-                  value={it.valueB as number}
-                  maxV={maxV}
-                  unit={u}
-                  height={hB}
-                  fill={BAR_B}
-                  numColor={NUM_ON_BAR}
-                  fs={fs}
-                />
-              )}
-            </div>
+            {barStack}
           </div>
         );
       })}
@@ -124,6 +151,7 @@ function Bar({
   fill,
   numColor,
   fs,
+  label,
 }: {
   value: number;
   maxV: number;
@@ -132,6 +160,9 @@ function Bar({
   fill: string;
   numColor: string;
   fs: (n: number) => number;
+  /** Optional category label rendered INSIDE the fill (left). When set the fill
+   *  gets a wider min-width so the label + value coexist (labelInside mode). */
+  label?: string;
 }) {
   const w = Math.max(0, Math.min(value / maxV, 1)) * 100;
   return (
@@ -143,16 +174,34 @@ function Bar({
             top: 0,
             height: "100%",
             width: `${w}%`,
-            minWidth: MIN_FILL,
+            minWidth: label ? fs(170) : MIN_FILL,
             borderRadius: 8,
             background: fill,
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-end",
+            justifyContent: label ? "space-between" : "flex-end",
+            gap: label ? 12 : 0,
+            paddingLeft: label ? 16 : 0,
             paddingRight: 12,
             boxSizing: "border-box",
           }}
         >
+          {label && (
+            <span
+              style={{
+                fontSize: fs(15),
+                fontWeight: 600,
+                color: numColor,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                minWidth: 0,
+                flex: 1,
+              }}
+            >
+              {label}
+            </span>
+          )}
           <span
             style={{
               fontFamily: INFOGRAPHIC_SERIF,
@@ -161,6 +210,7 @@ function Bar({
               letterSpacing: "-0.01em",
               color: numColor,
               whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {value}

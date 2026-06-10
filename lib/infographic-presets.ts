@@ -283,10 +283,15 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       return {
         id,
         type: "bar-group",
-        labelA: "A",
-        labelB: "B",
+        // Blank by default: labelA/labelB only surface as headers in "ranked" or
+        // "bars" + labelInside, where literal "A"/"B" would be noise.
+        labelA: "",
+        labelB: "",
         unit: "%",
-        items: [{ label: "Row", valueA: 50 }],
+        // Both series filled so the default "bars" (A/B) variant loads as a real
+        // two-series comparison, not a single bar. valueB is ignored by the
+        // split/columns/ranked variants.
+        items: [{ label: "Row", valueA: 50, valueB: 50 }],
       };
     case "stacked-bar":
       return {
