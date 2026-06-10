@@ -158,6 +158,24 @@ export type SavedAsset = {
 
 // ── Editor State ──────────────────────────────────────────
 
+/** In-progress chat editor draft, autosaved to localStorage so a refresh/crash
+ *  resumes work. Mirrors the live (non-persisted) chat fields. */
+export type ChatDraft = {
+  messages: ChatMessage[];
+  backgroundId: string;
+  layout: "center" | "split";
+  exportSize: "desktop" | "mobile";
+  appName: string;
+  userName: string;
+  userAvatarUrl: string;
+  activeScenarioId: string | null;
+};
+
+/** Persisted autosave drafts, keyed by template family. Absent key = no draft
+ *  yet (distinct from an empty-but-edited draft). product-ui intentionally out
+ *  of scope for beta. */
+export type DraftState = { chat?: ChatDraft; infographic?: InfographicContent };
+
 export type EditorState = {
   templateId: string;
   layout: "center" | "split";
@@ -229,6 +247,17 @@ export type EditorState = {
   /** Seeded from the Product UI template's defaultContent on editor mount. */
   productUiContent: ProductUiContent | null;
   setProductUiContent: (content: ProductUiContent) => void;
+
+  // ── Autosave drafts (persisted) ─────────────────────────
+  /** In-progress editor drafts, persisted so a refresh/crash resumes work. */
+  drafts: DraftState;
+  saveChatDraft: (draft: ChatDraft) => void;
+  saveInfographicDraft: (content: InfographicContent) => void;
+  clearDraft: (kind: "chat" | "infographic") => void;
+  /** Transient — set true by "Create asset" entry points to force a fresh seed
+   *  instead of resuming a persisted draft. Consumed (cleared) on editor mount. */
+  freshStart: boolean;
+  setFreshStart: (v: boolean) => void;
 };
 
 // ── v0 → v1 마이그레이션 ──────────────────────────────────
@@ -278,7 +307,13 @@ function convertMessage(raw: unknown): ChatMessage | null {
   return null; // 알 수 없는 포맷 → skip
 }
 
-type PersistedV1 = { customBackgrounds: Background[]; savedAssets: SavedAsset[] };
+type PersistedV1 = {
+  customBackgrounds: Background[];
+  savedAssets: SavedAsset[];
+  /** Additive in this release. Absent in pre-existing blobs → store keeps its
+   *  initial `drafts: {}` via persist's shallow merge (no version bump needed). */
+  drafts?: DraftState;
+};
 
 function migrateV0toV1(raw: unknown): PersistedV1 {
   const state = (raw ?? {}) as Record<string, unknown>;
@@ -436,6 +471,21 @@ export const useEditorStore = create<EditorState>()(
       productUiContent:    null,
       setProductUiContent: (productUiContent) => set({ productUiContent }),
 
+      // Autosave drafts — persisted (see partialize). Absent key = no draft yet.
+      drafts: {},
+      saveChatDraft: (chat) => set((s) => ({ drafts: { ...s.drafts, chat } })),
+      saveInfographicDraft: (infographic) =>
+        set((s) => ({ drafts: { ...s.drafts, infographic } })),
+      clearDraft: (kind) =>
+        set((s) => {
+          const drafts = { ...s.drafts };
+          delete drafts[kind];
+          return { drafts };
+        }),
+      // freshStart — transient, never persisted
+      freshStart:    false,
+      setFreshStart: (freshStart) => set({ freshStart }),
+
       setTemplateId:   (templateId)   => set({ templateId }),
       setLayout:       (layout)       => set({ layout }),
       setExportSize:   (exportSize)   => set({ exportSize }),
@@ -498,6 +548,7 @@ export const useEditorStore = create<EditorState>()(
       partialize: (state) => ({
         customBackgrounds: state.customBackgrounds,
         savedAssets:       state.savedAssets,
+        drafts:            state.drafts,
       }),
       migrate: (persistedState, version) => {
         if (version < 1) return migrateV0toV1(persistedState);

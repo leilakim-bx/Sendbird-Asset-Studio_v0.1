@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetLibrary } from "@/components/assets/AssetLibrary";
+import { useEditorStore } from "@/lib/store";
 
 // ── Template gallery ──────────────────────────────────────
 
@@ -29,13 +30,23 @@ const TEMPLATES = [
 
 function TemplateGallery() {
   const router = useRouter();
+  const setFreshStart = useEditorStore((s) => s.setFreshStart);
   return (
     <div className="mb-8">
       <div className="flex gap-4 overflow-x-auto pb-1 -mx-8 px-8">
         {TEMPLATES.map((t) => (
           <button
             key={t.id}
-            onClick={() => { if (t.ready) router.push(`/editor/${t.id}`); }}
+            onClick={() => {
+              if (!t.ready) return;
+              // "Create asset" → seed fresh, not resume. Only chat + infographic
+              // consume this flag on mount (product-ui autosave is out of scope),
+              // so scope it to them to avoid a lingering flag.
+              if (t.id === "feature-mockup" || t.id === "infographic") {
+                setFreshStart(true);
+              }
+              router.push(`/editor/${t.id}`);
+            }}
             className={[
               "relative shrink-0 w-56 h-36 rounded-xl overflow-hidden group",
               t.ready ? "cursor-pointer" : "cursor-default",

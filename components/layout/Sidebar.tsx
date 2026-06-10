@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { X, MessageSquare, LayoutDashboard, BarChart3, Sparkles, BookOpen } from "lucide-react";
+import { useEditorStore } from "@/lib/store";
 
 // ── Nav ───────────────────────────────────────────────────
 
@@ -220,6 +221,7 @@ const ASSET_TYPES: AssetType[] = [
 
 function NewAssetModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
+  const setFreshStart = useEditorStore((s) => s.setFreshStart);
 
   return (
     /* Backdrop */
@@ -260,6 +262,11 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
                 ].join(" ")}
                 onClick={() => {
                   if (!type.ready) return;
+                  // "Create asset" → seed fresh, not resume. Scoped to the two
+                  // templates that consume the flag (product-ui out of scope).
+                  if (type.id === "feature-mockup" || type.id === "infographic") {
+                    setFreshStart(true);
+                  }
                   onClose();
                   router.push(`/editor/${type.id}`);
                 }}

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { BookOpen, Home, ChevronDown, Images, Clipboard, Blocks, Monitor, Smartphone } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { GuideModal } from "@/components/layout/Sidebar";
+import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { useEditorStore } from "@/lib/store";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { DEFAULT_SCENARIO } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
@@ -21,17 +23,26 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
     layout, exportSize, backgroundId, appName, messages,
     setMessages, setLayout, setBackgroundId, setAppName, setExportSize,
     customBackgrounds, saveAsset,
-    pendingAssetRestore, setPendingAssetRestore,
+    setPendingAssetRestore,
     userName, userAvatarUrl,
     shuffleUserProfile, setUserName,
     migrationSkipCount, clearMigrationWarning,
-    activeScenarioId,
+    activeScenarioId, setActiveScenarioId,
     setCanvasIsFull,
+    saveChatDraft, clearDraft, setFreshStart,
   } = useEditorStore();
 
-  // Seed default content on mount — or restore a saved asset if one is pending
+  // Gates the autosave write-through: stays false until the mount effect below
+  // has run once, so we never persist seed/default state over a saved draft.
+  const [ready, setReady] = useState(false);
+
+  // Mount: decide what to load — restore a saved asset (priority), start fresh
+  // (explicit "Create asset"), resume the autosaved draft, or seed defaults.
+  // drafts/freshStart/pending are read via getState() to avoid stale closures.
   useEffect(() => {
-    const pending = pendingAssetRestore;
+    const { pendingAssetRestore: pending, freshStart, drafts } =
+      useEditorStore.getState();
+
     if (pending && pending.templateId === template.id) {
       setAppName(pending.appName);
       if (pending.messages)     setMessages(pending.messages);
@@ -45,18 +56,74 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
         shuffleUserProfile();
       }
       setPendingAssetRestore(null);
-    } else {
+    } else if (freshStart || !drafts.chat) {
+      // Explicit "Create asset" (or no draft yet) → seed defaults fresh.
       const d = template.defaultContent;
-      // Fresh session → load the default scenario (Omnipresence)
       setMessages(DEFAULT_SCENARIO.messages);
       setLayout(template.defaultLayout);
       setBackgroundId(d.backgroundId);
       setAppName(d.appName);
-      // Fresh session → new random user profile (case A)
+      setActiveScenarioId(DEFAULT_SCENARIO.id);
       shuffleUserProfile();
+      // Drop any abandoned draft so it can't resurface; autosave will write the
+      // fresh state right after `ready`.
+      clearDraft("chat");
+    } else {
+      // Resume the autosaved draft (refresh / crash recovery).
+      const c = drafts.chat;
+      setMessages(c.messages);
+      setBackgroundId(c.backgroundId);
+      setLayout(c.layout);
+      setExportSize(c.exportSize);
+      setAppName(c.appName);
+      setActiveScenarioId(c.activeScenarioId);
+      // Restore exact profile (avatar may be shuffled, not derived from name).
+      useEditorStore.setState({
+        userName: c.userName,
+        userAvatarUrl: c.userAvatarUrl,
+      });
     }
+
+    setFreshStart(false); // consume unconditionally — never let it linger
+    setReady(true);       // MUST be the last line (opens the autosave gate)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
+
+  // Write-through autosave (debounced + flushed on teardown/tab-hide).
+  const chatDraft = useMemo(
+    () => ({
+      messages, backgroundId, layout, exportSize, appName,
+      userName, userAvatarUrl, activeScenarioId,
+    }),
+    [messages, backgroundId, layout, exportSize, appName, userName, userAvatarUrl, activeScenarioId],
+  );
+  useAutosaveDraft(chatDraft, saveChatDraft, ready);
+
+  // ── Unsaved-changes guard (logo → home) ─────────────────
+  // "Dirty" = current draft differs from the last state saved to My files (or
+  // the seeded/resumed baseline). Autosave handles refresh/crash; this catches
+  // intentional navigation away, where re-creating would start fresh.
+  const router = useRouter();
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const savedBaselineRef = useRef<string>("");
+  const chatDraftRef = useRef(chatDraft);
+  chatDraftRef.current = chatDraft;
+  // Capture the baseline once the mount effect has restored/seeded content.
+  useEffect(() => {
+    if (ready) savedBaselineRef.current = JSON.stringify(chatDraftRef.current);
+  }, [ready]);
+  const isDirty = () =>
+    JSON.stringify(chatDraftRef.current) !== savedBaselineRef.current;
+
+  function handleLeaveHome() {
+    if (isDirty()) setLeaveOpen(true);
+    else router.push("/");
+  }
+  async function handleSaveAndLeave() {
+    await handleSave();
+    setLeaveOpen(false);
+    router.push("/");
+  }
 
   const desktopRef = useRef<HTMLDivElement>(null);
   const mobileRef  = useRef<HTMLDivElement>(null);
@@ -212,6 +279,8 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
         userAvatarUrl,
       };
       saveAsset(asset);
+      // Clear dirty state — this is now the saved baseline.
+      savedBaselineRef.current = JSON.stringify(chatDraftRef.current);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
@@ -244,10 +313,13 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
 
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-studio-border bg-studio-sidebar shrink-0">
-        <Link href="/" className="flex items-center gap-1.5 text-studio-muted hover:text-studio-text transition-colors">
+        <button
+          onClick={handleLeaveHome}
+          className="flex items-center gap-1.5 text-studio-muted hover:text-studio-text transition-colors"
+        >
           <Image src="/Logo_Das.svg" alt="Logo" width={20} height={20} />
           <Home size={14} />
-        </Link>
+        </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
         <div className="ml-auto">
@@ -444,6 +516,15 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
 
       {guideOpen && (
         <GuideModal onClose={() => setGuideOpen(false)} initialSection="mobile-chat" />
+      )}
+
+      {leaveOpen && (
+        <ConfirmLeaveDialog
+          saving={saveState !== "idle"}
+          onSaveAndLeave={handleSaveAndLeave}
+          onLeave={() => router.push("/")}
+          onCancel={() => setLeaveOpen(false)}
+        />
       )}
     </div>
   );

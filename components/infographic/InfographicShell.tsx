@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Home, ChevronDown, AppWindow, FileText } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
+import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { exportImage, captureThumbnail } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
@@ -21,21 +23,64 @@ const MAX_PREVIEW_W = 580;
 export function InfographicShell({ template }: { template: InfographicTemplate }) {
   const {
     infographicContent, setInfographicContent,
-    saveAsset, pendingAssetRestore, setPendingAssetRestore,
+    saveAsset, setPendingAssetRestore,
+    saveInfographicDraft, clearDraft, setFreshStart,
   } = useEditorStore();
 
-  // On mount: restore a saved infographic asset if one is pending (opened from
-  // "My files"), otherwise seed session content from the template default.
+  // Gates the autosave write-through until the mount effect below has run once.
+  const [ready, setReady] = useState(false);
+
+  // On mount: restore a saved asset (priority), start fresh (explicit "Create
+  // asset"), resume the autosaved draft, or seed the template default.
+  // drafts/freshStart/pending read via getState() to avoid stale closures.
   useEffect(() => {
-    const pending = pendingAssetRestore;
+    const { pendingAssetRestore: pending, freshStart, drafts } =
+      useEditorStore.getState();
+
     if (pending && pending.templateId === template.id && pending.infographic) {
       setInfographicContent(pending.infographic);
       setPendingAssetRestore(null);
-    } else {
+    } else if (freshStart || !drafts.infographic) {
       setInfographicContent(template.defaultContent);
+      clearDraft("infographic");
+    } else {
+      setInfographicContent(drafts.infographic);
     }
+
+    setFreshStart(false); // consume unconditionally
+    setReady(true);       // MUST be last (opens the autosave gate)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
+
+  // Write-through autosave (debounced + flushed on teardown/tab-hide). Skip null
+  // (pre-seed) content so we never persist a null draft.
+  useAutosaveDraft(
+    infographicContent,
+    (c) => { if (c) saveInfographicDraft(c); },
+    ready,
+  );
+
+  // ── Unsaved-changes guard (logo → home) ─────────────────
+  const router = useRouter();
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const savedBaselineRef = useRef<string>("");
+  const contentRef = useRef(infographicContent);
+  contentRef.current = infographicContent;
+  useEffect(() => {
+    if (ready) savedBaselineRef.current = JSON.stringify(contentRef.current);
+  }, [ready]);
+  const isDirty = () =>
+    JSON.stringify(contentRef.current) !== savedBaselineRef.current;
+
+  function handleLeaveHome() {
+    if (isDirty()) setLeaveOpen(true);
+    else router.push("/");
+  }
+  async function handleSaveAndLeave() {
+    await handleSave();
+    setLeaveOpen(false);
+    router.push("/");
+  }
 
   const content = infographicContent ?? template.defaultContent;
   const format = content.format;
@@ -65,6 +110,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         infographic:    content,
       };
       saveAsset(asset);
+      savedBaselineRef.current = JSON.stringify(contentRef.current);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
@@ -128,10 +174,13 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     <div className="flex flex-col h-full">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-studio-border bg-studio-sidebar shrink-0">
-        <Link href="/" className="flex items-center gap-1.5 text-studio-muted hover:text-studio-text transition-colors">
+        <button
+          onClick={handleLeaveHome}
+          className="flex items-center gap-1.5 text-studio-muted hover:text-studio-text transition-colors"
+        >
           <Image src="/Logo_Das.svg" alt="Logo" width={20} height={20} />
           <Home size={14} />
-        </Link>
+        </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
       </div>
@@ -236,6 +285,15 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         {/* Right: editing sidebar */}
         <InfographicSidebar />
       </div>
+
+      {leaveOpen && (
+        <ConfirmLeaveDialog
+          saving={saveState !== "idle"}
+          onSaveAndLeave={handleSaveAndLeave}
+          onLeave={() => router.push("/")}
+          onCancel={() => setLeaveOpen(false)}
+        />
+      )}
     </div>
   );
 }
