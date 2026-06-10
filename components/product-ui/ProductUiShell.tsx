@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronDown, Home, Monitor, Square } from "lucide-react";
+import { ChevronDown, Home } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { captureThumbnail, exportImage } from "@/lib/export";
@@ -37,9 +37,8 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }, [template.id]);
 
   const content = productUiContent ?? template.defaultContent;
-  const wideRef = useRef<HTMLDivElement>(null);
-  const squareRef = useRef<HTMLDivElement>(null);
-  const currentRef = content.format === "homepage-wide" ? wideRef : squareRef;
+  const productRef = useRef<HTMLDivElement>(null);
+  const currentRef = productRef;
   const currentSize = PRODUCT_UI_SIZES[content.format];
 
   const [exporting, setExporting] = useState(false);
@@ -81,7 +80,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }
 
   async function exportOne(format: ProductUiFormat) {
-    const ref = format === "homepage-wide" ? wideRef.current : squareRef.current;
+    const ref = productRef.current;
     if (!ref) return;
     const size = PRODUCT_UI_SIZES[format];
     await exportImage(ref, size.width, size.height, filename(format));
@@ -155,28 +154,12 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                         <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
                         <Menu.Item
-                          onClick={() => handleExport("homepage-wide")}
+                          onClick={() => handleExport("product")}
                           className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                         >
-                          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                            <Monitor size={16} className="text-studio-text" />
-                          </span>
-                          <span className="flex-1">Homepage wide</span>
+                          <span className="flex-1">Product feature</span>
                           <span className="text-[11px] text-studio-muted tabular-nums">
-                            {PRODUCT_UI_SIZES["homepage-wide"].width}×{PRODUCT_UI_SIZES["homepage-wide"].height}
-                          </span>
-                        </Menu.Item>
-
-                        <Menu.Item
-                          onClick={() => handleExport("square")}
-                          className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
-                        >
-                          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                            <Square size={16} className="text-studio-text" />
-                          </span>
-                          <span className="flex-1">Square</span>
-                          <span className="text-[11px] text-studio-muted tabular-nums">
-                            {PRODUCT_UI_SIZES.square.width}×{PRODUCT_UI_SIZES.square.height}
+                            {PRODUCT_UI_SIZES.product.width}×{PRODUCT_UI_SIZES.product.height}
                           </span>
                         </Menu.Item>
                       </Menu.Popup>
@@ -188,11 +171,8 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
             </div>
 
             <div aria-hidden style={{ position: "fixed", left: "-9999px", top: 0, pointerEvents: "none" }}>
-              <div ref={wideRef}>
-                <ProductUiCanvas content={{ ...content, format: "homepage-wide" }} exportMode />
-              </div>
-              <div ref={squareRef}>
-                <ProductUiCanvas content={{ ...content, format: "square" }} exportMode />
+              <div ref={productRef}>
+                <ProductUiCanvas content={{ ...content, format: "product" }} exportMode />
               </div>
             </div>
           </div>
@@ -203,4 +183,3 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
     </div>
   );
 }
-

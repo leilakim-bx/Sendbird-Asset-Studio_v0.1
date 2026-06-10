@@ -7,10 +7,8 @@ import {
   History,
   ListChecks,
   MessageSquareText,
-  Route,
   Sparkles,
   Split,
-  Square,
   Table2,
   Workflow,
   type LucideIcon,
@@ -276,20 +274,19 @@ export function ProductUiSidebar() {
       <Section title="Format">
         <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
           {[
-            { id: "homepage-wide" as const, label: "Homepage" },
-            { id: "square" as const, label: "Square" },
+            { id: "product" as const, label: "Product feature", size: "866×660" },
           ].map((format) => (
             <button
               key={format.id}
               onClick={() => update({ format: format.id })}
               aria-pressed={content.format === format.id}
               className={[
-                "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
+                "flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
                 content.format === format.id ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
               ].join(" ")}
             >
-              {format.id === "homepage-wide" ? <Route size={13} /> : <Square size={13} />}
-              {format.label}
+              <span>{format.label}</span>
+              <span className="text-[10px] text-studio-muted tabular-nums">{format.size}</span>
             </button>
           ))}
         </div>

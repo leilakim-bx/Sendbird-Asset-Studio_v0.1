@@ -13,7 +13,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "AI-prepared response",
     description: "A reviewer-ready response with grounded sources.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "ai-response",
       composition: "photo-card",
       backgroundId: "bg-101",
@@ -36,7 +36,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Oversight queue",
     description: "A compact Trust OS review list with policy status.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "review-queue",
       composition: "plain-stage",
       backgroundId: "bg-302",
@@ -60,7 +60,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Test result details",
     description: "A simplified build/test/evaluate validation scene.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "test-results",
       composition: "photo-card",
       backgroundId: "bg-201",
@@ -98,7 +98,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Traffic allocation",
     description: "A tiny launch-control card for rollout percentages.",
     content: {
-      format: "square",
+      format: "product",
       scene: "traffic-allocation",
       composition: "plain-stage",
       backgroundId: "bg-300",
@@ -117,7 +117,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Proactive workflow",
     description: "A trigger-to-action moment for proactive concierge flows.",
     content: {
-      format: "square",
+      format: "product",
       scene: "workflow",
       composition: "plain-stage",
       backgroundId: "bg-500",
@@ -138,7 +138,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Version history",
     description: "A stacked prompt/version comparison card.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "version-history",
       composition: "photo-card",
       backgroundId: "bg-100",
@@ -161,7 +161,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "Steward detail",
     description: "A single agent task detail with activity trail.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "steward-detail",
       composition: "photo-card",
       backgroundId: "bg-301",
@@ -188,7 +188,7 @@ export const PRODUCT_UI_PRESETS: ProductUiPreset[] = [
     name: "A/B test result",
     description: "Connected environment cards plus a compact result card.",
     content: {
-      format: "homepage-wide",
+      format: "product",
       scene: "ab-test",
       composition: "wide-system",
       backgroundId: "bg-504",
@@ -218,6 +218,8 @@ export function getProductUiPreset(scene: ProductUiScene): ProductUiPreset {
 }
 
 export function cloneProductUiContent(content: ProductUiContent): ProductUiContent {
-  return JSON.parse(JSON.stringify(content)) as ProductUiContent;
+  const cloned = JSON.parse(JSON.stringify(content)) as ProductUiContent & {
+    format?: ProductUiContent["format"] | "homepage-wide" | "square";
+  };
+  return { ...cloned, format: "product" };
 }
-

@@ -1,4 +1,4 @@
-export type ProductUiFormat = "homepage-wide" | "square";
+export type ProductUiFormat = "product";
 
 export type ProductUiScene =
   | "ai-response"
@@ -73,4 +73,3 @@ export const PRODUCT_UI_STATUS_STYLES: Record<ProductUiStatus, { bg: string; fg:
   accent: { bg: "#F2FF66", fg: "#1C1917", border: "#E0EA58" },
   live: { bg: "#111111", fg: "#FFFFFF", border: "#111111" },
 };
-

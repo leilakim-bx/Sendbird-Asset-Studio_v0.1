@@ -14,8 +14,7 @@ type Props = {
 };
 
 export const PRODUCT_UI_SIZES = {
-  "homepage-wide": { width: 1200, height: 560, label: "Homepage wide" },
-  square: { width: 720, height: 720, label: "Square" },
+  product: { width: 866, height: 660, label: "Product feature" },
 } as const;
 
 const FONT = '"Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -525,7 +524,7 @@ function renderScene(content: ProductUiContent, compact: boolean) {
 
 export function ProductUiCanvas({ content, exportMode }: Props) {
   const size = PRODUCT_UI_SIZES[content.format];
-  const compact = content.format === "square";
+  const compact = false;
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const hasPhoto = content.composition !== "plain-stage";
   const scene = renderScene(content, compact);

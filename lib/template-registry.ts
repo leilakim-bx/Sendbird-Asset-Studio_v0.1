@@ -152,11 +152,10 @@ export const TEMPLATES: Template[] = [
     kind: "product-ui",
     id: "product-ui",
     name: "Product UI",
-    description: "Homepage-ready product UI scenes from reusable recipes",
+    description: "Product feature UI scenes from reusable recipes",
     layouts: [],
     exportSizes: [
-      { id: "homepage-wide", label: "Homepage wide", width: 1200, height: 560 },
-      { id: "square", label: "Square", width: 720, height: 720 },
+      { id: "product", label: "Product feature", width: 866, height: 660 },
     ],
     defaultContent: cloneProductUiContent(DEFAULT_PRODUCT_UI_CONTENT),
   },
