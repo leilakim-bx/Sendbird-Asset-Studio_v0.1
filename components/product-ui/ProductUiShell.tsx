@@ -18,7 +18,6 @@ const MAX_PREVIEW_H = 520;
 const FORMAT_ORDER: ProductUiFormat[] = ["feature", "release", "blog"];
 const FEATURE_DESKTOP = PRODUCT_UI_SIZES["feature-desktop"];
 const FEATURE_MOBILE = PRODUCT_UI_SIZES["feature-mobile"];
-const RELEASE = PRODUCT_UI_SIZES.release;
 const BLOG = PRODUCT_UI_SIZES.blog;
 
 function createSavedProductUiAsset({
@@ -144,11 +143,12 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
 
   const scale = Math.min(1, MAX_PREVIEW_W / currentSize.width, MAX_PREVIEW_H / currentSize.height);
   const releaseLabel = content.releasePurpose === "insert" ? "Release insert" : "Release thumbnail";
+  const releaseSize = getProductUiCanvasSize(content, "release");
   const previewLabel = content.format === "feature"
     ? `Feature · Desktop ${FEATURE_DESKTOP.width}×${FEATURE_DESKTOP.height} + Mobile ${FEATURE_MOBILE.width}×${FEATURE_MOBILE.height}`
     : content.format === "blog"
       ? `Blog ${BLOG.width}×auto`
-      : `${releaseLabel} ${RELEASE.width}×${RELEASE.height}`;
+      : `${releaseLabel} ${releaseSize.width}×${releaseSize.height}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -207,7 +207,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                             ? `${FEATURE_DESKTOP.detail} + ${FEATURE_MOBILE.detail}`
                             : format === "blog"
                               ? BLOG.detail
-                              : RELEASE.detail;
+                              : `${releaseSize.width}×${releaseSize.height}`;
                           return (
                             <Menu.Item
                               key={format}

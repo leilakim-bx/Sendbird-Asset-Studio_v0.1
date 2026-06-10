@@ -18,9 +18,11 @@ type Props = {
 export const PRODUCT_UI_SIZES = {
   "feature-desktop": { width: 866, height: 660, label: "Feature · Desktop", detail: "866×660" },
   "feature-mobile": { width: 343, height: 660, label: "Feature · Mobile", detail: "343×660" },
-  release: { width: 866, height: 660, label: "Release image", detail: "thumbnail / inline" },
+  release: { width: 866, height: 660, label: "Release insert", detail: "866×660" },
   blog: { width: 664, height: 0, label: "Blog", detail: "664×auto" },
 } as const;
+
+const RELEASE_THUMBNAIL_SIZE = { width: 667, height: 316, label: "Release thumbnail", detail: "667×316" } as const;
 
 const COLORS = {
   bg: "#FFFFFF",
@@ -55,6 +57,7 @@ const BORDER_LIGHT = COLORS.borderLight;
 const SURFACE = COLORS.surface;
 const STAGE = COLORS.bgSubtle;
 const LIME = COLORS.lime;
+const RELEASE_THUMBNAIL_INSET = 36;
 const BLOG_INSET = 48;
 
 function defaultExportTarget(content: ProductUiContent): ProductUiExportTarget {
@@ -602,6 +605,8 @@ function sceneSize(scene: ProductUiContent["scene"], compact: boolean) {
 
 export function getProductUiCanvasSize(content: ProductUiContent, target?: ProductUiExportTarget) {
   const exportTarget = target ?? defaultExportTarget(content);
+  if (exportTarget === "release" && content.releasePurpose !== "insert") return RELEASE_THUMBNAIL_SIZE;
+
   const base = PRODUCT_UI_SIZES[exportTarget];
 
   if (exportTarget !== "blog") return base;
@@ -623,15 +628,24 @@ export function ProductUiCanvas({ content, exportMode, target }: Props) {
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const hasPhoto = content.composition !== "plain-stage";
   const scene = renderScene(content, compact);
-  const inset = exportTarget === "blog" ? BLOG_INSET : compact ? 20 : content.composition === "wide-system" ? 66 : 58;
+  const releaseThumbnail = exportTarget === "release" && content.releasePurpose !== "insert";
+  const inset = releaseThumbnail
+    ? RELEASE_THUMBNAIL_INSET
+    : exportTarget === "blog"
+      ? BLOG_INSET
+      : compact
+        ? 20
+        : content.composition === "wide-system"
+          ? 66
+          : 58;
   const frameW = size.width - inset * 2;
   const frameH = size.height - inset * 2;
   const natural = sceneSize(content.scene, compact);
   const sceneScale = exportTarget === "blog"
     ? Math.min(1, frameW / natural.width)
-    : compact
-    ? Math.min(1, frameW / natural.width, frameH / natural.height)
-    : 1;
+    : compact || releaseThumbnail
+      ? Math.min(1, frameW / natural.width, frameH / natural.height)
+      : 1;
 
   return (
     <div
