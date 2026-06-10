@@ -67,6 +67,10 @@ type EditorProps = {
 /** Max compare rows in the fixed-height Product format (Blog has free height). */
 const MAX_COMPARE_ROWS_PRODUCT = 6;
 
+/** Hub title sits on one (nowrap) line under the logo — cap it so a long title
+ *  never spills past the hub column / canvas edge. ~"Steward hub hub". */
+const MAX_HUB_TITLE = 16;
+
 /** Per-type edit form shown when a block row is expanded. */
 export function BlockEditor({ block, onChange, format }: EditorProps) {
   switch (block.type) {
@@ -383,8 +387,13 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const setItems = (items: typeof b.items) => onChange({ ...b, items });
       return (
         <>
-          <Field label="Hub title">
-            <input className={inputCls} value={b.hubTitle} onChange={(e) => set({ hubTitle: e.target.value })} />
+          <Field label={`Hub title (max ${MAX_HUB_TITLE})`}>
+            <input
+              className={inputCls}
+              value={b.hubTitle}
+              maxLength={MAX_HUB_TITLE}
+              onChange={(e) => set({ hubTitle: e.target.value })}
+            />
           </Field>
           <Field label="Hub subtitle">
             <input className={inputCls} value={b.hubSub ?? ""} onChange={(e) => set({ hubSub: e.target.value })} />
@@ -619,6 +628,129 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             </ItemCard>
           ))}
           <AddRow onClick={addPoint}>Add point</AddRow>
+        </>
+      );
+    }
+    case "stacked-bar": {
+      const b = block;
+      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+
+      const setSeriesLabel = (si: number, label: string) =>
+        set({ series: b.series.map((s, j) => (j === si ? label : s)) });
+      const addSeries = () =>
+        onChange({
+          ...b,
+          series: [...b.series, `Series ${String.fromCharCode(65 + b.series.length)}`],
+          rows: b.rows.map((r) => ({ ...r, values: [...r.values, 0] })),
+        });
+      const removeSeries = (si: number) => {
+        if (b.series.length <= 1) return;
+        // Removing a series shifts later indices — keep accentIndex pointing at
+        // the same series (clear it if it was the one removed).
+        const accent =
+          b.accentIndex === undefined
+            ? undefined
+            : b.accentIndex === si
+              ? undefined
+              : b.accentIndex > si
+                ? b.accentIndex - 1
+                : b.accentIndex;
+        onChange({
+          ...b,
+          series: b.series.filter((_, j) => j !== si),
+          rows: b.rows.map((r) => ({ ...r, values: r.values.filter((_, j) => j !== si) })),
+          accentIndex: accent,
+        });
+      };
+
+      const setRowLabel = (ri: number, label: string) =>
+        set({ rows: b.rows.map((r, j) => (j === ri ? { ...r, label } : r)) });
+      const setValue = (ri: number, si: number, v: number) =>
+        set({
+          rows: b.rows.map((r, j) =>
+            j === ri ? { ...r, values: r.values.map((x, k) => (k === si ? v : x)) } : r,
+          ),
+        });
+      const addRow = () =>
+        set({ rows: [...b.rows, { label: `Row ${b.rows.length + 1}`, values: b.series.map(() => 0) }] });
+      const removeRow = (ri: number) => set({ rows: b.rows.filter((_, j) => j !== ri) });
+
+      return (
+        <>
+          <Field label="Unit (optional, e.g. % or k)">
+            <input className={inputCls} value={b.unit ?? ""} onChange={(e) => set({ unit: e.target.value })} />
+          </Field>
+          <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={b.normalize === true}
+              onChange={(e) => set({ normalize: e.target.checked })}
+              className="sb-checkbox"
+            />
+            Stretch every row to 100%
+          </label>
+          <Field label="Accent series (lime)">
+            <select
+              className={inputCls}
+              value={b.accentIndex ?? -1}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                set({ accentIndex: v < 0 ? undefined : v });
+              }}
+            >
+              <option value={-1}>None (all grayscale)</option>
+              {b.series.map((s, i) => (
+                <option key={i} value={i}>
+                  {s || `Series ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div className={labelCls + " mt-1"}>Series</div>
+          {b.series.map((s, si) => (
+            <div key={si} className="flex items-center gap-1.5 mb-1.5">
+              <input
+                className={inputCls}
+                value={s}
+                onChange={(e) => setSeriesLabel(si, e.target.value)}
+              />
+              <button
+                onClick={() => removeSeries(si)}
+                disabled={b.series.length <= 1}
+                title="Remove series"
+                className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-6 h-6 flex items-center justify-center transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          <div className="mb-3">
+            <AddRow onClick={addSeries}>Add series</AddRow>
+          </div>
+
+          {b.rows.map((row, ri) => (
+            <ItemCard key={ri} idx={ri} onRemove={() => removeRow(ri)}>
+              <input
+                className={inputCls + " mb-1.5"}
+                placeholder="Row label (e.g. Q1)"
+                value={row.label}
+                onChange={(e) => setRowLabel(ri, e.target.value)}
+              />
+              {b.series.map((sName, si) => (
+                <div key={si} className="grid grid-cols-[1fr_76px] gap-1.5 items-center mb-1.5 last:mb-0">
+                  <span className="text-[10px] text-studio-muted truncate">{sName || `Series ${si + 1}`}</span>
+                  <input
+                    className={inputCls}
+                    type="number"
+                    value={row.values[si] ?? 0}
+                    onChange={(e) => setValue(ri, si, num(e.target.value))}
+                  />
+                </div>
+              ))}
+            </ItemCard>
+          ))}
+          <AddRow onClick={addRow}>Add row</AddRow>
         </>
       );
     }

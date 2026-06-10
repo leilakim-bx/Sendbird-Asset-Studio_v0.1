@@ -2,7 +2,6 @@ import {
   TrendingUp,
   LayoutGrid,
   BarChart3,
-  Percent,
   ListOrdered,
   Circle,
   Layers,
@@ -36,11 +35,11 @@ export const PRESET_META: Record<string, PresetMeta> = {
   "channel-comparison": { Icon: BarChart3, typeLabel: "bar", soon: false },
   "trend-over-time": { Icon: LineChart, typeLabel: "trend", soon: false },
   "before-after": { Icon: Columns2, typeLabel: "compare", soon: false },
-  "split-ratio": { Icon: Percent, typeLabel: "bar", soon: false },
+  "split-ratio": { Icon: BarChart3, typeLabel: "bar", soon: false },
   "maturity-levels": { Icon: BarChart3, typeLabel: "bar", soon: false },
   "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: false },
   architecture: { Icon: Layers, typeLabel: "layers", soon: false },
-  "agent-overview": { Icon: Circle, typeLabel: "network", soon: false },
+  "agent-overview": { Icon: Circle, typeLabel: "hub", soon: false },
   empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
 
@@ -288,6 +287,18 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
         labelB: "B",
         unit: "%",
         items: [{ label: "Row", valueA: 50 }],
+      };
+    case "stacked-bar":
+      return {
+        id,
+        type: "stacked-bar",
+        series: ["Series A", "Series B"],
+        unit: "",
+        rows: [
+          { label: "Row 1", values: [60, 40] },
+          { label: "Row 2", values: [45, 55] },
+          { label: "Row 3", values: [70, 30] },
+        ],
       };
     case "step":
       return { id, type: "step", items: [{ title: "Step", desc: "" }] };

@@ -2,6 +2,7 @@ import type { InfographicBlock } from "@/lib/types/infographic";
 import { StatBlock } from "./StatBlock";
 import { KpiGroupBlock } from "./KpiGroupBlock";
 import { BarGroupBlock } from "./BarGroupBlock";
+import { StackedBarBlock } from "./StackedBarBlock";
 import { StepBlock } from "./StepBlock";
 import { StackBlock } from "./StackBlock";
 import { NodeListBlock } from "./NodeListBlock";
@@ -24,6 +25,8 @@ export function BlockRenderer({ block, scale = 1 }: { block: InfographicBlock; s
       return <KpiGroupBlock block={block} scale={scale} />;
     case "bar-group":
       return <BarGroupBlock block={block} scale={scale} />;
+    case "stacked-bar":
+      return <StackedBarBlock block={block} scale={scale} />;
     case "step":
       return <StepBlock block={block} scale={scale} />;
     case "stack":

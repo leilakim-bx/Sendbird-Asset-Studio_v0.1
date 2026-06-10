@@ -91,6 +91,21 @@ export type InfographicBlock =
     }
   | {
       id: string;
+      type: "stacked-bar";
+      /** Series legend labels, in stacking order (left→right within each bar). */
+      series: string[];
+      /** Category rows; each row's `values` align to `series` by index. */
+      rows: Array<{ label: string; values: number[] }>;
+      /** Normalize every row to 100% width (default false = absolute widths on a
+       *  shared scale, so row totals are comparable). */
+      normalize?: boolean;
+      /** Index into `series` rendered in the accent (lime); the rest stay
+       *  grayscale. undefined / -1 = pure grayscale. */
+      accentIndex?: number;
+      unit?: string;
+    }
+  | {
+      id: string;
       type: "line-chart";
       /** Shared x-axis category labels; series values align by index. */
       xLabels: string[];

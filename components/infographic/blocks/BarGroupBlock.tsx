@@ -252,25 +252,32 @@ function SplitBar({
   );
 }
 
-/** Grayscale ramp for the "ranked" variant (dark→light, top to bottom). Each
- *  entry pairs a bar fill with a readable label color. A highlighted row uses
- *  the accent fill instead (the one place accent is a bar fill, by design). */
-const RANKED_RAMP: { fill: string; text: string }[] = [
+/** Ranked fills — dark end of the palette only, so bars stay legible on the
+ *  light track. Light grays (#D9D6D2/#E5E3DF) would vanish into the track. A
+ *  highlighted row uses the accent fill (the one place accent is a bar fill). */
+const RANKED_FILL_RAMP: { fill: string; text: string }[] = [
   { fill: "#292016", text: "#FFFFFF" },
   { fill: "#66625E", text: "#FFFFFF" },
   { fill: "#8C867E", text: "#FFFFFF" },
-  { fill: "#D9D6D2", text: "#292016" },
-  { fill: "#E5E3DF", text: "#292016" },
 ];
-/** Largest bar fills this share of the row; the rest leaves room for the value. */
+/** Light track behind each ranked row (the un-filled remainder). */
+const RANKED_TRACK = "#E5E3DF";
+/** Largest bar fills this share of the full-width track; the remainder holds the
+ *  right-pinned value so values align in one column regardless of bar length. */
 const RANKED_MAX_BAR_PCT = 72;
+/** Label inset inside the fill — shared with the left header's padding. */
+const RANKED_PAD_L = 18;
+/** Value's right padding — shared with the right header so the value column and
+ *  its header land on one vertical line. */
+const RANKED_PAD_R = 22;
 
 /**
- * "ranked" variant — single-series rows with the category label INSIDE each
- * bar (left), the value as a big serif number OUTSIDE (right), and a grayscale
- * color ramp down the rows. Left-aligned full width (no label gutter), so label
- * length never skews the layout. Optional column headers come from labelA
- * (left) / labelB (right). Highlight → accent fill.
+ * "ranked" variant — each row is a full-width track (light gray) with a colored
+ * fill ∝ value growing from the left, the category label INSIDE the fill, and
+ * the value pinned to the track's RIGHT edge. Because every value sits at the
+ * same right offset, the values (and the labelB header above them) align in one
+ * column — bar length never shifts them. labelA = left header, labelB = right
+ * header. Highlight → accent fill. Fills use the dark palette only for contrast.
  */
 function Ranked({
   block,
@@ -283,7 +290,7 @@ function Ranked({
   const u = block.unit ?? "%";
   const items = block.items;
   const maxV = Math.max(...items.map((it) => it.valueA), 1);
-  const barH = Math.round(56 * scale);
+  const barH = Math.round(58 * scale);
   const hasHeader = !!(block.labelA || block.labelB);
 
   const headerStyle = {
@@ -297,30 +304,45 @@ function Ranked({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
       {hasHeader && (
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-          <span style={headerStyle}>{block.labelA}</span>
-          <span style={headerStyle}>{block.labelB}</span>
+        // Absolute left/right offsets mirror the rows exactly (label paddingLeft +
+        // value right), so each header lands on its column's vertical line.
+        <div style={{ position: "relative", height: fs(16), marginBottom: 6 }}>
+          <span style={{ ...headerStyle, position: "absolute", left: RANKED_PAD_L, top: 0 }}>{block.labelA}</span>
+          <span style={{ ...headerStyle, position: "absolute", right: RANKED_PAD_R, top: 0 }}>{block.labelB}</span>
         </div>
       )}
       {items.map((it, i) => {
-        const ramp = RANKED_RAMP[Math.min(i, RANKED_RAMP.length - 1)];
-        const fill = it.highlight ? "var(--ig-accent)" : ramp.fill;
-        const textColor = it.highlight ? "#292016" : ramp.text;
+        const ramp = it.highlight
+          ? { fill: "var(--ig-accent)", text: "#292016" }
+          : RANKED_FILL_RAMP[i % RANKED_FILL_RAMP.length];
         const w = (Math.max(0, it.valueA) / maxV) * RANKED_MAX_BAR_PCT;
         return (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          // Track: rounded + overflow:hidden. This rounds only the fill's LEFT
+          // corners (clipped to the track); the fill itself has no radius, so its
+          // right edge stays square — reads as a progress fill, not a pill.
+          <div
+            key={i}
+            style={{
+              position: "relative",
+              height: barH,
+              borderRadius: 10,
+              background: RANKED_TRACK,
+              overflow: "hidden",
+            }}
+          >
             <div
               style={{
-                flexBasis: `${w}%`,
-                flexGrow: 0,
-                flexShrink: 0,
-                minWidth: Math.round(110 * scale),
-                height: barH,
-                borderRadius: 10,
-                background: fill,
+                position: "absolute",
+                left: 0,
+                top: 0,
+                height: "100%",
+                width: `${w}%`,
+                minWidth: Math.round(120 * scale),
+                background: ramp.fill,
                 display: "flex",
                 alignItems: "center",
-                padding: "0 16px",
+                paddingLeft: RANKED_PAD_L,
+                paddingRight: 12,
                 boxSizing: "border-box",
               }}
             >
@@ -328,7 +350,7 @@ function Ranked({
                 style={{
                   fontSize: fs(15),
                   fontWeight: 600,
-                  color: textColor,
+                  color: ramp.text,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -339,6 +361,10 @@ function Ranked({
             </div>
             <span
               style={{
+                position: "absolute",
+                right: RANKED_PAD_R,
+                top: "50%",
+                transform: "translateY(-50%)",
                 fontFamily: INFOGRAPHIC_SERIF,
                 fontSize: fs(26),
                 fontWeight: 500,
