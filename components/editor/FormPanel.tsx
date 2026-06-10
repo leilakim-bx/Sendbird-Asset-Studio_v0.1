@@ -15,6 +15,8 @@ import { Menu } from "@base-ui/react/menu";
 import { ScenarioList } from "./ScenarioList";
 import { ScenarioLibraryModal } from "./ScenarioLibraryModal";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
+import { useOnceFlag } from "@/lib/use-once-flag";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
@@ -955,6 +957,25 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   // ── Placeholder (focus 시 숨김) ─────────────────────────
   const [phFocused, setPhFocused] = useState(false);
 
+  // First-run coachmark nudging the user toward the Scenario section.
+  const [showScenarioCoach, dismissScenarioCoach] = useOnceFlag("coach-chat-scenario-v1");
+  const coachPanelRef = useRef<HTMLDivElement>(null);
+  const scenarioRef = useRef<HTMLDivElement>(null);
+  const [coachTop, setCoachTop] = useState(0);
+  useEffect(() => {
+    if (!showScenarioCoach) return;
+    const measure = () => {
+      if (!coachPanelRef.current || !scenarioRef.current) return;
+      setCoachTop(
+        scenarioRef.current.getBoundingClientRect().top -
+          coachPanelRef.current.getBoundingClientRect().top,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [showScenarioCoach]);
+
   /** product cards 중 imageQuery 있고 img 없는 항목 자동 fetch */
   function autoFetchImages(msgs: ChatMessage[]) {
     msgs.forEach((msg) => {
@@ -997,6 +1018,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   /** 시나리오 선택 시 즉시 적용 (확인 모달 없음 — 빠른 전환 우선) */
   function handleScenarioChange(id: string) {
+    dismissScenarioCoach(); // user engaged with scenarios — retire the coachmark
     applyScenario(id);
   }
 
@@ -1140,6 +1162,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   return (
     <div
+      ref={coachPanelRef}
       style={{ width: panelWidth }}
       className="relative shrink-0 h-full flex flex-col bg-studio-sidebar border-l border-studio-border"
     >
@@ -1191,22 +1214,25 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         {genError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{genError}</p>}
       </div>
 
-      {/* Scenario — preset-style list (mirrors infographic Preset cards) */}
-      <Section
-        title="Scenario"
-        action={
-          <button
-            onClick={() => setShowScenarioModal(true)}
-            title="All scenarios"
-            aria-label="All scenarios"
-            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
-          >
-            <Plus size={15} />
-          </button>
-        }
-      >
-        <ScenarioList activeId={activeScenario} onPick={handleScenarioChange} limit={4} />
-      </Section>
+      {/* Scenario — preset-style list (mirrors infographic Preset cards).
+          Wrapped so the floating first-run coachmark can measure its position. */}
+      <div ref={scenarioRef}>
+        <Section
+          title="Scenario"
+          action={
+            <button
+              onClick={() => setShowScenarioModal(true)}
+              title="All scenarios"
+              aria-label="All scenarios"
+              className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+            >
+              <Plus size={15} />
+            </button>
+          }
+        >
+          <ScenarioList activeId={activeScenario} onPick={handleScenarioChange} limit={4} />
+        </Section>
+      </div>
 
       {showScenarioModal && (
         <ScenarioLibraryModal
@@ -1409,6 +1435,16 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       </Section>
 
       </div> {/* /p-5 */}
+
+      {/* First-run coachmark — floats out of the panel's left edge toward the
+          canvas, pointing back at the Scenario section. */}
+      {showScenarioCoach && coachTop > 0 && (
+        <CoachmarkBubble
+          text="Pick a scenario to start 🙂"
+          onDismiss={dismissScenarioCoach}
+          top={coachTop}
+        />
+      )}
     </div>
   );
 }

@@ -34,6 +34,8 @@ import {
   type Suggestion,
 } from "@/lib/ai/validate-suggestions";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
+import { useOnceFlag } from "@/lib/use-once-flag";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
 import { ConfirmDialog } from "./sidebar/ConfirmDialog";
@@ -131,6 +133,27 @@ export function InfographicSidebar() {
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
 
+  // First-run coachmark nudging the user toward the Preset section. The bubble
+  // floats out of the panel's left edge, so we measure the Preset section's
+  // vertical offset within the panel to align it.
+  const [showPresetCoach, dismissPresetCoach] = useOnceFlag("coach-ig-preset-v1");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const presetRef = useRef<HTMLDivElement>(null);
+  const [coachTop, setCoachTop] = useState(0);
+  useEffect(() => {
+    if (!showPresetCoach) return;
+    const measure = () => {
+      if (!panelRef.current || !presetRef.current) return;
+      setCoachTop(
+        presetRef.current.getBoundingClientRect().top -
+          panelRef.current.getBoundingClientRect().top,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [showPresetCoach]);
+
   // ── AI Magic state ──
   const [article, setArticle] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
@@ -222,6 +245,7 @@ export function InfographicSidebar() {
    *  swap would discard; otherwise load straight away (no dialog by default). */
   function requestPreset(id: string) {
     if (PRESET_META[id]?.soon) return;
+    dismissPresetCoach(); // user engaged with presets — retire the coachmark
     const edited = baselineRef.current !== null && contentFingerprint(content) !== baselineRef.current;
     if (edited) setPendingPreset(id);
     else loadPreset(id);
@@ -267,6 +291,7 @@ export function InfographicSidebar() {
 
   return (
     <div
+      ref={panelRef}
       style={{ width: panelWidth }}
       className="relative shrink-0 h-full flex flex-col bg-studio-sidebar border-l border-studio-border"
     >
@@ -336,22 +361,25 @@ export function InfographicSidebar() {
         </div>
       </Section>
 
-      {/* Preset — 4-item preview; the "+" opens a modal with the full set. */}
-      <Section
-        title="Preset"
-        action={
-          <button
-            onClick={() => setPresetModalOpen(true)}
-            title="All presets"
-            aria-label="All presets"
-            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
-          >
-            <Plus size={15} />
-          </button>
-        }
-      >
-        <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
-      </Section>
+      {/* Preset — 4-item preview; the "+" opens a modal with the full set.
+          Wrapped so the floating first-run coachmark can measure its position. */}
+      <div ref={presetRef}>
+        <Section
+          title="Preset"
+          action={
+            <button
+              onClick={() => setPresetModalOpen(true)}
+              title="All presets"
+              aria-label="All presets"
+              className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+            >
+              <Plus size={15} />
+            </button>
+          }
+        >
+          <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
+        </Section>
+      </div>
 
       {/* Background — product format is locked to the fixed warm-gray bg. */}
       <Section title="Background">
@@ -490,6 +518,16 @@ export function InfographicSidebar() {
         )}
       </Section>
       </div>
+
+      {/* First-run coachmark — floats out of the panel's left edge toward the
+          canvas, pointing back at the Preset section. */}
+      {showPresetCoach && coachTop > 0 && (
+        <CoachmarkBubble
+          text="Pick a preset to start 🙂"
+          onDismiss={dismissPresetCoach}
+          top={coachTop}
+        />
+      )}
 
       <SuggestionsModal
         open={modalOpen}
