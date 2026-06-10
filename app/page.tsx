@@ -21,9 +21,9 @@ const TEMPLATES = [
     ready: true,
   },
   {
-    id: "product-ui",
-    title: "Product UI",
-    preview: "/preview/snippet.png",
+    id: "product-visual",
+    title: "Product Visual",
+    preview: "/preview/snippet.png", // stopgap art — dedicated preview in STEP 2~5
     ready: true,
   },
 ];
@@ -40,8 +40,8 @@ function TemplateGallery() {
             onClick={() => {
               if (!t.ready) return;
               // "Create asset" → seed fresh, not resume. Only chat + infographic
-              // consume this flag on mount (product-ui autosave is out of scope),
-              // so scope it to them to avoid a lingering flag.
+              // consume this flag on mount (product-visual is a placeholder with
+              // no autosave), so scope it to them to avoid a lingering flag.
               if (t.id === "feature-mockup" || t.id === "infographic") {
                 setFreshStart(true);
               }

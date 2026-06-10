@@ -1,8 +1,7 @@
 import type { ChatMessage } from "./store";
 import type { InfographicContent } from "./types/infographic";
-import type { ProductUiContent } from "./types/product-ui";
+import type { ProductVisualContent } from "./types/product-visual";
 import { getAvatarForName } from "./avatar";
-import { DEFAULT_PRODUCT_UI_CONTENT, cloneProductUiContent } from "./product-ui-presets";
 
 /** Wrap an external image URL through our same-origin proxy */
 function p(url: string) {
@@ -46,13 +45,13 @@ export type InfographicTemplate = TemplateBase & {
   defaultContent: InfographicContent;
 };
 
-export type ProductUiTemplate = TemplateBase & {
-  kind: "product-ui";
-  defaultContent: ProductUiContent;
+export type ProductVisualTemplate = TemplateBase & {
+  kind: "product-visual";
+  defaultContent: ProductVisualContent;
 };
 
 /** Discriminated by `kind` — narrow before accessing variant-specific fields. */
-export type Template = ChatTemplate | InfographicTemplate | ProductUiTemplate;
+export type Template = ChatTemplate | InfographicTemplate | ProductVisualTemplate;
 
 // ── Export Sizes ──────────────────────────────────────────
 
@@ -149,16 +148,31 @@ export const TEMPLATES: Template[] = [
     },
   },
   {
-    kind: "product-ui",
-    id: "product-ui",
-    name: "Product UI",
-    description: "Product feature and release UI scenes from reusable recipes",
-    layouts: [],
+    kind: "product-visual",
+    id: "product-visual",
+    name: "Product Visual",
+    description: "Polish product screenshots for releases and blogs",
+    layouts: [], // format-specific; resolved from FORMAT_LAYOUTS on format select
+    // NOTE: the spec listed { id, w, h, label }; adapted to the shared
+    // ExportSize shape ({ id, label, width, height }, height 0 = variable).
+    // Canonical per-format sizing lives in FORMAT_SIZES (types/product-visual).
     exportSizes: [
-      { id: "feature", label: "Feature (desktop + mobile)", width: 866, height: 660 },
-      { id: "release", label: "Release image", width: 866, height: 660 },
+      { id: "feature-desktop",   label: "Product Feature — Desktop (866×660)", width: 866, height: 660 },
+      { id: "feature-mobile",    label: "Product Feature — Mobile (343×var)",  width: 343, height: 0 },
+      { id: "release-thumbnail", label: "Product Release — Thumbnail (667×316)", width: 667, height: 316 },
+      { id: "release-insert",    label: "Product Release — Insert (840×var)",  width: 840, height: 0 },
+      { id: "blog",              label: "Blog (664×var)",                      width: 664, height: 0 },
     ],
-    defaultContent: cloneProductUiContent(DEFAULT_PRODUCT_UI_CONTENT),
+    // Initial seed = release-thumbnail's per-format default (kept in sync with
+    // FORMAT_DEFAULTS in types/product-visual so first-entry == switch-back).
+    defaultContent: {
+      format: "release-thumbnail", // most-used format first
+      layout: "side-by-side",      // satisfies FORMAT_LAYOUTS["release-thumbnail"]
+      bg: "warmgray",
+      screenshot: undefined,       // empty until the marketer uploads one
+      title: "Introducing AI agent workspace",
+      subtitle: "Manage all your AI agents in one workspace.",
+    },
   },
 ];
 

@@ -9,7 +9,8 @@ import type {
   InfographicAccent,
   InfographicBlock,
 } from "@/lib/types/infographic";
-import type { ProductUiContent } from "@/lib/types/product-ui";
+import type { ProductVisualContent, ProductVisualFormat } from "@/lib/types/product-visual";
+import { FORMAT_DEFAULTS } from "@/lib/types/product-visual";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -152,8 +153,11 @@ export type SavedAsset = {
   userAvatarUrl?: string;
   /** Infographic content snapshot — present for infographic assets (v1.3+) */
   infographic?: InfographicContent;
-  /** Product UI content snapshot — present for Product UI assets (v1.4+) */
-  productUi?: ProductUiContent;
+  /** Product Visual content snapshot — present for product-visual assets.
+   *  NOTE: `screenshot` is stripped before save (base64 too large for the
+   *  shared localStorage blob → would blow quota and stall chat/infographic
+   *  autosave). The marketer re-uploads the image on restore. */
+  productVisual?: ProductVisualContent;
 };
 
 // ── Editor State ──────────────────────────────────────────
@@ -172,8 +176,8 @@ export type ChatDraft = {
 };
 
 /** Persisted autosave drafts, keyed by template family. Absent key = no draft
- *  yet (distinct from an empty-but-edited draft). product-ui intentionally out
- *  of scope for beta. */
+ *  yet (distinct from an empty-but-edited draft). product-visual intentionally
+ *  out of scope (placeholder editor in STEP 1). */
 export type DraftState = { chat?: ChatDraft; infographic?: InfographicContent };
 
 export type EditorState = {
@@ -243,10 +247,15 @@ export type EditorState = {
   updateInfographicBlock: (id: string, block: InfographicBlock) => void;
   removeInfographicBlock: (id: string) => void;
 
-  // ── Product UI template (non-persisted session state) ───
-  /** Seeded from the Product UI template's defaultContent on editor mount. */
-  productUiContent: ProductUiContent | null;
-  setProductUiContent: (content: ProductUiContent) => void;
+  // ── Product Visual template (non-persisted session state) ──
+  /** Seeded from the Product Visual template's defaultContent on editor mount.
+   *  Transient (not persisted, not autosaved). */
+  productVisualContent: ProductVisualContent | null;
+  setProductVisualContent: (content: ProductVisualContent) => void;
+  /** Switch format → apply that format's defaults (title/subtitle/layout/bg)
+   *  while preserving the uploaded screenshot. Keeps layout valid for the
+   *  format (FORMAT_DEFAULTS layouts always satisfy FORMAT_LAYOUTS). */
+  setProductVisualFormat: (format: ProductVisualFormat) => void;
 
   // ── Autosave drafts (persisted) ─────────────────────────
   /** In-progress editor drafts, persisted so a refresh/crash resumes work. */
@@ -371,6 +380,41 @@ function migrateV0toV1(raw: unknown): PersistedV1 {
   };
 }
 
+// ── v1 → v2 마이그레이션 ──────────────────────────────────
+// Product UI 템플릿 폐기 → 저장된 product-ui 에셋 제거.
+// PersistedV2 ≡ PersistedV1 (partialize shape 동일, 데이터만 필터링).
+
+function migrateV1toV2(raw: unknown): PersistedV1 {
+  const state = (raw ?? {}) as Record<string, unknown>;
+
+  // 제거 전 원본 백업 (v0→v1 패턴 동일)
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("sendbird-editor-v2-backup", JSON.stringify(state));
+    } catch {
+      // 쿼터 초과 시 조용히 무시
+    }
+  }
+
+  const all = Array.isArray(state.savedAssets) ? (state.savedAssets as SavedAsset[]) : [];
+  // 정확한 id 일치로만 제외 → chat/infographic 등 그 외 전부 보존
+  const savedAssets = all.filter((a) => a?.templateId !== "product-ui");
+
+  const removed = all.length - savedAssets.length;
+  if (removed > 0) {
+    // 의도된 제거이므로 경고 토스트(_migrationSkips) 대신 조용히 로그만 남긴다.
+    console.info(`[migrate v1→v2] Removed ${removed} retired Product UI asset(s).`);
+  }
+
+  return {
+    customBackgrounds: Array.isArray(state.customBackgrounds)
+      ? (state.customBackgrounds as Background[])
+      : [],
+    savedAssets,
+    ...(state.drafts !== undefined && { drafts: state.drafts as DraftState }),
+  };
+}
+
 // ── Store ─────────────────────────────────────────────────
 
 export const useEditorStore = create<EditorState>()(
@@ -467,9 +511,21 @@ export const useEditorStore = create<EditorState>()(
             : s,
         ),
 
-      // Product UI content — transient session state, never persisted
-      productUiContent:    null,
-      setProductUiContent: (productUiContent) => set({ productUiContent }),
+      // Product Visual content — transient session state, never persisted
+      productVisualContent:    null,
+      setProductVisualContent: (productVisualContent) => set({ productVisualContent }),
+      setProductVisualFormat: (format) =>
+        set((s) =>
+          s.productVisualContent
+            ? {
+                productVisualContent: {
+                  ...FORMAT_DEFAULTS[format],
+                  // preserve the uploaded screenshot across format switches
+                  screenshot: s.productVisualContent.screenshot,
+                },
+              }
+            : s,
+        ),
 
       // Autosave drafts — persisted (see partialize). Absent key = no draft yet.
       drafts: {},
@@ -543,7 +599,7 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name:    "sendbird-editor-v1",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         customBackgrounds: state.customBackgrounds,
@@ -551,8 +607,11 @@ export const useEditorStore = create<EditorState>()(
         drafts:            state.drafts,
       }),
       migrate: (persistedState, version) => {
-        if (version < 1) return migrateV0toV1(persistedState);
-        return persistedState as PersistedV1;
+        // Chained: a v0 blob threads through both steps; a v1 blob runs only v1→v2.
+        let state: unknown = persistedState;
+        if (version < 1) state = migrateV0toV1(state);
+        if (version < 2) state = migrateV1toV2(state);
+        return state as PersistedV1;
       },
       onRehydrateStorage: () => (state) => {
         if (state && _migrationSkips > 0) {

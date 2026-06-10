@@ -7,12 +7,12 @@ import { useEditorStore } from "@/lib/store";
 
 // ── Tabs ──────────────────────────────────────────────────
 
-type TabId = "chat" | "infographic" | "product-ui";
+type TabId = "chat" | "infographic" | "product-visual";
 
 const TABS: { id: TabId; label: string; soon?: boolean }[] = [
-  { id: "chat",        label: "Chat UI" },
-  { id: "infographic", label: "Infographic", soon: true },
-  { id: "product-ui",  label: "Product UI",  soon: true },
+  { id: "chat",           label: "Chat UI" },
+  { id: "infographic",    label: "Infographic",    soon: true },
+  { id: "product-visual", label: "Product Visual", soon: true },
 ];
 
 // ── Coming-soon panel ─────────────────────────────────────
@@ -85,11 +85,11 @@ export default function OpenAssetPage() {
           desc="Data-driven infographics and visual summaries are on the way. This section will let you browse and export report and overview assets."
         />
       )}
-      {tab === "product-ui" && (
+      {tab === "product-visual" && (
         <ComingSoon
           icon={LayoutDashboard}
-          title="Product UI"
-          desc="Product interface snippets and dashboards are on the way. This section will let you browse and export real product feature assets."
+          title="Product Visual"
+          desc="Polish real product screenshots into release and blog visuals. This section will let you browse and export your Product Visual assets."
         />
       )}
     </div>

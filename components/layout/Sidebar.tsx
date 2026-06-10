@@ -99,8 +99,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
     comingSoon: true,
   },
   {
-    id: "product-ui",
-    label: "Product UI",
+    id: "product-visual",
+    label: "Product Visual",
     icon: LayoutDashboard,
     soon: true,
     comingSoon: true,
@@ -211,11 +211,12 @@ const ASSET_TYPES: AssetType[] = [
     inProgress: true,
   },
   {
-    id: "product-ui",
+    id: "product-visual",
     icon: LayoutDashboard,
-    title: "Product UI",
-    description: "Product interface snippets and dashboards for showcasing real product features.",
-    ready: false,
+    title: "Product Visual",
+    description: "Polish product screenshots for releases and blogs.",
+    ready: true,
+    inProgress: true,
   },
 ];
 
@@ -263,7 +264,7 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
                 onClick={() => {
                   if (!type.ready) return;
                   // "Create asset" → seed fresh, not resume. Scoped to the two
-                  // templates that consume the flag (product-ui out of scope).
+                  // templates that consume the flag (product-visual out of scope).
                   if (type.id === "feature-mockup" || type.id === "infographic") {
                     setFreshStart(true);
                   }
