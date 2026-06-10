@@ -23,7 +23,20 @@ export function KpiGroupBlock({ block, scale = 1 }: Props) {
           >
             {it.number}
           </div>
-          <div style={{ fontSize: fs(13), color: INFOGRAPHIC_INK_MUTED }}>{it.label}</div>
+          <div
+            style={{
+              fontSize: fs(13),
+              color: INFOGRAPHIC_INK_MUTED,
+              lineHeight: 1.4,
+              // Clamp to at most 2 lines so uneven label lengths don't stretch a column.
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {it.label}
+          </div>
         </div>
       ))}
     </div>

@@ -343,9 +343,12 @@
   border: none;
   outline: none;
   border-radius: 5px;
-  background-color: var(--studio-border);
+  background-color: #5A5A5A;
   cursor: pointer;
   transition: background-color 0.15s ease;
+}
+.sb-checkbox:hover {
+  background-color: #6B6B6B;
 }
 .sb-checkbox:checked {
   background-color: var(--studio-accent);

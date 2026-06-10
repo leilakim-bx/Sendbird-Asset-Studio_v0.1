@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Plus, X, Lightbulb } from "lucide-react";
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
@@ -57,10 +57,18 @@ function num(v: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-type EditorProps = { block: InfographicBlock; onChange: (b: InfographicBlock) => void };
+type EditorProps = {
+  block: InfographicBlock;
+  onChange: (b: InfographicBlock) => void;
+  /** Current canvas format — Product is fixed-height, so some blocks cap row count. */
+  format: InfographicFormat;
+};
+
+/** Max compare rows in the fixed-height Product format (Blog has free height). */
+const MAX_COMPARE_ROWS_PRODUCT = 6;
 
 /** Per-type edit form shown when a block row is expanded. */
-export function BlockEditor({ block, onChange }: EditorProps) {
+export function BlockEditor({ block, onChange, format }: EditorProps) {
   switch (block.type) {
     case "stat": {
       const b = block;
@@ -110,7 +118,9 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               />
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { number: "00", label: "Label" }])}>Add KPI</AddRow>
+          {b.items.length < 4 && (
+            <AddRow onClick={() => setItems([...b.items, { number: "00", label: "Label" }])}>Add KPI</AddRow>
+          )}
         </>
       );
     }
@@ -466,7 +476,14 @@ export function BlockEditor({ block, onChange }: EditorProps) {
               </div>
             </ItemCard>
           ))}
-          <AddRow onClick={() => setRows([...b.rows, { label: "", a: "", b: "" }])}>Add row</AddRow>
+          {format === "product" && b.rows.length >= MAX_COMPARE_ROWS_PRODUCT ? (
+            <p className="text-[11px] text-studio-muted leading-relaxed px-0.5">
+              Product format is a fixed height, so it fits up to {MAX_COMPARE_ROWS_PRODUCT} rows. Switch to
+              Blog/Perspective to add more.
+            </p>
+          ) : (
+            <AddRow onClick={() => setRows([...b.rows, { label: "", a: "", b: "" }])}>Add row</AddRow>
+          )}
         </>
       );
     }

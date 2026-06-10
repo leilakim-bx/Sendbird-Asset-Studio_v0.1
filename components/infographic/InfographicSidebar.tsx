@@ -374,7 +374,7 @@ export function InfographicSidebar() {
       })()}
 
       {/* Content — one image holds exactly one content block */}
-      <Section title="Content">
+      <Section title="Block">
         {/* Type picker — small icon grid; selecting one replaces the content */}
         <div className="grid grid-cols-3 gap-1.5 mb-3">
           {BLOCK_TYPE_META.map(({ type, label, Icon }) => {
@@ -388,7 +388,7 @@ export function InfographicSidebar() {
                 className={[
                   "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg border transition-colors",
                   active
-                    ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                    ? "border-studio-accent text-studio-text"
                     : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
                 ].join(" ")}
               >
@@ -401,12 +401,12 @@ export function InfographicSidebar() {
 
         {block ? (
           <>
-            <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} />
+            <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} format={content.format} />
             <button
               onClick={() => setInfographicContent({ ...content, blocks: [] })}
               className="mt-1 w-full text-[11px] text-studio-muted hover:text-red-400 transition-colors py-1.5"
             >
-              Clear content
+              Clear block
             </button>
           </>
         ) : (
