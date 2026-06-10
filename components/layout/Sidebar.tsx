@@ -344,7 +344,7 @@ export function Sidebar() {
           {/* Create asset */}
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-studio-accent text-studio-accent-fg font-bold text-sm hover:opacity-90 transition-opacity"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] bg-studio-accent text-studio-accent-fg font-bold text-sm hover:opacity-90 transition-opacity"
           >
             Create asset
           </button>
@@ -352,7 +352,7 @@ export function Sidebar() {
           {/* Create with AI — coming soon */}
           <button
             disabled
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-studio-border text-studio-muted font-semibold text-sm opacity-50 cursor-not-allowed"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] border border-studio-border text-studio-muted font-semibold text-sm opacity-50 cursor-not-allowed"
           >
             <Sparkles size={15} />
             Create with AI
@@ -364,7 +364,7 @@ export function Sidebar() {
           {/* Open asset */}
           <button
             onClick={() => router.push("/open")}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-studio-border text-studio-muted font-semibold text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] border border-studio-border text-studio-muted font-semibold text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
           >
             Open asset
           </button>
@@ -377,7 +377,7 @@ export function Sidebar() {
         <div className="px-4 pb-6">
           <button
             onClick={() => setGuideOpen(true)}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-studio-border text-studio-muted text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] border border-studio-border text-studio-muted text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
           >
             <BookOpen size={14} />
             Guides

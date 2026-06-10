@@ -166,7 +166,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
               <button
                 onClick={handleSave}
                 disabled={saveState !== "idle"}
-                className="font-semibold text-sm px-5 py-2.5 rounded-xl border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-semibold text-sm px-5 py-2.5 rounded-[10px] border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved ✓" : "Save"}
               </button>
@@ -175,7 +175,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
               <Menu.Root>
                 <Menu.Trigger
                   disabled={exporting}
-                  className="flex items-center gap-2 bg-studio-accent text-studio-accent-fg font-semibold text-sm px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-studio-accent text-studio-accent-fg font-semibold text-sm px-5 py-2.5 rounded-[10px] hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {exporting ? "Exporting…" : "Export"}
                   <ChevronDown size={14} />
