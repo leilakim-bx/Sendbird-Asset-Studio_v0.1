@@ -17,13 +17,39 @@ export const PRODUCT_UI_SIZES = {
   product: { width: 866, height: 660, label: "Product feature" },
 } as const;
 
-const FONT = '"Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
-const INK = "#151515";
-const MUTED = "#77716A";
-const BORDER = "#E8E3DD";
-const SURFACE = "#FFFFFF";
-const STAGE = "#E4E1DC";
-const LIME = "#F2FF66";
+const COLORS = {
+  bg: "#FFFFFF",
+  bgSubtle: "#F7F5F0",
+  surface: "#FFFFFF",
+  surface2: "#F7F5F0",
+  border: "#D9D6D2",
+  borderLight: "#E5E3DF",
+  text: "#292016",
+  textMuted: "#66625E",
+  textDim: "#8C867E",
+  disabled: "#C4C0B9",
+  lime: "#F2FF66",
+  limeBorder: "#D9E64D",
+  ctaDark: "#18140F",
+  red500: "#FF5E69",
+  red100: "#FFE3E5",
+  blue500: "#27A6F7",
+  blue100: "#D8F0FF",
+  green500: "#25BD85",
+  green100: "#D0F3E6",
+} as const;
+
+// SF Pro is available as the Apple system font; -apple-system is the reliable
+// browser alias used for export when the named SF families are not exposed.
+const FONT = '"SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif';
+const INK = COLORS.text;
+const MUTED = COLORS.textMuted;
+const DIM = COLORS.textDim;
+const BORDER = COLORS.border;
+const BORDER_LIGHT = COLORS.borderLight;
+const SURFACE = COLORS.surface;
+const STAGE = COLORS.bgSubtle;
+const LIME = COLORS.lime;
 
 function statusStyle(status: ProductUiStatus = "neutral") {
   return PRODUCT_UI_STATUS_STYLES[status];
@@ -47,10 +73,10 @@ function Surface({
     <div
       style={{
         boxSizing: "border-box",
-        background: muted ? "rgba(255,255,255,0.88)" : SURFACE,
+        background: muted ? "rgba(255,255,255,0.92)" : SURFACE,
         border: `1px solid ${BORDER}`,
         borderRadius: 14,
-        boxShadow: "0 18px 38px rgba(42, 36, 30, 0.14)",
+        boxShadow: "0 18px 38px rgba(41, 32, 22, 0.12)",
         color: INK,
         overflow: "hidden",
         ...style,
@@ -103,9 +129,9 @@ function TinyButton({ children, dark = false }: { children: ReactNode; dark?: bo
         height: 28,
         padding: "0 12px",
         borderRadius: 7,
-        background: dark ? "#050505" : "#F7F5F2",
-        color: dark ? "#FFFFFF" : INK,
-        border: dark ? "1px solid #050505" : `1px solid ${BORDER}`,
+        background: dark ? COLORS.ctaDark : COLORS.surface2,
+        color: dark ? COLORS.bg : INK,
+        border: dark ? `1px solid ${COLORS.ctaDark}` : `1px solid ${BORDER_LIGHT}`,
         fontSize: 10,
         fontWeight: 700,
       }}
@@ -118,9 +144,9 @@ function TinyButton({ children, dark = false }: { children: ReactNode; dark?: bo
 function Dots() {
   return (
     <span style={{ display: "inline-flex", gap: 5 }}>
-      <span style={{ width: 6, height: 6, borderRadius: 999, background: "#E6DFD8" }} />
-      <span style={{ width: 6, height: 6, borderRadius: 999, background: "#E6DFD8" }} />
-      <span style={{ width: 6, height: 6, borderRadius: 999, background: "#E6DFD8" }} />
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: BORDER_LIGHT }} />
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: BORDER_LIGHT }} />
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: BORDER_LIGHT }} />
     </span>
   );
 }
@@ -157,8 +183,8 @@ function ItemRow({ item, dense = false }: { item: ProductUiItem; dense?: boolean
         minHeight: dense ? 42 : 50,
         padding: dense ? "8px 10px" : "10px 12px",
         borderRadius: 10,
-        background: "#FBFAF8",
-        border: `1px solid ${BORDER}`,
+        background: COLORS.surface2,
+        border: `1px solid ${BORDER_LIGHT}`,
       }}
     >
       <span
@@ -198,7 +224,7 @@ function ItemRow({ item, dense = false }: { item: ProductUiItem; dense?: boolean
               display: "block",
               marginTop: 3,
               fontSize: dense ? 8 : 9,
-              color: MUTED,
+              color: DIM,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -221,7 +247,7 @@ function AiResponseScene({ content, compact }: { content: ProductUiContent; comp
       <div style={{ padding: compact ? 18 : 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <span style={{ color: MUTED, fontSize: 11 }}>{content.eyebrow ?? "Reviewer"}</span>
-          <span style={{ width: 22, height: 22, borderRadius: 999, background: "#D7C0A7" }} />
+          <span style={{ width: 22, height: 22, borderRadius: 999, background: COLORS.disabled }} />
           <strong style={{ fontSize: 11 }}>{content.secondaryText ?? "Emily Choi"}</strong>
         </div>
         <div
@@ -243,7 +269,7 @@ function AiResponseScene({ content, compact }: { content: ProductUiContent; comp
               <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10 }}>
                 <span style={{ color: MUTED }}>▣</span>
                 <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-                <span style={{ color: "#13A66B", fontWeight: 800 }}>{item.value}</span>
+                <span style={{ color: COLORS.green500, fontWeight: 800 }}>{item.value}</span>
               </div>
             ))}
           </div>
@@ -275,14 +301,14 @@ function ReviewQueueScene({ content, compact }: { content: ProductUiContent; com
             marginTop: 14,
             padding: "11px 12px",
             borderRadius: 12,
-            background: "#F7F4F0",
+            background: COLORS.surface2,
             display: "flex",
             alignItems: "center",
             gap: 12,
             fontSize: 12,
           }}
         >
-          <strong style={{ color: "#08A76D" }}>{content.primaryText ?? "94% on policy"}</strong>
+          <strong style={{ color: COLORS.green500 }}>{content.primaryText ?? "94% on policy"}</strong>
           <span style={{ color: MUTED, flex: 1 }}>{content.secondaryText ?? "12 flagged today"}</span>
           <TinyButton dark>{content.metricB ?? "Kill switch"}</TinyButton>
         </div>
@@ -298,8 +324,8 @@ function TestResultsScene({ content, compact }: { content: ProductUiContent; com
         <h3 style={{ margin: 0, fontSize: 18 }}>{content.title}</h3>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18, fontSize: 11, fontWeight: 800 }}>
           <span>{content.eyebrow ?? "Results"}</span>
-          <span style={{ color: "#08A76D" }}>{content.metricA}</span>
-          <span style={{ color: "#D82A46" }}>{content.metricB}</span>
+          <span style={{ color: COLORS.green500 }}>{content.metricA}</span>
+          <span style={{ color: COLORS.red500 }}>{content.metricB}</span>
         </div>
         <div style={{ display: "grid", gap: 9, marginTop: 12 }}>
           {content.items.slice(0, compact ? 4 : 5).map((item) => <ItemRow key={item.id} item={item} dense />)}
@@ -316,7 +342,7 @@ function TestResultsScene({ content, compact }: { content: ProductUiContent; com
         }}
       >
         {content.nodes.slice(0, 2).map((node) => (
-          <Surface key={node.id} style={{ padding: 16, background: node.status === "warning" ? "#F8F1F4" : "#F4F1FF" }}>
+          <Surface key={node.id} style={{ padding: 16, background: node.status === "warning" ? COLORS.red100 : COLORS.blue100 }}>
             <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 7 }}>{content.secondaryText ?? "AI agent's answer"}</div>
             <div style={{ fontSize: 12, lineHeight: 1.35 }}>{truncate(node.title, compact ? 76 : 120)}</div>
             <div style={{ marginTop: 8, color: MUTED, fontSize: 10 }}>{node.detail}</div>
@@ -338,9 +364,9 @@ function TrafficScene({ content }: { content: ProductUiContent }) {
         <span>{content.secondaryText ?? "Version B (Candidate)"}</span>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 9 }}>
-        <div style={{ height: 13, width: `${Math.max(12, a)}%`, background: "#3478FF", borderRadius: 4 }} />
-        <div style={{ height: 30, width: 3, background: "#111", borderRadius: 999 }} />
-        <div style={{ height: 13, flex: 1, background: "#822CF2", borderRadius: 4 }} />
+        <div style={{ height: 13, width: `${Math.max(12, a)}%`, background: COLORS.blue500, borderRadius: 4 }} />
+        <div style={{ height: 30, width: 3, background: COLORS.ctaDark, borderRadius: 999 }} />
+        <div style={{ height: 13, flex: 1, background: COLORS.lime, borderRadius: 4, border: `1px solid ${COLORS.limeBorder}` }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 15 }}>
         <TinyButton>{content.metricA ?? "70%"}</TinyButton>
@@ -369,8 +395,8 @@ function WorkflowScene({ content }: { content: ProductUiContent }) {
           top: 88,
           width: 88,
           height: 60,
-          borderTop: "2px solid #111",
-          borderRight: "2px solid #111",
+          borderTop: `2px solid ${COLORS.ctaDark}`,
+          borderRight: `2px solid ${COLORS.ctaDark}`,
           transform: "skewX(-24deg)",
         }}
       />
@@ -406,7 +432,7 @@ function VersionHistoryScene({ content, compact }: { content: ProductUiContent; 
           </div>
           <div style={{ marginTop: 12, fontSize: 11, color: MUTED }}>{content.metricA}</div>
           {items.map((item) => (
-            <div key={item.id} style={{ marginTop: 12, padding: 13, borderRadius: 8, background: "#F6F3EF" }}>
+            <div key={item.id} style={{ marginTop: 12, padding: 13, borderRadius: 8, background: COLORS.surface2 }}>
               <strong style={{ display: "block", fontSize: 11 }}>{item.label}</strong>
               <span style={{ display: "block", marginTop: 6, color: MUTED, fontSize: 11, lineHeight: 1.35 }}>
                 {item.detail}
@@ -428,8 +454,8 @@ function VersionHistoryScene({ content, compact }: { content: ProductUiContent; 
       >
         <div style={{ padding: 15 }}>
           <Pill status="neutral" compact>Older version</Pill>
-          <div style={{ marginTop: 12, height: 18, borderRadius: 5, background: "#F2EFEA" }} />
-          <div style={{ marginTop: 8, height: 36, borderRadius: 5, background: "#F2EFEA" }} />
+          <div style={{ marginTop: 12, height: 18, borderRadius: 5, background: COLORS.surface2 }} />
+          <div style={{ marginTop: 8, height: 36, borderRadius: 5, background: COLORS.surface2 }} />
         </div>
       </Surface>
     </div>
@@ -538,7 +564,7 @@ export function ProductUiCanvas({ content, exportMode }: Props) {
         width: size.width,
         height: size.height,
         overflow: "hidden",
-        background: hasPhoto ? "#D9E7EA" : STAGE,
+        background: hasPhoto ? COLORS.blue100 : STAGE,
         fontFamily: FONT,
         color: INK,
       }}

@@ -66,10 +66,10 @@ export const PRODUCT_UI_STATUS_LABELS: Record<ProductUiStatus, string> = {
 };
 
 export const PRODUCT_UI_STATUS_STYLES: Record<ProductUiStatus, { bg: string; fg: string; border: string }> = {
-  success: { bg: "#DDF8E9", fg: "#0D8A50", border: "#BAEBCF" },
-  warning: { bg: "#FFF1D9", fg: "#B15C00", border: "#F7D8A8" },
-  danger: { bg: "#FFE1E6", fg: "#BB203B", border: "#F6C0CB" },
-  neutral: { bg: "#F3F0EC", fg: "#66625E", border: "#E3DDD6" },
-  accent: { bg: "#F2FF66", fg: "#1C1917", border: "#E0EA58" },
-  live: { bg: "#111111", fg: "#FFFFFF", border: "#111111" },
+  success: { bg: "#D0F3E6", fg: "#25BD85", border: "#D9D6D2" },
+  warning: { bg: "#F2FF66", fg: "#292016", border: "#D9E64D" },
+  danger: { bg: "#FFE3E5", fg: "#FF5E69", border: "#FF5E69" },
+  neutral: { bg: "#F7F5F0", fg: "#66625E", border: "#E5E3DF" },
+  accent: { bg: "#F2FF66", fg: "#292016", border: "#D9E64D" },
+  live: { bg: "#18140F", fg: "#FFFFFF", border: "#18140F" },
 };
