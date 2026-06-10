@@ -15,6 +15,7 @@ import {
   Plus,
   Info,
   ChevronDown,
+  Lightbulb,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -676,12 +677,17 @@ export function InfographicSidebar({
         {articleNotice && <p className="mt-2 text-[10px] text-studio-muted leading-snug">{articleNotice}</p>}
       </div>
 
-      <Section title="Article images">
-        {articleImages.length === 0 ? (
-          <p className="text-[11px] text-studio-muted leading-relaxed">
-            Paste an article above to suggest 2-5 infographic images. No API key is required.
-          </p>
-        ) : (
+      {articleImages.length === 0 ? (
+        <Section title="Guide">
+          <div className="flex items-start gap-2 rounded-md border border-studio-accent/30 bg-studio-accent/[0.08] px-2.5 py-2">
+            <Lightbulb size={13} className="text-studio-accent shrink-0 mt-px" />
+            <p className="text-[11px] text-studio-text leading-snug">
+              Paste an article above to suggest 2-5 infographic images.
+            </p>
+          </div>
+        </Section>
+      ) : (
+        <Section title="Article images">
           <div className="flex flex-col gap-1">
             {articleImages.map((candidate, index) => {
               const active = candidate.id === activeArticleImageId;
@@ -724,8 +730,8 @@ export function InfographicSidebar({
               );
             })}
           </div>
-        )}
-      </Section>
+        </Section>
+      )}
 
       <Section title="Selected image">
         <SelectedImageEditor content={content} onChange={setInfographicContent} />
