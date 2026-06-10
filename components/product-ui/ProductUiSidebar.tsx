@@ -7,6 +7,7 @@ import {
   History,
   ListChecks,
   MessageSquareText,
+  Plus,
   Sparkles,
   Split,
   Table2,
@@ -27,6 +28,7 @@ import {
 import { PRODUCT_UI_PRESETS, cloneProductUiContent, getProductUiPreset } from "@/lib/product-ui-presets";
 import { Section } from "@/components/infographic/sidebar/Section";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
+import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
 
 const inputCls =
   "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
@@ -193,9 +195,15 @@ function draftFromPrompt(prompt: string, current: ProductUiContent): ProductUiCo
 }
 
 export function ProductUiSidebar() {
-  const { productUiContent: content, setProductUiContent } = useEditorStore();
+  const {
+    productUiContent: content,
+    setProductUiContent,
+    customBackgrounds,
+    addCustomBackground,
+  } = useEditorStore();
   const [prompt, setPrompt] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [showBgModal, setShowBgModal] = useState(false);
 
   if (!content) return null;
   const activeContent = content;
@@ -316,16 +324,30 @@ export function ProductUiSidebar() {
         </div>
       </Section>
 
-      <Section title="Background">
-        <div className="grid grid-cols-5 gap-1.5">
-          {BACKGROUNDS.slice(0, 15).map((background) => (
+      <Section
+        title="Background"
+        action={
+          <button
+            onClick={() => setShowBgModal(true)}
+            title="Background Library"
+            aria-label="Background Library"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+          >
+            <Plus size={15} />
+          </button>
+        }
+      >
+        <div className="grid grid-cols-3 gap-2">
+          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((background) => (
             <button
               key={background.id}
               onClick={() => update({ backgroundId: background.id })}
               title={background.label}
               className={[
-                "h-9 rounded-md border-2 overflow-hidden transition-transform hover:scale-105",
-                content.backgroundId === background.id ? "border-studio-accent" : "border-transparent",
+                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
+                content.backgroundId === background.id
+                  ? "border-studio-accent"
+                  : "border-transparent hover:border-studio-muted",
               ].join(" ")}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -334,6 +356,16 @@ export function ProductUiSidebar() {
           ))}
         </div>
       </Section>
+
+      {showBgModal && (
+        <BackgroundPickerModal
+          currentId={content.backgroundId}
+          customBackgrounds={customBackgrounds}
+          onSelect={(background) => update({ backgroundId: background.id })}
+          onUpload={(background) => addCustomBackground(background)}
+          onClose={() => setShowBgModal(false)}
+        />
+      )}
 
       <Section title="Copy">
         <Field label="Title" value={content.title} onChange={(title) => update({ title })} />
