@@ -126,31 +126,16 @@ function FormatDropdown({
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner side="bottom" align="start" sideOffset={6}>
-          <Menu.Popup className="z-50 w-(--anchor-width) min-w-[260px] rounded-xl border border-studio-border bg-studio-sidebar py-1.5 shadow-xl outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-            {FORMAT_OPTIONS.map((format) => {
-              const active = format.id === value;
-              return (
-                <Menu.Item
-                  key={format.id}
-                  onClick={() => onChange(format.id)}
-                  className={[
-                    "mx-1 flex cursor-default items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left outline-none transition-colors data-[highlighted]:bg-studio-hover",
-                    active ? "bg-studio-hover" : "",
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "h-2 w-2 shrink-0 rounded-full",
-                      active ? "bg-studio-accent" : "bg-studio-border",
-                    ].join(" ")}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-studio-text">{format.label}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-studio-muted">{format.detail}</span>
-                  </span>
-                </Menu.Item>
-              );
-            })}
+          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar py-1 shadow-lg outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+            {FORMAT_OPTIONS.map((format) => (
+              <Menu.Item
+                key={format.id}
+                onClick={() => onChange(format.id)}
+                className="text-xs text-studio-text px-3 py-1.5 cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white"
+              >
+                {format.label}
+              </Menu.Item>
+            ))}
           </Menu.Popup>
         </Menu.Positioner>
       </Menu.Portal>
