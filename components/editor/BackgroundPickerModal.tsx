@@ -14,6 +14,7 @@ const TABS: { key: "all" | BackgroundGroup; label: string }[] = [
 type Props = {
   currentId: string;
   customBackgrounds: Background[];
+  hiddenGroups?: BackgroundGroup[];
   onSelect: (bg: Background) => void;
   onUpload: (bg: Background) => void;
   onClose: () => void;
@@ -22,6 +23,7 @@ type Props = {
 export function BackgroundPickerModal({
   currentId,
   customBackgrounds,
+  hiddenGroups = [],
   onSelect,
   onUpload,
   onClose,
@@ -77,7 +79,9 @@ export function BackgroundPickerModal({
     }
   }
 
-  const allBackgrounds = [...BACKGROUNDS, ...customBackgrounds];
+  const hiddenGroupSet = new Set(hiddenGroups);
+  const tabs = TABS.filter((t) => t.key === "all" || !hiddenGroupSet.has(t.key));
+  const allBackgrounds = [...BACKGROUNDS, ...customBackgrounds].filter((bg) => !bg.group || !hiddenGroupSet.has(bg.group));
   const visibleBackgrounds = tab === "all"
     ? allBackgrounds
     : allBackgrounds.filter((bg) => bg.group === tab);
@@ -102,7 +106,7 @@ export function BackgroundPickerModal({
 
         {/* Tabs */}
         <div className="flex items-center gap-1 px-5 pt-4 pb-3 shrink-0">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}

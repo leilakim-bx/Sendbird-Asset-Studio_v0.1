@@ -395,6 +395,7 @@ export function ProductUiSidebar() {
         <BackgroundPickerModal
           currentId={content.backgroundId}
           customBackgrounds={customBackgrounds}
+          hiddenGroups={["industry"]}
           onSelect={(background) => update({ backgroundId: background.id })}
           onUpload={(background) => addCustomBackground(background)}
           onClose={() => setShowBgModal(false)}
