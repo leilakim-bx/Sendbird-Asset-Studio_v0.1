@@ -3,13 +3,10 @@
 import { useState } from "react";
 import {
   Bot,
-  ChevronDown,
-  FileImage,
   GitBranch,
   History,
   ListChecks,
   MessageSquareText,
-  Monitor,
   Plus,
   Sparkles,
   Split,
@@ -17,7 +14,6 @@ import {
   Workflow,
   type LucideIcon,
 } from "lucide-react";
-import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import {
@@ -51,9 +47,9 @@ const sceneIcons: Record<ProductUiScene, LucideIcon> = {
 
 const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutral", "accent", "live"];
 
-const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string; meta: string; Icon: LucideIcon }> = [
-  { id: "feature", label: "Feature", meta: "Desktop + mobile", Icon: Monitor },
-  { id: "release", label: "Release image", meta: "Thumbnail / inline", Icon: FileImage },
+const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string }> = [
+  { id: "feature", label: "Feature" },
+  { id: "release", label: "Release image" },
 ];
 
 function nextId(prefix: string) {
@@ -217,8 +213,6 @@ export function ProductUiSidebar() {
 
   if (!content) return null;
   const activeContent = content;
-  const selectedFormat = FORMAT_OPTIONS.find((format) => format.id === content.format) ?? FORMAT_OPTIONS[0];
-  const SelectedFormatIcon = selectedFormat.Icon;
 
   function update(patch: Partial<ProductUiContent>) {
     setProductUiContent({ ...activeContent, ...patch } as ProductUiContent);
@@ -292,46 +286,23 @@ export function ProductUiSidebar() {
       </Section>
 
       <Section title="Format">
-        <Menu.Root>
-          <Menu.Trigger className="flex w-full items-center gap-2 rounded-xl border border-studio-border bg-studio-hover px-3 py-2.5 text-left text-studio-text transition-colors hover:border-studio-muted">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-studio-text">
-              <SelectedFormatIcon size={16} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold">{selectedFormat.label}</span>
-              <span className="block truncate text-[10px] text-studio-muted">{selectedFormat.meta}</span>
-            </span>
-            <ChevronDown size={15} className="shrink-0 text-studio-muted" />
-          </Menu.Trigger>
-          <Menu.Portal>
-            <Menu.Positioner side="bottom" align="start" sideOffset={6}>
-              <Menu.Popup className="z-50 w-[288px] rounded-xl border border-studio-border bg-[#101010] p-1.5 shadow-xl outline-none data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-                {FORMAT_OPTIONS.map((format) => {
-                  const Icon = format.Icon;
-                  const active = content.format === format.id;
-                  return (
-                    <Menu.Item
-                      key={format.id}
-                      onClick={() => update({ format: format.id })}
-                      className={[
-                        "flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm outline-none cursor-default transition-colors",
-                        active ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:bg-studio-hover hover:text-studio-text",
-                      ].join(" ")}
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
-                        <Icon size={15} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{format.label}</span>
-                        <span className="block truncate text-[10px] text-studio-muted">{format.meta}</span>
-                      </span>
-                    </Menu.Item>
-                  );
-                })}
-              </Menu.Popup>
-            </Menu.Positioner>
-          </Menu.Portal>
-        </Menu.Root>
+        <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
+          {FORMAT_OPTIONS.map((format) => (
+            <button
+              key={format.id}
+              onClick={() => update({ format: format.id })}
+              aria-pressed={content.format === format.id}
+              className={[
+                "flex-1 text-xs py-1.5 rounded-md transition-colors",
+                content.format === format.id
+                  ? "bg-studio-sidebar text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {format.label}
+            </button>
+          ))}
+        </div>
       </Section>
 
       <Section title="Composition">
