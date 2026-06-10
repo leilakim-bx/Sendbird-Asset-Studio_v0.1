@@ -1,5 +1,5 @@
-export type ProductUiFormat = "feature" | "release";
-export type ProductUiExportTarget = "feature-desktop" | "feature-mobile" | "release";
+export type ProductUiFormat = "feature" | "release" | "blog";
+export type ProductUiExportTarget = "feature-desktop" | "feature-mobile" | "release" | "blog";
 export type ProductUiReleasePurpose = "thumbnail" | "insert";
 
 export type ProductUiScene =

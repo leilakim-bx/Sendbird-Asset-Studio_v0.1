@@ -227,7 +227,7 @@ export function cloneProductUiContent(content: ProductUiContent): ProductUiConte
       | "homepage-wide"
       | "square";
   };
-  const format = cloned.format === "release" ? "release" : "feature";
+  const format = cloned.format === "release" || cloned.format === "blog" ? cloned.format : "feature";
   const releasePurpose = cloned.releasePurpose === "insert" ? "insert" : "thumbnail";
   return { ...cloned, format, releasePurpose };
 }

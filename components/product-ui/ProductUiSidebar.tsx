@@ -52,6 +52,7 @@ const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutr
 const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string }> = [
   { id: "feature", label: "Feature" },
   { id: "release", label: "Release image" },
+  { id: "blog", label: "Blog" },
 ];
 
 const RELEASE_PURPOSE_OPTIONS: Array<{ id: ProductUiReleasePurpose; label: string }> = [

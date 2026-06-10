@@ -10,15 +10,16 @@ import { captureThumbnail, exportImage } from "@/lib/export";
 import type { ProductUiTemplate } from "@/lib/template-registry";
 import type { ProductUiContent, ProductUiExportTarget, ProductUiFormat } from "@/lib/types/product-ui";
 import { cloneProductUiContent } from "@/lib/product-ui-presets";
-import { ProductUiCanvas, PRODUCT_UI_SIZES } from "./ProductUiCanvas";
+import { getProductUiCanvasSize, ProductUiCanvas, PRODUCT_UI_SIZES } from "./ProductUiCanvas";
 import { ProductUiSidebar } from "./ProductUiSidebar";
 
 const MAX_PREVIEW_W = 760;
 const MAX_PREVIEW_H = 520;
-const FORMAT_ORDER: ProductUiFormat[] = ["feature", "release"];
+const FORMAT_ORDER: ProductUiFormat[] = ["feature", "release", "blog"];
 const FEATURE_DESKTOP = PRODUCT_UI_SIZES["feature-desktop"];
 const FEATURE_MOBILE = PRODUCT_UI_SIZES["feature-mobile"];
 const RELEASE = PRODUCT_UI_SIZES.release;
+const BLOG = PRODUCT_UI_SIZES.blog;
 
 function createSavedProductUiAsset({
   templateId,
@@ -66,8 +67,13 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   const featureDesktopRef = useRef<HTMLDivElement>(null);
   const featureMobileRef = useRef<HTMLDivElement>(null);
   const releaseRef = useRef<HTMLDivElement>(null);
-  const currentTarget: ProductUiExportTarget = content.format === "release" ? "release" : "feature-desktop";
-  const currentSize = PRODUCT_UI_SIZES[currentTarget];
+  const blogRef = useRef<HTMLDivElement>(null);
+  const currentTarget: ProductUiExportTarget = content.format === "release"
+    ? "release"
+    : content.format === "blog"
+      ? "blog"
+      : "feature-desktop";
+  const currentSize = getProductUiCanvasSize(content, currentTarget);
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -88,6 +94,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   function refFor(target: ProductUiExportTarget) {
     if (target === "feature-mobile") return featureMobileRef;
     if (target === "release") return releaseRef;
+    if (target === "blog") return blogRef;
     return featureDesktopRef;
   }
 
@@ -109,7 +116,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   async function exportOne(target: ProductUiExportTarget) {
     const ref = refFor(target).current;
     if (!ref) return;
-    const size = PRODUCT_UI_SIZES[target];
+    const size = getProductUiCanvasSize(content, target);
     await exportImage(ref, size.width, size.height, filename(target));
   }
 
@@ -121,8 +128,10 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
         await exportOne("feature-desktop");
         await new Promise((resolve) => setTimeout(resolve, 400));
         await exportOne("feature-mobile");
-      } else {
+      } else if (format === "release") {
         await exportOne("release");
+      } else {
+        await exportOne("blog");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -137,7 +146,9 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   const releaseLabel = content.releasePurpose === "insert" ? "Release insert" : "Release thumbnail";
   const previewLabel = content.format === "feature"
     ? `Feature · Desktop ${FEATURE_DESKTOP.width}×${FEATURE_DESKTOP.height} + Mobile ${FEATURE_MOBILE.width}×${FEATURE_MOBILE.height}`
-    : `${releaseLabel} ${RELEASE.width}×${RELEASE.height}`;
+    : content.format === "blog"
+      ? `Blog ${BLOG.width}×auto`
+      : `${releaseLabel} ${RELEASE.width}×${RELEASE.height}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -191,10 +202,12 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                         <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
                         {FORMAT_ORDER.map((format) => {
-                          const label = format === "feature" ? "Feature" : releaseLabel;
+                          const label = format === "feature" ? "Feature" : format === "blog" ? "Blog" : releaseLabel;
                           const detail = format === "feature"
                             ? `${FEATURE_DESKTOP.detail} + ${FEATURE_MOBILE.detail}`
-                            : RELEASE.detail;
+                            : format === "blog"
+                              ? BLOG.detail
+                              : RELEASE.detail;
                           return (
                             <Menu.Item
                               key={format}
@@ -225,6 +238,9 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
               </div>
               <div ref={releaseRef}>
                 <ProductUiCanvas content={{ ...content, format: "release" }} target="release" exportMode />
+              </div>
+              <div ref={blogRef}>
+                <ProductUiCanvas content={{ ...content, format: "blog" }} target="blog" exportMode />
               </div>
             </div>
           </div>

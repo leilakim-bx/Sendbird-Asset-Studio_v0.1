@@ -59,11 +59,12 @@ function extractCandidateLines(input: string) {
 
 function sceneFromText(input: string, current: ProductUiContent): ProductUiScene {
   const lower = input.toLowerCase();
+  const inlineFormat = current.format === "blog" || current.releasePurpose === "insert";
 
   if (/(traffic|rollout|allocation|candidate|pause rollout|version\s+\w+)/.test(lower)) return "traffic-allocation";
   if (/(environment|deployment|staging|production|development|a\/b|ab test|experiment)/.test(lower)) return "ab-test";
   if (/(test|evaluate|evaluation|validation|passed|failed|csat|quality|outcome|hallucination)/.test(lower)) {
-    return current.releasePurpose === "insert" ? "test-results" : "review-queue";
+    return inlineFormat ? "test-results" : "review-queue";
   }
   if (/(workflow|trigger|action|proactive|email|sequence|channel|automation)/.test(lower)) return "workflow";
   if (/(compare|before|after|version history|prompt|translation|language|locale|glossary)/.test(lower)) {
@@ -77,14 +78,14 @@ function sceneFromText(input: string, current: ProductUiContent): ProductUiScene
 }
 
 function compositionFor(scene: ProductUiScene, current: ProductUiContent): ProductUiComposition {
-  if (current.format === "release" && current.releasePurpose === "insert") return "plain-stage";
+  if (current.format === "blog" || (current.format === "release" && current.releasePurpose === "insert")) return "plain-stage";
   if (scene === "ab-test") return "wide-system";
   if (scene === "traffic-allocation" || scene === "workflow" || scene === "review-queue") return "plain-stage";
   return "photo-card";
 }
 
 function backgroundFor(scene: ProductUiScene, current: ProductUiContent) {
-  if (current.format === "release" && current.releasePurpose === "insert") return "bg-300";
+  if (current.format === "blog" || (current.format === "release" && current.releasePurpose === "insert")) return "bg-300";
   if (scene === "ab-test") return "bg-504";
   if (scene === "workflow") return "bg-500";
   if (scene === "review-queue") return "bg-302";
@@ -140,7 +141,7 @@ function trafficDraft(input: string, current: ProductUiContent, preset: ProductU
     ...preset,
     format: current.format,
     releasePurpose: current.releasePurpose,
-    composition: current.format === "release" && current.releasePurpose === "insert" ? "plain-stage" : preset.composition,
+    composition: current.format === "blog" || (current.format === "release" && current.releasePurpose === "insert") ? "plain-stage" : preset.composition,
     backgroundId: backgroundFor("traffic-allocation", current),
     title,
     primaryText: versions[0] ?? "Version A",

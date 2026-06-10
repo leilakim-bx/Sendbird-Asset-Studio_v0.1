@@ -19,6 +19,7 @@ export const PRODUCT_UI_SIZES = {
   "feature-desktop": { width: 866, height: 660, label: "Feature · Desktop", detail: "866×660" },
   "feature-mobile": { width: 343, height: 660, label: "Feature · Mobile", detail: "343×660" },
   release: { width: 866, height: 660, label: "Release image", detail: "thumbnail / inline" },
+  blog: { width: 664, height: 0, label: "Blog", detail: "664×auto" },
 } as const;
 
 const COLORS = {
@@ -54,6 +55,13 @@ const BORDER_LIGHT = COLORS.borderLight;
 const SURFACE = COLORS.surface;
 const STAGE = COLORS.bgSubtle;
 const LIME = COLORS.lime;
+const BLOG_INSET = 48;
+
+function defaultExportTarget(content: ProductUiContent): ProductUiExportTarget {
+  if (content.format === "release") return "release";
+  if (content.format === "blog") return "blog";
+  return "feature-desktop";
+}
 
 function statusStyle(status: ProductUiStatus = "neutral") {
   return PRODUCT_UI_STATUS_STYLES[status];
@@ -592,18 +600,36 @@ function sceneSize(scene: ProductUiContent["scene"], compact: boolean) {
   }
 }
 
+export function getProductUiCanvasSize(content: ProductUiContent, target?: ProductUiExportTarget) {
+  const exportTarget = target ?? defaultExportTarget(content);
+  const base = PRODUCT_UI_SIZES[exportTarget];
+
+  if (exportTarget !== "blog") return base;
+
+  const natural = sceneSize(content.scene, false);
+  const frameW = base.width - BLOG_INSET * 2;
+  const sceneScale = Math.min(1, frameW / natural.width);
+
+  return {
+    ...base,
+    height: Math.ceil(natural.height * sceneScale + BLOG_INSET * 2),
+  };
+}
+
 export function ProductUiCanvas({ content, exportMode, target }: Props) {
-  const exportTarget = target ?? (content.format === "release" ? "release" : "feature-desktop");
-  const size = PRODUCT_UI_SIZES[exportTarget];
+  const exportTarget = target ?? defaultExportTarget(content);
+  const size = getProductUiCanvasSize(content, exportTarget);
   const compact = exportTarget === "feature-mobile";
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const hasPhoto = content.composition !== "plain-stage";
   const scene = renderScene(content, compact);
-  const inset = compact ? 20 : content.composition === "wide-system" ? 66 : 58;
+  const inset = exportTarget === "blog" ? BLOG_INSET : compact ? 20 : content.composition === "wide-system" ? 66 : 58;
   const frameW = size.width - inset * 2;
   const frameH = size.height - inset * 2;
   const natural = sceneSize(content.scene, compact);
-  const sceneScale = compact
+  const sceneScale = exportTarget === "blog"
+    ? Math.min(1, frameW / natural.width)
+    : compact
     ? Math.min(1, frameW / natural.width, frameH / natural.height)
     : 1;
 
