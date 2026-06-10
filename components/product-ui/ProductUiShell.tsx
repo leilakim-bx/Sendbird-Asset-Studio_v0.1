@@ -8,13 +8,36 @@ import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { captureThumbnail, exportImage } from "@/lib/export";
 import type { ProductUiTemplate } from "@/lib/template-registry";
-import type { ProductUiFormat } from "@/lib/types/product-ui";
+import type { ProductUiContent, ProductUiFormat } from "@/lib/types/product-ui";
 import { cloneProductUiContent } from "@/lib/product-ui-presets";
 import { ProductUiCanvas, PRODUCT_UI_SIZES } from "./ProductUiCanvas";
 import { ProductUiSidebar } from "./ProductUiSidebar";
 
 const MAX_PREVIEW_W = 760;
 const MAX_PREVIEW_H = 520;
+const FORMAT_ORDER: ProductUiFormat[] = ["feature-desktop", "feature-mobile", "release"];
+
+function createSavedProductUiAsset({
+  templateId,
+  content,
+  previewDataUrl,
+}: {
+  templateId: string;
+  content: ProductUiContent;
+  previewDataUrl: string;
+}): SavedAsset {
+  const now = Date.now();
+  const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return {
+    id: `asset-${now}`,
+    templateId,
+    appName: content.title || "Product UI",
+    name: `${content.title || "Product UI"} · ${dateStr}`,
+    previewDataUrl,
+    savedAt: now,
+    productUi: content,
+  };
+}
 
 export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   const {
@@ -37,8 +60,9 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }, [template.id]);
 
   const content = productUiContent ?? template.defaultContent;
-  const productRef = useRef<HTMLDivElement>(null);
-  const currentRef = productRef;
+  const featureDesktopRef = useRef<HTMLDivElement>(null);
+  const featureMobileRef = useRef<HTMLDivElement>(null);
+  const releaseRef = useRef<HTMLDivElement>(null);
   const currentSize = PRODUCT_UI_SIZES[content.format];
 
   const [exporting, setExporting] = useState(false);
@@ -54,24 +78,20 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
     return `${slug}-${format}.png`;
   }
 
+  function refFor(format: ProductUiFormat) {
+    if (format === "feature-mobile") return featureMobileRef;
+    if (format === "release") return releaseRef;
+    return featureDesktopRef;
+  }
+
   async function handleSave() {
+    const currentRef = refFor(content.format);
     const ref = currentRef.current;
     if (!ref || saveState !== "idle") return;
     setSaveState("saving");
     try {
       const previewDataUrl = await captureThumbnail(ref);
-      const now = Date.now();
-      const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const asset: SavedAsset = {
-        id: `asset-${now}`,
-        templateId: template.id,
-        appName: content.title || "Product UI",
-        name: `${content.title || "Product UI"} · ${dateStr}`,
-        previewDataUrl,
-        savedAt: now,
-        productUi: content,
-      };
-      saveAsset(asset);
+      saveAsset(createSavedProductUiAsset({ templateId: template.id, content, previewDataUrl }));
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
@@ -80,7 +100,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }
 
   async function exportOne(format: ProductUiFormat) {
-    const ref = productRef.current;
+    const ref = refFor(format).current;
     if (!ref) return;
     const size = PRODUCT_UI_SIZES[format];
     await exportImage(ref, size.width, size.height, filename(format));
@@ -153,15 +173,21 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                         </div>
                         <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
-                        <Menu.Item
-                          onClick={() => handleExport("product")}
-                          className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
-                        >
-                          <span className="flex-1">Product feature</span>
-                          <span className="text-[11px] text-studio-muted tabular-nums">
-                            {PRODUCT_UI_SIZES.product.width}×{PRODUCT_UI_SIZES.product.height}
-                          </span>
-                        </Menu.Item>
+                        {FORMAT_ORDER.map((format) => {
+                          const size = PRODUCT_UI_SIZES[format];
+                          return (
+                            <Menu.Item
+                              key={format}
+                              onClick={() => handleExport(format)}
+                              className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                            >
+                              <span className="flex-1">{size.label}</span>
+                              <span className="text-[11px] text-studio-muted tabular-nums">
+                                {size.detail}
+                              </span>
+                            </Menu.Item>
+                          );
+                        })}
                       </Menu.Popup>
                     </Menu.Positioner>
                   </Menu.Portal>
@@ -171,8 +197,14 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
             </div>
 
             <div aria-hidden style={{ position: "fixed", left: "-9999px", top: 0, pointerEvents: "none" }}>
-              <div ref={productRef}>
-                <ProductUiCanvas content={{ ...content, format: "product" }} exportMode />
+              <div ref={featureDesktopRef}>
+                <ProductUiCanvas content={{ ...content, format: "feature-desktop" }} exportMode />
+              </div>
+              <div ref={featureMobileRef}>
+                <ProductUiCanvas content={{ ...content, format: "feature-mobile" }} exportMode />
+              </div>
+              <div ref={releaseRef}>
+                <ProductUiCanvas content={{ ...content, format: "release" }} exportMode />
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-export type ProductUiFormat = "product";
+export type ProductUiFormat = "feature-desktop" | "feature-mobile" | "release";
 
 export type ProductUiScene =
   | "ai-response"

@@ -14,7 +14,9 @@ type Props = {
 };
 
 export const PRODUCT_UI_SIZES = {
-  product: { width: 866, height: 660, label: "Product feature" },
+  "feature-desktop": { width: 866, height: 660, label: "Feature · Desktop", detail: "866×660" },
+  "feature-mobile": { width: 343, height: 660, label: "Feature · Mobile", detail: "mobile crop" },
+  release: { width: 866, height: 660, label: "Release image", detail: "thumbnail / inline" },
 } as const;
 
 const COLORS = {
@@ -548,12 +550,59 @@ function renderScene(content: ProductUiContent, compact: boolean) {
   }
 }
 
+function sceneSize(scene: ProductUiContent["scene"], compact: boolean) {
+  if (compact) {
+    switch (scene) {
+      case "ai-response":
+      case "steward-detail":
+        return { width: 360, height: 330 };
+      case "review-queue":
+        return { width: 430, height: 410 };
+      case "test-results":
+        return { width: 540, height: 410 };
+      case "traffic-allocation":
+        return { width: 382, height: 190 };
+      case "workflow":
+        return { width: 520, height: 250 };
+      case "version-history":
+        return { width: 430, height: 360 };
+      case "ab-test":
+        return { width: 590, height: 300 };
+    }
+  }
+
+  switch (scene) {
+    case "ai-response":
+    case "steward-detail":
+      return { width: 390, height: 330 };
+    case "review-queue":
+      return { width: 470, height: 420 };
+    case "test-results":
+      return { width: 760, height: 360 };
+    case "traffic-allocation":
+      return { width: 382, height: 190 };
+    case "workflow":
+      return { width: 520, height: 250 };
+    case "version-history":
+      return { width: 520, height: 330 };
+    case "ab-test":
+      return { width: 760, height: 240 };
+  }
+}
+
 export function ProductUiCanvas({ content, exportMode }: Props) {
   const size = PRODUCT_UI_SIZES[content.format];
-  const compact = false;
+  const compact = content.format === "feature-mobile";
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const hasPhoto = content.composition !== "plain-stage";
   const scene = renderScene(content, compact);
+  const inset = compact ? 20 : content.composition === "wide-system" ? 66 : 58;
+  const frameW = size.width - inset * 2;
+  const frameH = size.height - inset * 2;
+  const natural = sceneSize(content.scene, compact);
+  const sceneScale = compact
+    ? Math.min(1, frameW / natural.width, frameH / natural.height)
+    : 1;
 
   return (
     <div
@@ -599,13 +648,25 @@ export function ProductUiCanvas({ content, exportMode }: Props) {
       <div
         style={{
           position: "absolute",
-          inset: compact ? 48 : content.composition === "wide-system" ? 66 : 58,
+          inset,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {scene}
+        <div
+          style={{
+            width: natural.width,
+            height: natural.height,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform: `scale(${sceneScale})`,
+            transformOrigin: "center",
+          }}
+        >
+          {scene}
+        </div>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ import {
   PRODUCT_UI_SCENE_LABELS,
   PRODUCT_UI_STATUS_LABELS,
   type ProductUiContent,
+  type ProductUiFormat,
   type ProductUiItem,
   type ProductUiNode,
   type ProductUiScene,
@@ -45,6 +46,12 @@ const sceneIcons: Record<ProductUiScene, LucideIcon> = {
 };
 
 const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutral", "accent", "live"];
+
+const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string; meta: string }> = [
+  { id: "feature-desktop", label: "Feature · Desktop", meta: "866×660" },
+  { id: "feature-mobile", label: "Feature · Mobile", meta: "mobile crop" },
+  { id: "release", label: "Release image", meta: "thumbnail / inline" },
+];
 
 function nextId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -280,21 +287,19 @@ export function ProductUiSidebar() {
       </Section>
 
       <Section title="Format">
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-          {[
-            { id: "product" as const, label: "Product feature", size: "866×660" },
-          ].map((format) => (
+        <div className="grid gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+          {FORMAT_OPTIONS.map((format) => (
             <button
               key={format.id}
               onClick={() => update({ format: format.id })}
               aria-pressed={content.format === format.id}
               className={[
-                "flex-1 flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
+                "flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors",
                 content.format === format.id ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
               ].join(" ")}
             >
               <span>{format.label}</span>
-              <span className="text-[10px] text-studio-muted tabular-nums">{format.size}</span>
+              <span className="text-[10px] text-studio-muted tabular-nums">{format.meta}</span>
             </button>
           ))}
         </div>
