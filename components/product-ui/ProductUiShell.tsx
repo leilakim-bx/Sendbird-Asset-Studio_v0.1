@@ -79,7 +79,10 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 42) || "product-ui";
-    return `${slug}-${target}.png`;
+    const suffix = target === "release"
+      ? `release-${content.releasePurpose === "insert" ? "insert" : "thumbnail"}`
+      : target;
+    return `${slug}-${suffix}.png`;
   }
 
   function refFor(target: ProductUiExportTarget) {
@@ -131,9 +134,10 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }
 
   const scale = Math.min(1, MAX_PREVIEW_W / currentSize.width, MAX_PREVIEW_H / currentSize.height);
+  const releaseLabel = content.releasePurpose === "insert" ? "Release insert" : "Release thumbnail";
   const previewLabel = content.format === "feature"
     ? `Feature · Desktop ${FEATURE_DESKTOP.width}×${FEATURE_DESKTOP.height} + Mobile ${FEATURE_MOBILE.width}×${FEATURE_MOBILE.height}`
-    : `Release image ${RELEASE.width}×${RELEASE.height}`;
+    : `${releaseLabel} ${RELEASE.width}×${RELEASE.height}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -187,7 +191,7 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                         <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
                         {FORMAT_ORDER.map((format) => {
-                          const label = format === "feature" ? "Feature" : "Release image";
+                          const label = format === "feature" ? "Feature" : releaseLabel;
                           const detail = format === "feature"
                             ? `${FEATURE_DESKTOP.detail} + ${FEATURE_MOBILE.detail}`
                             : RELEASE.detail;

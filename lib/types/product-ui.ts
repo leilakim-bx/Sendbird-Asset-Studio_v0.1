@@ -1,5 +1,6 @@
 export type ProductUiFormat = "feature" | "release";
 export type ProductUiExportTarget = "feature-desktop" | "feature-mobile" | "release";
+export type ProductUiReleasePurpose = "thumbnail" | "insert";
 
 export type ProductUiScene =
   | "ai-response"
@@ -33,6 +34,7 @@ export type ProductUiNode = {
 
 export type ProductUiContent = {
   format: ProductUiFormat;
+  releasePurpose?: ProductUiReleasePurpose;
   scene: ProductUiScene;
   composition: ProductUiComposition;
   backgroundId: string;

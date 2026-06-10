@@ -23,10 +23,16 @@ import {
   type ProductUiFormat,
   type ProductUiItem,
   type ProductUiNode,
+  type ProductUiReleasePurpose,
   type ProductUiScene,
   type ProductUiStatus,
 } from "@/lib/types/product-ui";
 import { PRODUCT_UI_PRESETS, cloneProductUiContent, getProductUiPreset } from "@/lib/product-ui-presets";
+import {
+  buildProductUiExternalPrompt,
+  draftProductUiFromText,
+  productUiContentFromDraftJson,
+} from "@/lib/product-ui-draft";
 import { Section } from "@/components/infographic/sidebar/Section";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
@@ -50,6 +56,11 @@ const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutr
 const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string }> = [
   { id: "feature", label: "Feature" },
   { id: "release", label: "Release image" },
+];
+
+const RELEASE_PURPOSE_OPTIONS: Array<{ id: ProductUiReleasePurpose; label: string }> = [
+  { id: "thumbnail", label: "Thumbnail" },
+  { id: "insert", label: "Insert image" },
 ];
 
 function nextId(prefix: string) {
@@ -170,36 +181,6 @@ function NodeEditor({
   );
 }
 
-function draftFromPrompt(prompt: string, current: ProductUiContent): ProductUiContent {
-  const lower = prompt.toLowerCase();
-  let scene: ProductUiScene = current.scene;
-  if (lower.includes("review") || lower.includes("oversight") || lower.includes("policy")) scene = "review-queue";
-  else if (lower.includes("test") || lower.includes("evaluate") || lower.includes("validation")) scene = "test-results";
-  else if (lower.includes("traffic") || lower.includes("rollout")) scene = "traffic-allocation";
-  else if (lower.includes("workflow") || lower.includes("proactive") || lower.includes("trigger")) scene = "workflow";
-  else if (lower.includes("version") || lower.includes("prompt")) scene = "version-history";
-  else if (lower.includes("steward") || lower.includes("approval")) scene = "steward-detail";
-  else if (lower.includes("a/b") || lower.includes("ab test") || lower.includes("experiment")) scene = "ab-test";
-  else if (lower.includes("response") || lower.includes("source") || lower.includes("reply")) scene = "ai-response";
-
-  const preset = cloneProductUiContent(getProductUiPreset(scene).content);
-  const clean = prompt.trim().replace(/\s+/g, " ");
-  if (!clean) return preset;
-
-  return {
-    ...preset,
-    title: preset.title,
-    primaryText:
-      scene === "ai-response"
-        ? `Hi, I've checked the policy and prepared the safest response: ${clean.slice(0, 140)}`
-        : preset.primaryText,
-    secondaryText:
-      scene === "review-queue" || scene === "test-results"
-        ? "Generated from launch note"
-        : preset.secondaryText,
-  };
-}
-
 export function ProductUiSidebar() {
   const {
     productUiContent: content,
@@ -209,6 +190,9 @@ export function ProductUiSidebar() {
   } = useEditorStore();
   const [prompt, setPrompt] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
+  const [jsonDraft, setJsonDraft] = useState("");
+  const [externalPrompt, setExternalPrompt] = useState("");
   const [showBgModal, setShowBgModal] = useState(false);
 
   if (!content) return null;
@@ -219,14 +203,45 @@ export function ProductUiSidebar() {
   }
 
   function loadScene(scene: ProductUiScene) {
-    setProductUiContent(cloneProductUiContent(getProductUiPreset(scene).content));
+    const next = cloneProductUiContent(getProductUiPreset(scene).content);
+    setProductUiContent({
+      ...next,
+      format: activeContent.format,
+      releasePurpose: activeContent.releasePurpose ?? "thumbnail",
+    });
     setNotice(null);
   }
 
   function applyDraft() {
-    const drafted = draftFromPrompt(prompt, activeContent);
+    const drafted = draftProductUiFromText(prompt, activeContent);
     setProductUiContent(drafted);
+    setDraftError(null);
     setNotice(`Drafted ${PRODUCT_UI_SCENE_LABELS[drafted.scene]}.`);
+  }
+
+  async function copyExternalPrompt() {
+    const nextPrompt = buildProductUiExternalPrompt(prompt, activeContent);
+    try {
+      await navigator.clipboard.writeText(nextPrompt);
+      setExternalPrompt("");
+      setDraftError(null);
+      setNotice("Claude prompt copied.");
+    } catch {
+      setExternalPrompt(nextPrompt);
+      setDraftError("Copy failed. You can copy the prompt below manually.");
+    }
+  }
+
+  function applyJsonDraft() {
+    const result = productUiContentFromDraftJson(jsonDraft, activeContent);
+    if (result.error || !result.content) {
+      setDraftError(result.error ?? "Could not apply JSON.");
+      return;
+    }
+    setProductUiContent(result.content);
+    setJsonDraft("");
+    setDraftError(null);
+    setNotice(`Applied ${PRODUCT_UI_SCENE_LABELS[result.content.scene]} from JSON.`);
   }
 
   function updateItem(id: string, next: ProductUiItem) {
@@ -239,23 +254,97 @@ export function ProductUiSidebar() {
 
   return (
     <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
+      <Section title="Format">
+        <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
+          {FORMAT_OPTIONS.map((format) => (
+            <button
+              key={format.id}
+              onClick={() => update({ format: format.id })}
+              aria-pressed={content.format === format.id}
+              className={[
+                "flex-1 text-xs py-1.5 rounded-md transition-colors",
+                content.format === format.id
+                  ? "bg-studio-sidebar text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {format.label}
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      {content.format === "release" && (
+        <Section title="Release use">
+          <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
+            {RELEASE_PURPOSE_OPTIONS.map((purpose) => (
+              <button
+                key={purpose.id}
+                onClick={() => update({ releasePurpose: purpose.id })}
+                aria-pressed={(content.releasePurpose ?? "thumbnail") === purpose.id}
+                className={[
+                  "flex-1 text-xs py-1.5 rounded-md transition-colors",
+                  (content.releasePurpose ?? "thumbnail") === purpose.id
+                    ? "bg-studio-sidebar text-studio-text"
+                    : "text-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                {purpose.label}
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
+
       <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
         <div className="flex items-center gap-1.5 mb-2.5">
           <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center bg-studio-hover">
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
-          <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Draft from release text</span>
         </div>
         <textarea
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Describe the product moment..."
-          rows={4}
+          placeholder="Paste a release note, PRD snippet, or launch announcement..."
+          rows={5}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[84px]"
         />
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={copyExternalPrompt}
+            disabled={!prompt.trim()}
+            className="text-[11px] font-medium text-studio-muted hover:text-studio-text disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Copy Claude prompt
+          </button>
           <AiMagicButton label="Draft" loading={false} disabled={!prompt.trim()} onClick={applyDraft} />
         </div>
+        <details className="mt-3 group">
+          <summary className="cursor-pointer list-none text-[11px] font-medium text-studio-muted hover:text-studio-text">
+            Paste Claude JSON
+          </summary>
+          <textarea
+            value={jsonDraft}
+            onChange={(event) => setJsonDraft(event.target.value)}
+            placeholder='{"scene":"workflow","title":"..."}'
+            rows={4}
+            className={`${inputCls} mt-2 resize-none`}
+          />
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={applyJsonDraft}
+              disabled={!jsonDraft.trim()}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-md bg-studio-hover text-studio-text hover:bg-studio-border disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Apply JSON
+            </button>
+          </div>
+        </details>
+        {externalPrompt && (
+          <textarea readOnly value={externalPrompt} rows={5} className={`${inputCls} mt-2 resize-none`} />
+        )}
+        {draftError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{draftError}</p>}
         {notice && <p className="mt-1.5 text-[10px] text-studio-muted leading-snug">{notice}</p>}
       </div>
 
@@ -282,26 +371,6 @@ export function ProductUiSidebar() {
               </button>
             );
           })}
-        </div>
-      </Section>
-
-      <Section title="Format">
-        <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-          {FORMAT_OPTIONS.map((format) => (
-            <button
-              key={format.id}
-              onClick={() => update({ format: format.id })}
-              aria-pressed={content.format === format.id}
-              className={[
-                "flex-1 text-xs py-1.5 rounded-md transition-colors",
-                content.format === format.id
-                  ? "bg-studio-sidebar text-studio-text"
-                  : "text-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              {format.label}
-            </button>
-          ))}
         </div>
       </Section>
 

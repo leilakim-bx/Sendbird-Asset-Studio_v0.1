@@ -228,5 +228,6 @@ export function cloneProductUiContent(content: ProductUiContent): ProductUiConte
       | "square";
   };
   const format = cloned.format === "release" ? "release" : "feature";
-  return { ...cloned, format };
+  const releasePurpose = cloned.releasePurpose === "insert" ? "insert" : "thumbnail";
+  return { ...cloned, format, releasePurpose };
 }
