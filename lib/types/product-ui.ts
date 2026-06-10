@@ -1,6 +1,8 @@
 export type ProductUiFormat = "feature" | "release" | "blog";
 export type ProductUiExportTarget = "feature-desktop" | "feature-mobile" | "release" | "blog";
 export type ProductUiReleasePurpose = "thumbnail" | "insert";
+export const PRODUCT_UI_BLOG_BACKGROUND_COLORS = ["#D9D6D2", "#F7F5F0"] as const;
+export type ProductUiBlogBackgroundColor = (typeof PRODUCT_UI_BLOG_BACKGROUND_COLORS)[number];
 
 export type ProductUiScene =
   | "ai-response"
@@ -38,6 +40,7 @@ export type ProductUiContent = {
   scene: ProductUiScene;
   composition: ProductUiComposition;
   backgroundId: string;
+  blogBackgroundColor?: ProductUiBlogBackgroundColor;
   title: string;
   eyebrow?: string;
   primaryText?: string;

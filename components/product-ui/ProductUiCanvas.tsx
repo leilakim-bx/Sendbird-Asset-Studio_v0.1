@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { getBackground } from "@/lib/backgrounds";
 import {
+  PRODUCT_UI_BLOG_BACKGROUND_COLORS,
   PRODUCT_UI_STATUS_LABELS,
   PRODUCT_UI_STATUS_STYLES,
   type ProductUiContent,
@@ -627,7 +628,11 @@ export function ProductUiCanvas({ content, exportMode, target }: Props) {
   const compact = exportTarget === "feature-mobile";
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const releaseFormat = exportTarget === "release";
-  const hasPhoto = !releaseFormat && content.composition !== "plain-stage";
+  const blogFormat = exportTarget === "blog";
+  const blogBackground = content.blogBackgroundColor && PRODUCT_UI_BLOG_BACKGROUND_COLORS.includes(content.blogBackgroundColor)
+    ? content.blogBackgroundColor
+    : PRODUCT_UI_BLOG_BACKGROUND_COLORS[0];
+  const hasPhoto = !releaseFormat && !blogFormat && content.composition !== "plain-stage";
   const scene = renderScene(content, compact);
   const releaseThumbnail = exportTarget === "release" && content.releasePurpose !== "insert";
   const inset = releaseThumbnail
@@ -657,7 +662,7 @@ export function ProductUiCanvas({ content, exportMode, target }: Props) {
         width: size.width,
         height: size.height,
         overflow: "hidden",
-        background: releaseFormat ? BORDER_LIGHT : hasPhoto ? COLORS.blue100 : STAGE,
+        background: releaseFormat ? BORDER_LIGHT : blogFormat ? blogBackground : hasPhoto ? COLORS.blue100 : STAGE,
         fontFamily: FONT,
         color: INK,
       }}

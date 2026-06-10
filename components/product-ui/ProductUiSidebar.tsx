@@ -17,6 +17,7 @@ import {
 import { useEditorStore } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import {
+  PRODUCT_UI_BLOG_BACKGROUND_COLORS,
   PRODUCT_UI_SCENE_LABELS,
   PRODUCT_UI_STATUS_LABELS,
   type ProductUiContent,
@@ -310,7 +311,37 @@ export function ProductUiSidebar() {
         </div>
       </Section>
 
-      {content.format !== "release" && (
+      {content.format === "blog" && (
+        <Section title="Background">
+          <div className="grid grid-cols-2 gap-2">
+            {PRODUCT_UI_BLOG_BACKGROUND_COLORS.map((color) => {
+              const active = (content.blogBackgroundColor ?? PRODUCT_UI_BLOG_BACKGROUND_COLORS[0]) === color;
+              return (
+                <button
+                  key={color}
+                  onClick={() => update({ blogBackgroundColor: color })}
+                  aria-pressed={active}
+                  title={color}
+                  className={[
+                    "rounded-lg border p-1.5 text-left transition-colors",
+                    active
+                      ? "border-studio-accent text-studio-text"
+                      : "border-studio-border text-studio-muted hover:border-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  <span
+                    className="block h-9 rounded-md border border-studio-border"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="block mt-1.5 text-[10px] font-medium tabular-nums">{color}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
+      {content.format === "feature" && (
         <Section
           title="Background"
           action={
@@ -345,7 +376,7 @@ export function ProductUiSidebar() {
         </Section>
       )}
 
-      {showBgModal && content.format !== "release" && (
+      {showBgModal && content.format === "feature" && (
         <BackgroundPickerModal
           currentId={content.backgroundId}
           customBackgrounds={customBackgrounds}

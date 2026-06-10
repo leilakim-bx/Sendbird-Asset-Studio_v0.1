@@ -1,4 +1,9 @@
-import type { ProductUiContent, ProductUiScene } from "@/lib/types/product-ui";
+import {
+  PRODUCT_UI_BLOG_BACKGROUND_COLORS,
+  type ProductUiBlogBackgroundColor,
+  type ProductUiContent,
+  type ProductUiScene,
+} from "@/lib/types/product-ui";
 
 export type ProductUiPreset = {
   id: ProductUiScene;
@@ -226,8 +231,12 @@ export function cloneProductUiContent(content: ProductUiContent): ProductUiConte
       | "product"
       | "homepage-wide"
       | "square";
+    blogBackgroundColor?: string;
   };
   const format = cloned.format === "release" || cloned.format === "blog" ? cloned.format : "feature";
   const releasePurpose = cloned.releasePurpose === "insert" ? "insert" : "thumbnail";
-  return { ...cloned, format, releasePurpose };
+  const blogBackgroundColor = PRODUCT_UI_BLOG_BACKGROUND_COLORS.includes(cloned.blogBackgroundColor as ProductUiBlogBackgroundColor)
+    ? cloned.blogBackgroundColor as ProductUiBlogBackgroundColor
+    : undefined;
+  return { ...cloned, format, releasePurpose, blogBackgroundColor };
 }
