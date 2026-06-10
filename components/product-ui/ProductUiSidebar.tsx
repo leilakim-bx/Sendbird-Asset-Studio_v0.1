@@ -61,6 +61,11 @@ const RELEASE_PURPOSE_OPTIONS: Array<{ id: ProductUiReleasePurpose; label: strin
   { id: "insert", label: "Insert image" },
 ];
 
+const BLOG_BACKGROUND_LABELS: Record<(typeof PRODUCT_UI_BLOG_BACKGROUND_COLORS)[number], string> = {
+  "#D9D6D2": "Stone",
+  "#F7F5F0": "Warm gray",
+};
+
 function nextId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -311,40 +316,10 @@ export function ProductUiSidebar() {
         </div>
       </Section>
 
-      {content.format === "blog" && (
-        <Section title="Background">
-          <div className="grid grid-cols-2 gap-2">
-            {PRODUCT_UI_BLOG_BACKGROUND_COLORS.map((color) => {
-              const active = (content.blogBackgroundColor ?? PRODUCT_UI_BLOG_BACKGROUND_COLORS[0]) === color;
-              return (
-                <button
-                  key={color}
-                  onClick={() => update({ blogBackgroundColor: color })}
-                  aria-pressed={active}
-                  title={color}
-                  className={[
-                    "rounded-lg border p-1.5 text-left transition-colors",
-                    active
-                      ? "border-studio-accent text-studio-text"
-                      : "border-studio-border text-studio-muted hover:border-studio-muted hover:text-studio-text",
-                  ].join(" ")}
-                >
-                  <span
-                    className="block h-9 rounded-md border border-studio-border"
-                    style={{ backgroundColor: color }}
-                  />
-                  <span className="block mt-1.5 text-[10px] font-medium tabular-nums">{color}</span>
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-      )}
-
-      {content.format === "feature" && (
-        <Section
-          title="Background"
-          action={
+      <Section
+        title="Background"
+        action={
+          content.format === "feature" ? (
             <button
               onClick={() => setShowBgModal(true)}
               title="Background Library"
@@ -353,8 +328,36 @@ export function ProductUiSidebar() {
             >
               <Plus size={15} />
             </button>
-          }
-        >
+          ) : undefined
+        }
+      >
+        {content.format === "release" ? (
+          <p className="text-[11px] text-studio-muted leading-relaxed">
+            Fixed to #E5E3DF for release images.
+          </p>
+        ) : content.format === "blog" ? (
+          <div className="flex gap-1.5 flex-wrap">
+            {PRODUCT_UI_BLOG_BACKGROUND_COLORS.map((color) => {
+              const active = (content.blogBackgroundColor ?? PRODUCT_UI_BLOG_BACKGROUND_COLORS[0]) === color;
+              return (
+                <button
+                  key={color}
+                  onClick={() => update({ blogBackgroundColor: color })}
+                  aria-pressed={active}
+                  title={`${BLOG_BACKGROUND_LABELS[color]} · ${color}`}
+                  className={[
+                    "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
+                    active ? "border-studio-accent" : "border-transparent",
+                  ].join(" ")}
+                  style={{
+                    background: color,
+                    boxShadow: active ? "0 0 0 1px var(--studio-sidebar)" : undefined,
+                  }}
+                />
+              );
+            })}
+          </div>
+        ) : (
           <div className="grid grid-cols-3 gap-2">
             {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((background) => (
               <button
@@ -373,8 +376,8 @@ export function ProductUiSidebar() {
               </button>
             ))}
           </div>
-        </Section>
-      )}
+        )}
+      </Section>
 
       {showBgModal && content.format === "feature" && (
         <BackgroundPickerModal
