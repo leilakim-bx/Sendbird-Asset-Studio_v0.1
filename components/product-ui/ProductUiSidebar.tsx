@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Bot,
   ChevronDown,
@@ -14,8 +14,10 @@ import {
   Split,
   Table2,
   Workflow,
+  X,
   type LucideIcon,
 } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import {
@@ -37,7 +39,7 @@ import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
 
 const inputCls =
-  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
+  "h-8 w-full rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1 text-xs text-studio-text placeholder:text-studio-muted outline-none transition-colors focus:border-studio-accent focus:ring-1 focus:ring-studio-accent";
 
 const sceneIcons: Record<ProductUiScene, LucideIcon> = {
   "ai-response": MessageSquareText,
@@ -52,10 +54,10 @@ const sceneIcons: Record<ProductUiScene, LucideIcon> = {
 
 const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutral", "accent", "live"];
 
-const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string }> = [
-  { id: "feature", label: "Product feature" },
-  { id: "release", label: "Product release" },
-  { id: "blog", label: "Blog" },
+const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string; detail: string }> = [
+  { id: "feature", label: "Product feature", detail: "Desktop + mobile" },
+  { id: "release", label: "Product release", detail: "Thumbnail / insert" },
+  { id: "blog", label: "Blog", detail: "664px wide" },
 ];
 
 const RELEASE_PURPOSE_OPTIONS: Array<{ id: ProductUiReleasePurpose; label: string }> = [
@@ -66,6 +68,17 @@ const RELEASE_PURPOSE_OPTIONS: Array<{ id: ProductUiReleasePurpose; label: strin
 const BLOG_BACKGROUND_LABELS: Record<(typeof PRODUCT_UI_BLOG_BACKGROUND_COLORS)[number], string> = {
   "#D9D6D2": "Stone",
   "#F7F5F0": "Warm gray",
+};
+
+const SCENE_TYPE_LABELS: Record<ProductUiScene, string> = {
+  "ai-response": "response",
+  "review-queue": "queue",
+  "test-results": "testing",
+  "traffic-allocation": "rollout",
+  workflow: "flow",
+  "version-history": "history",
+  "steward-detail": "steward",
+  "ab-test": "test",
 };
 
 function InfoTooltip({ text }: { text: string }) {
@@ -83,6 +96,98 @@ function nextId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-studio-muted">
+      {children}
+    </span>
+  );
+}
+
+function FormatDropdown({
+  value,
+  onChange,
+}: {
+  value: ProductUiFormat;
+  onChange: (format: ProductUiFormat) => void;
+}) {
+  const current = FORMAT_OPTIONS.find((format) => format.id === value) ?? FORMAT_OPTIONS[0];
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger className="flex w-full items-center gap-3 rounded-lg border border-studio-border bg-studio-hover px-3 py-2.5 text-left outline-none transition-colors hover:bg-white/[0.06] focus-visible:border-studio-accent focus-visible:ring-1 focus-visible:ring-studio-accent">
+        <span className="flex-1 min-w-0">
+          <span className="block truncate text-sm font-semibold text-studio-text">{current.label}</span>
+          <span className="mt-0.5 block truncate text-[11px] font-medium text-studio-muted">
+            {current.detail}
+          </span>
+        </span>
+        <ChevronDown size={15} className="shrink-0 text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={6}>
+          <Menu.Popup className="z-50 w-(--anchor-width) min-w-[260px] rounded-xl border border-studio-border bg-studio-sidebar py-1.5 shadow-xl outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+            {FORMAT_OPTIONS.map((format) => {
+              const active = format.id === value;
+              return (
+                <Menu.Item
+                  key={format.id}
+                  onClick={() => onChange(format.id)}
+                  className={[
+                    "mx-1 flex cursor-default items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left outline-none transition-colors data-[highlighted]:bg-studio-hover",
+                    active ? "bg-studio-hover" : "",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "h-2 w-2 shrink-0 rounded-full",
+                      active ? "bg-studio-accent" : "bg-studio-border",
+                    ].join(" ")}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-studio-text">{format.label}</span>
+                    <span className="mt-0.5 block truncate text-[11px] text-studio-muted">{format.detail}</span>
+                  </span>
+                </Menu.Item>
+              );
+            })}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
+function SegmentedControl<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { id: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="flex gap-1 rounded-lg bg-studio-hover p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          onClick={() => onChange(option.id)}
+          aria-pressed={value === option.id}
+          className={[
+            "flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+            value === option.id
+              ? "bg-studio-sidebar text-studio-text"
+              : "text-studio-muted hover:text-studio-text",
+          ].join(" ")}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Field({
   label,
   value,
@@ -96,13 +201,13 @@ function Field({
 }) {
   return (
     <label className="block mb-2.5">
-      <span className="block text-[10px] text-studio-muted mb-1">{label}</span>
+      <FieldLabel>{label}</FieldLabel>
       {multiline ? (
         <textarea
           value={value}
           onChange={(event) => onChange(event.target.value)}
           rows={3}
-          className={`${inputCls} resize-none min-h-16`}
+          className={`${inputCls} min-h-20 resize-none py-2 leading-snug`}
         />
       ) : (
         <input value={value} onChange={(event) => onChange(event.target.value)} className={inputCls} />
@@ -121,27 +226,27 @@ function ItemEditor({
   onRemove: () => void;
 }) {
   return (
-    <div className="rounded-lg bg-studio-hover p-2.5 mb-2">
+    <div className="mb-2 rounded-lg bg-studio-hover p-2.5">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] text-studio-muted flex-1">Row</span>
+        <span className="text-xs font-medium text-studio-muted flex-1">Row</span>
         <button
           onClick={onRemove}
-          className="w-5 h-5 rounded text-studio-muted hover:text-studio-text hover:bg-studio-border transition-colors"
+          className="flex h-5 w-5 items-center justify-center rounded-[4px] text-studio-muted transition-colors hover:bg-studio-border hover:text-studio-text"
           aria-label="Remove row"
           title="Remove row"
         >
-          ×
+          <X size={12} />
         </button>
       </div>
       <Field label="Label" value={item.label} onChange={(label) => onChange({ ...item, label })} />
       <Field label="Detail" value={item.detail ?? ""} onChange={(detail) => onChange({ ...item, detail })} />
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="block text-[10px] text-studio-muted mb-1">Status</span>
+          <FieldLabel>Status</FieldLabel>
           <select
             value={item.status ?? "neutral"}
             onChange={(event) => onChange({ ...item, status: event.target.value as ProductUiStatus })}
-            className={inputCls}
+            className={`${inputCls} appearance-none`}
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>{PRODUCT_UI_STATUS_LABELS[status]}</option>
@@ -164,27 +269,27 @@ function NodeEditor({
   onRemove: () => void;
 }) {
   return (
-    <div className="rounded-lg bg-studio-hover p-2.5 mb-2">
+    <div className="mb-2 rounded-lg bg-studio-hover p-2.5">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] text-studio-muted flex-1">Node</span>
+        <span className="text-xs font-medium text-studio-muted flex-1">Node</span>
         <button
           onClick={onRemove}
-          className="w-5 h-5 rounded text-studio-muted hover:text-studio-text hover:bg-studio-border transition-colors"
+          className="flex h-5 w-5 items-center justify-center rounded-[4px] text-studio-muted transition-colors hover:bg-studio-border hover:text-studio-text"
           aria-label="Remove node"
           title="Remove node"
         >
-          ×
+          <X size={12} />
         </button>
       </div>
       <Field label="Title" value={node.title} onChange={(title) => onChange({ ...node, title })} />
       <Field label="Detail" value={node.detail ?? ""} onChange={(detail) => onChange({ ...node, detail })} />
       <div className="grid grid-cols-2 gap-2">
         <label className="block">
-          <span className="block text-[10px] text-studio-muted mb-1">Status</span>
+          <FieldLabel>Status</FieldLabel>
           <select
             value={node.status ?? "neutral"}
             onChange={(event) => onChange({ ...node, status: event.target.value as ProductUiStatus })}
-            className={inputCls}
+            className={`${inputCls} appearance-none`}
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>{PRODUCT_UI_STATUS_LABELS[status]}</option>
@@ -240,51 +345,24 @@ export function ProductUiSidebar() {
   }
 
   return (
-    <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
+    <div className="relative h-full w-80 shrink-0 border-l border-studio-border bg-studio-sidebar">
+      <div className="h-full overflow-y-auto">
       <Section
         title="Format"
         info={
           <InfoTooltip text="Product feature images are used on general product pages, such as product capabilities or industry pages." />
         }
       >
-        <label className="relative block">
-          <select
-            value={content.format}
-            onChange={(event) => update({ format: event.target.value as ProductUiFormat })}
-            className="w-full appearance-none rounded-lg border border-studio-border bg-studio-hover px-3 py-2.5 pr-9 text-sm font-medium text-studio-text outline-none transition-colors hover:border-studio-muted focus:border-studio-accent focus:ring-1 focus:ring-studio-accent"
-          >
-            {FORMAT_OPTIONS.map((format) => (
-              <option key={format.id} value={format.id}>
-                {format.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            size={15}
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-studio-muted"
-          />
-        </label>
+        <FormatDropdown value={content.format} onChange={(format) => update({ format })} />
       </Section>
 
       {content.format === "release" && (
         <Section title="Release use">
-          <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-            {RELEASE_PURPOSE_OPTIONS.map((purpose) => (
-              <button
-                key={purpose.id}
-                onClick={() => update({ releasePurpose: purpose.id })}
-                aria-pressed={(content.releasePurpose ?? "thumbnail") === purpose.id}
-                className={[
-                  "flex-1 text-xs py-1.5 rounded-md transition-colors",
-                  (content.releasePurpose ?? "thumbnail") === purpose.id
-                    ? "bg-studio-sidebar text-studio-text"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                {purpose.label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={content.releasePurpose ?? "thumbnail"}
+            options={RELEASE_PURPOSE_OPTIONS}
+            onChange={(releasePurpose) => update({ releasePurpose })}
+          />
         </Section>
       )}
 
@@ -309,7 +387,7 @@ export function ProductUiSidebar() {
       </div>
 
       <Section title="Scene recipe">
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="flex flex-col gap-1">
           {PRODUCT_UI_PRESETS.map((preset) => {
             const Icon = sceneIcons[preset.id];
             const active = preset.id === content.scene;
@@ -320,14 +398,21 @@ export function ProductUiSidebar() {
                 aria-pressed={active}
                 title={preset.description}
                 className={[
-                  "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors",
+                  "flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]",
                   active
-                    ? "border-studio-accent text-studio-text"
-                    : "border-studio-border text-studio-muted hover:border-studio-muted hover:text-studio-text",
+                    ? "border-studio-accent"
+                    : "border-transparent",
                 ].join(" ")}
               >
-                <Icon size={14} className="shrink-0" />
-                <span className="min-w-0 text-[10px] font-medium leading-tight">{preset.name}</span>
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-studio-hover text-studio-text">
+                  <Icon size={14} />
+                </span>
+                <span className="min-w-0 flex-1 text-[11.5px] font-medium leading-tight text-studio-text">
+                  {preset.name}
+                </span>
+                <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-studio-muted">
+                  {SCENE_TYPE_LABELS[preset.id]}
+                </span>
               </button>
             );
           })}
@@ -350,9 +435,13 @@ export function ProductUiSidebar() {
         }
       >
         {content.format === "release" ? (
-          <p className="text-[11px] text-studio-muted leading-relaxed">
-            Fixed to #E5E3DF for release images.
-          </p>
+          <div className="flex items-center gap-2.5 rounded-lg bg-studio-hover px-2.5 py-2">
+            <span className="h-8 w-8 rounded-md border-2 border-transparent bg-[#E5E3DF]" />
+            <span className="min-w-0">
+              <span className="block text-[11.5px] font-medium text-studio-text">Release gray</span>
+              <span className="block text-[10px] text-studio-muted">#E5E3DF · fixed</span>
+            </span>
+          </div>
         ) : content.format === "blog" ? (
           <div className="flex gap-1.5 flex-wrap">
             {PRODUCT_UI_BLOG_BACKGROUND_COLORS.map((color) => {
@@ -438,7 +527,7 @@ export function ProductUiSidebar() {
                 ],
               })
             }
-            className="w-full py-1.5 rounded-md border border-dashed border-studio-border text-[11px] text-studio-muted hover:text-studio-accent hover:border-studio-accent transition-colors"
+            className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-studio-border text-[11px] text-studio-muted transition-colors hover:border-studio-accent hover:text-studio-accent"
           >
             Add row
           </button>
@@ -464,12 +553,13 @@ export function ProductUiSidebar() {
                 ],
               })
             }
-            className="w-full py-1.5 rounded-md border border-dashed border-studio-border text-[11px] text-studio-muted hover:text-studio-accent hover:border-studio-accent transition-colors"
+            className="inline-flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-studio-border text-[11px] text-studio-muted transition-colors hover:border-studio-accent hover:text-studio-accent"
           >
             Add node
           </button>
         )}
       </Section>
+      </div>
     </div>
   );
 }
