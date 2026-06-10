@@ -23,7 +23,7 @@ const TEMPLATES = [
     id: "product-ui",
     title: "Product UI",
     preview: "/preview/snippet.png",
-    ready: false,
+    ready: true,
   },
 ];
 
@@ -66,7 +66,10 @@ function TemplateGallery() {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div className="p-8 flex flex-col h-full min-h-0">

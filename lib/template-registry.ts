@@ -1,6 +1,8 @@
 import type { ChatMessage } from "./store";
 import type { InfographicContent } from "./types/infographic";
+import type { ProductUiContent } from "./types/product-ui";
 import { getAvatarForName } from "./avatar";
+import { DEFAULT_PRODUCT_UI_CONTENT, cloneProductUiContent } from "./product-ui-presets";
 
 /** Wrap an external image URL through our same-origin proxy */
 function p(url: string) {
@@ -44,8 +46,13 @@ export type InfographicTemplate = TemplateBase & {
   defaultContent: InfographicContent;
 };
 
+export type ProductUiTemplate = TemplateBase & {
+  kind: "product-ui";
+  defaultContent: ProductUiContent;
+};
+
 /** Discriminated by `kind` — narrow before accessing variant-specific fields. */
-export type Template = ChatTemplate | InfographicTemplate;
+export type Template = ChatTemplate | InfographicTemplate | ProductUiTemplate;
 
 // ── Export Sizes ──────────────────────────────────────────
 
@@ -140,6 +147,18 @@ export const TEMPLATES: Template[] = [
         },
       ],
     },
+  },
+  {
+    kind: "product-ui",
+    id: "product-ui",
+    name: "Product UI",
+    description: "Homepage-ready product UI scenes from reusable recipes",
+    layouts: [],
+    exportSizes: [
+      { id: "homepage-wide", label: "Homepage wide", width: 1200, height: 560 },
+      { id: "square", label: "Square", width: 720, height: 720 },
+    ],
+    defaultContent: cloneProductUiContent(DEFAULT_PRODUCT_UI_CONTENT),
   },
 ];
 

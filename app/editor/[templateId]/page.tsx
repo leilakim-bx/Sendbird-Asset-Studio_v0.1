@@ -1,5 +1,6 @@
 import { EditorShell } from "@/components/editor/EditorShell";
 import { InfographicShell } from "@/components/infographic/InfographicShell";
+import { ProductUiShell } from "@/components/product-ui/ProductUiShell";
 import { getTemplate } from "@/lib/template-registry";
 import { notFound } from "next/navigation";
 
@@ -14,6 +15,10 @@ export default async function EditorPage({
 
   if (template.kind === "infographic") {
     return <InfographicShell template={template} />;
+  }
+
+  if (template.kind === "product-ui") {
+    return <ProductUiShell template={template} />;
   }
 
   // template is narrowed to ChatTemplate here

@@ -9,6 +9,7 @@ import type {
   InfographicAccent,
   InfographicBlock,
 } from "@/lib/types/infographic";
+import type { ProductUiContent } from "@/lib/types/product-ui";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -151,6 +152,8 @@ export type SavedAsset = {
   userAvatarUrl?: string;
   /** Infographic content snapshot — present for infographic assets (v1.3+) */
   infographic?: InfographicContent;
+  /** Product UI content snapshot — present for Product UI assets (v1.4+) */
+  productUi?: ProductUiContent;
 };
 
 // ── Editor State ──────────────────────────────────────────
@@ -221,6 +224,11 @@ export type EditorState = {
   addInfographicBlock: (block: InfographicBlock) => void;
   updateInfographicBlock: (id: string, block: InfographicBlock) => void;
   removeInfographicBlock: (id: string) => void;
+
+  // ── Product UI template (non-persisted session state) ───
+  /** Seeded from the Product UI template's defaultContent on editor mount. */
+  productUiContent: ProductUiContent | null;
+  setProductUiContent: (content: ProductUiContent) => void;
 };
 
 // ── v0 → v1 마이그레이션 ──────────────────────────────────
@@ -423,6 +431,10 @@ export const useEditorStore = create<EditorState>()(
               }
             : s,
         ),
+
+      // Product UI content — transient session state, never persisted
+      productUiContent:    null,
+      setProductUiContent: (productUiContent) => set({ productUiContent }),
 
       setTemplateId:   (templateId)   => set({ templateId }),
       setLayout:       (layout)       => set({ layout }),
