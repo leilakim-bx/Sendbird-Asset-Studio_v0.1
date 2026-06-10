@@ -310,30 +310,6 @@ export function ProductUiSidebar() {
         </div>
       </Section>
 
-      <Section title="Composition">
-        <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { id: "photo-card" as const, label: "Photo" },
-            { id: "plain-stage" as const, label: "Stage" },
-            { id: "wide-system" as const, label: "System" },
-          ].map((composition) => (
-            <button
-              key={composition.id}
-              onClick={() => update({ composition: composition.id })}
-              aria-pressed={content.composition === composition.id}
-              className={[
-                "rounded-lg border px-2 py-2 text-[10px] font-medium transition-colors",
-                content.composition === composition.id
-                  ? "border-studio-accent text-studio-text"
-                  : "border-studio-border text-studio-muted hover:border-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              {composition.label}
-            </button>
-          ))}
-        </div>
-      </Section>
-
       <Section
         title="Background"
         action={
