@@ -4,6 +4,7 @@ import {
   PRODUCT_UI_STATUS_LABELS,
   PRODUCT_UI_STATUS_STYLES,
   type ProductUiContent,
+  type ProductUiExportTarget,
   type ProductUiItem,
   type ProductUiStatus,
 } from "@/lib/types/product-ui";
@@ -11,11 +12,12 @@ import {
 type Props = {
   content: ProductUiContent;
   exportMode?: boolean;
+  target?: ProductUiExportTarget;
 };
 
 export const PRODUCT_UI_SIZES = {
   "feature-desktop": { width: 866, height: 660, label: "Feature · Desktop", detail: "866×660" },
-  "feature-mobile": { width: 343, height: 660, label: "Feature · Mobile", detail: "mobile crop" },
+  "feature-mobile": { width: 343, height: 660, label: "Feature · Mobile", detail: "343×660" },
   release: { width: 866, height: 660, label: "Release image", detail: "thumbnail / inline" },
 } as const;
 
@@ -590,9 +592,10 @@ function sceneSize(scene: ProductUiContent["scene"], compact: boolean) {
   }
 }
 
-export function ProductUiCanvas({ content, exportMode }: Props) {
-  const size = PRODUCT_UI_SIZES[content.format];
-  const compact = content.format === "feature-mobile";
+export function ProductUiCanvas({ content, exportMode, target }: Props) {
+  const exportTarget = target ?? (content.format === "release" ? "release" : "feature-desktop");
+  const size = PRODUCT_UI_SIZES[exportTarget];
+  const compact = exportTarget === "feature-mobile";
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
   const hasPhoto = content.composition !== "plain-stage";
   const scene = renderScene(content, compact);

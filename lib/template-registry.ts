@@ -155,8 +155,7 @@ export const TEMPLATES: Template[] = [
     description: "Product feature and release UI scenes from reusable recipes",
     layouts: [],
     exportSizes: [
-      { id: "feature-desktop", label: "Feature · Desktop", width: 866, height: 660 },
-      { id: "feature-mobile", label: "Feature · Mobile", width: 343, height: 660 },
+      { id: "feature", label: "Feature (desktop + mobile)", width: 866, height: 660 },
       { id: "release", label: "Release image", width: 866, height: 660 },
     ],
     defaultContent: cloneProductUiContent(DEFAULT_PRODUCT_UI_CONTENT),

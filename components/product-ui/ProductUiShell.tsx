@@ -8,14 +8,17 @@ import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { captureThumbnail, exportImage } from "@/lib/export";
 import type { ProductUiTemplate } from "@/lib/template-registry";
-import type { ProductUiContent, ProductUiFormat } from "@/lib/types/product-ui";
+import type { ProductUiContent, ProductUiExportTarget, ProductUiFormat } from "@/lib/types/product-ui";
 import { cloneProductUiContent } from "@/lib/product-ui-presets";
 import { ProductUiCanvas, PRODUCT_UI_SIZES } from "./ProductUiCanvas";
 import { ProductUiSidebar } from "./ProductUiSidebar";
 
 const MAX_PREVIEW_W = 760;
 const MAX_PREVIEW_H = 520;
-const FORMAT_ORDER: ProductUiFormat[] = ["feature-desktop", "feature-mobile", "release"];
+const FORMAT_ORDER: ProductUiFormat[] = ["feature", "release"];
+const FEATURE_DESKTOP = PRODUCT_UI_SIZES["feature-desktop"];
+const FEATURE_MOBILE = PRODUCT_UI_SIZES["feature-mobile"];
+const RELEASE = PRODUCT_UI_SIZES.release;
 
 function createSavedProductUiAsset({
   templateId,
@@ -63,29 +66,30 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   const featureDesktopRef = useRef<HTMLDivElement>(null);
   const featureMobileRef = useRef<HTMLDivElement>(null);
   const releaseRef = useRef<HTMLDivElement>(null);
-  const currentSize = PRODUCT_UI_SIZES[content.format];
+  const currentTarget: ProductUiExportTarget = content.format === "release" ? "release" : "feature-desktop";
+  const currentSize = PRODUCT_UI_SIZES[currentTarget];
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
-  function filename(format: ProductUiFormat) {
+  function filename(target: ProductUiExportTarget) {
     const slug = (content.title || "product-ui")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 42) || "product-ui";
-    return `${slug}-${format}.png`;
+    return `${slug}-${target}.png`;
   }
 
-  function refFor(format: ProductUiFormat) {
-    if (format === "feature-mobile") return featureMobileRef;
-    if (format === "release") return releaseRef;
+  function refFor(target: ProductUiExportTarget) {
+    if (target === "feature-mobile") return featureMobileRef;
+    if (target === "release") return releaseRef;
     return featureDesktopRef;
   }
 
   async function handleSave() {
-    const currentRef = refFor(content.format);
+    const currentRef = refFor(currentTarget);
     const ref = currentRef.current;
     if (!ref || saveState !== "idle") return;
     setSaveState("saving");
@@ -99,18 +103,24 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
     }
   }
 
-  async function exportOne(format: ProductUiFormat) {
-    const ref = refFor(format).current;
+  async function exportOne(target: ProductUiExportTarget) {
+    const ref = refFor(target).current;
     if (!ref) return;
-    const size = PRODUCT_UI_SIZES[format];
-    await exportImage(ref, size.width, size.height, filename(format));
+    const size = PRODUCT_UI_SIZES[target];
+    await exportImage(ref, size.width, size.height, filename(target));
   }
 
   async function handleExport(format: ProductUiFormat) {
     setExporting(true);
     setExportError(null);
     try {
-      await exportOne(format);
+      if (format === "feature") {
+        await exportOne("feature-desktop");
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await exportOne("feature-mobile");
+      } else {
+        await exportOne("release");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
@@ -121,6 +131,9 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
   }
 
   const scale = Math.min(1, MAX_PREVIEW_W / currentSize.width, MAX_PREVIEW_H / currentSize.height);
+  const previewLabel = content.format === "feature"
+    ? `Feature · Desktop ${FEATURE_DESKTOP.width}×${FEATURE_DESKTOP.height} + Mobile ${FEATURE_MOBILE.width}×${FEATURE_MOBILE.height}`
+    : `Release image ${RELEASE.width}×${RELEASE.height}`;
 
   return (
     <div className="flex flex-col h-full">
@@ -137,12 +150,12 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
         <div className="flex-1 overflow-auto bg-studio-bg">
           <div className="min-h-full flex flex-col items-center justify-center gap-6 py-8">
             <p className="text-studio-muted text-xs uppercase tracking-wider">
-              Preview — {currentSize.label} {currentSize.width}×{currentSize.height}
+              Preview — {previewLabel}
             </p>
 
             <div style={{ width: currentSize.width * scale, height: currentSize.height * scale }}>
               <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
-                <ProductUiCanvas content={content} />
+                <ProductUiCanvas content={content} target={currentTarget} />
               </div>
             </div>
 
@@ -174,16 +187,19 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
                         <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
                         {FORMAT_ORDER.map((format) => {
-                          const size = PRODUCT_UI_SIZES[format];
+                          const label = format === "feature" ? "Feature" : "Release image";
+                          const detail = format === "feature"
+                            ? `${FEATURE_DESKTOP.detail} + ${FEATURE_MOBILE.detail}`
+                            : RELEASE.detail;
                           return (
                             <Menu.Item
                               key={format}
                               onClick={() => handleExport(format)}
                               className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                             >
-                              <span className="flex-1">{size.label}</span>
+                              <span className="flex-1">{label}</span>
                               <span className="text-[11px] text-studio-muted tabular-nums">
-                                {size.detail}
+                                {detail}
                               </span>
                             </Menu.Item>
                           );
@@ -198,13 +214,13 @@ export function ProductUiShell({ template }: { template: ProductUiTemplate }) {
 
             <div aria-hidden style={{ position: "fixed", left: "-9999px", top: 0, pointerEvents: "none" }}>
               <div ref={featureDesktopRef}>
-                <ProductUiCanvas content={{ ...content, format: "feature-desktop" }} exportMode />
+                <ProductUiCanvas content={{ ...content, format: "feature" }} target="feature-desktop" exportMode />
               </div>
               <div ref={featureMobileRef}>
-                <ProductUiCanvas content={{ ...content, format: "feature-mobile" }} exportMode />
+                <ProductUiCanvas content={{ ...content, format: "feature" }} target="feature-mobile" exportMode />
               </div>
               <div ref={releaseRef}>
-                <ProductUiCanvas content={{ ...content, format: "release" }} exportMode />
+                <ProductUiCanvas content={{ ...content, format: "release" }} target="release" exportMode />
               </div>
             </div>
           </div>

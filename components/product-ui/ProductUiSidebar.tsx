@@ -3,10 +3,13 @@
 import { useState } from "react";
 import {
   Bot,
+  ChevronDown,
+  FileImage,
   GitBranch,
   History,
   ListChecks,
   MessageSquareText,
+  Monitor,
   Plus,
   Sparkles,
   Split,
@@ -14,6 +17,7 @@ import {
   Workflow,
   type LucideIcon,
 } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import {
@@ -47,10 +51,9 @@ const sceneIcons: Record<ProductUiScene, LucideIcon> = {
 
 const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutral", "accent", "live"];
 
-const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string; meta: string }> = [
-  { id: "feature-desktop", label: "Feature · Desktop", meta: "866×660" },
-  { id: "feature-mobile", label: "Feature · Mobile", meta: "mobile crop" },
-  { id: "release", label: "Release image", meta: "thumbnail / inline" },
+const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string; meta: string; Icon: LucideIcon }> = [
+  { id: "feature", label: "Feature", meta: "Desktop + mobile", Icon: Monitor },
+  { id: "release", label: "Release image", meta: "Thumbnail / inline", Icon: FileImage },
 ];
 
 function nextId(prefix: string) {
@@ -214,6 +217,8 @@ export function ProductUiSidebar() {
 
   if (!content) return null;
   const activeContent = content;
+  const selectedFormat = FORMAT_OPTIONS.find((format) => format.id === content.format) ?? FORMAT_OPTIONS[0];
+  const SelectedFormatIcon = selectedFormat.Icon;
 
   function update(patch: Partial<ProductUiContent>) {
     setProductUiContent({ ...activeContent, ...patch } as ProductUiContent);
@@ -287,22 +292,46 @@ export function ProductUiSidebar() {
       </Section>
 
       <Section title="Format">
-        <div className="grid gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-          {FORMAT_OPTIONS.map((format) => (
-            <button
-              key={format.id}
-              onClick={() => update({ format: format.id })}
-              aria-pressed={content.format === format.id}
-              className={[
-                "flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors",
-                content.format === format.id ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              <span>{format.label}</span>
-              <span className="text-[10px] text-studio-muted tabular-nums">{format.meta}</span>
-            </button>
-          ))}
-        </div>
+        <Menu.Root>
+          <Menu.Trigger className="flex w-full items-center gap-2 rounded-xl border border-studio-border bg-studio-hover px-3 py-2.5 text-left text-studio-text transition-colors hover:border-studio-muted">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-studio-text">
+              <SelectedFormatIcon size={16} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-semibold">{selectedFormat.label}</span>
+              <span className="block truncate text-[10px] text-studio-muted">{selectedFormat.meta}</span>
+            </span>
+            <ChevronDown size={15} className="shrink-0 text-studio-muted" />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner side="bottom" align="start" sideOffset={6}>
+              <Menu.Popup className="z-50 w-[288px] rounded-xl border border-studio-border bg-[#101010] p-1.5 shadow-xl outline-none data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+                {FORMAT_OPTIONS.map((format) => {
+                  const Icon = format.Icon;
+                  const active = content.format === format.id;
+                  return (
+                    <Menu.Item
+                      key={format.id}
+                      onClick={() => update({ format: format.id })}
+                      className={[
+                        "flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm outline-none cursor-default transition-colors",
+                        active ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:bg-studio-hover hover:text-studio-text",
+                      ].join(" ")}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.06]">
+                        <Icon size={15} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold">{format.label}</span>
+                        <span className="block truncate text-[10px] text-studio-muted">{format.meta}</span>
+                      </span>
+                    </Menu.Item>
+                  );
+                })}
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </Section>
 
       <Section title="Composition">
