@@ -39,6 +39,7 @@ const MIN_FILL = 50;
 export function BarGroupBlock({ block, scale = 1 }: Props) {
   if (block.variant === "split") return <SplitBar block={block} scale={scale} />;
   if (block.variant === "columns") return <Columns block={block} scale={scale} />;
+  if (block.variant === "ranked") return <Ranked block={block} scale={scale} />;
 
   const { items, unit } = block;
   const u = unit ?? "%";
@@ -244,6 +245,111 @@ function SplitBar({
                 {it.label}
               </span>
             )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Grayscale ramp for the "ranked" variant (dark→light, top to bottom). Each
+ *  entry pairs a bar fill with a readable label color. A highlighted row uses
+ *  the accent fill instead (the one place accent is a bar fill, by design). */
+const RANKED_RAMP: { fill: string; text: string }[] = [
+  { fill: "#292016", text: "#FFFFFF" },
+  { fill: "#66625E", text: "#FFFFFF" },
+  { fill: "#8C867E", text: "#FFFFFF" },
+  { fill: "#D9D6D2", text: "#292016" },
+  { fill: "#E5E3DF", text: "#292016" },
+];
+/** Largest bar fills this share of the row; the rest leaves room for the value. */
+const RANKED_MAX_BAR_PCT = 72;
+
+/**
+ * "ranked" variant — single-series rows with the category label INSIDE each
+ * bar (left), the value as a big serif number OUTSIDE (right), and a grayscale
+ * color ramp down the rows. Left-aligned full width (no label gutter), so label
+ * length never skews the layout. Optional column headers come from labelA
+ * (left) / labelB (right). Highlight → accent fill.
+ */
+function Ranked({
+  block,
+  scale,
+}: {
+  block: Extract<InfographicBlock, { type: "bar-group" }>;
+  scale: number;
+}) {
+  const fs = (n: number) => Math.round(n * scale);
+  const u = block.unit ?? "%";
+  const items = block.items;
+  const maxV = Math.max(...items.map((it) => it.valueA), 1);
+  const barH = Math.round(56 * scale);
+  const hasHeader = !!(block.labelA || block.labelB);
+
+  const headerStyle = {
+    fontSize: fs(13),
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase" as const,
+    color: "#8C867E",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+      {hasHeader && (
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+          <span style={headerStyle}>{block.labelA}</span>
+          <span style={headerStyle}>{block.labelB}</span>
+        </div>
+      )}
+      {items.map((it, i) => {
+        const ramp = RANKED_RAMP[Math.min(i, RANKED_RAMP.length - 1)];
+        const fill = it.highlight ? "var(--ig-accent)" : ramp.fill;
+        const textColor = it.highlight ? "#292016" : ramp.text;
+        const w = (Math.max(0, it.valueA) / maxV) * RANKED_MAX_BAR_PCT;
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                flexBasis: `${w}%`,
+                flexGrow: 0,
+                flexShrink: 0,
+                minWidth: Math.round(110 * scale),
+                height: barH,
+                borderRadius: 10,
+                background: fill,
+                display: "flex",
+                alignItems: "center",
+                padding: "0 16px",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: fs(15),
+                  fontWeight: 600,
+                  color: textColor,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {it.label}
+              </span>
+            </div>
+            <span
+              style={{
+                fontFamily: INFOGRAPHIC_SERIF,
+                fontSize: fs(26),
+                fontWeight: 500,
+                letterSpacing: "-0.01em",
+                color: "#292016",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {it.valueA}
+              {u}
+            </span>
           </div>
         );
       })}

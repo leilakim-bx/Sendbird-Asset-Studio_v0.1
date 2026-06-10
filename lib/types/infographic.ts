@@ -23,8 +23,12 @@ export type InfographicBlock =
       id: string;
       type: "bar-group";
       /** Bar shape. "bars" = horizontal A/B rows (default); "split" = one bar
-       *  divided into proportional segments; "columns" = vertical columns. */
-      variant?: "bars" | "split" | "columns";
+       *  divided into proportional segments; "columns" = vertical columns;
+       *  "ranked" = single-series rows with the label INSIDE each bar, value
+       *  outside, and a grayscale color ramp (highlight row = accent fill). */
+      variant?: "bars" | "split" | "columns" | "ranked";
+      /** Legend labels (bars). For "ranked" these double as column headers:
+       *  labelA = left/category header, labelB = right/value header. */
       labelA?: string;
       labelB?: string;
       unit?: string;

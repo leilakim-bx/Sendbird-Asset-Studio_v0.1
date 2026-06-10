@@ -134,7 +134,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
         <>
           <Field label="Shape">
             <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
-              {(["bars", "split", "columns"] as const).map((opt) => (
+              {(["bars", "split", "columns", "ranked"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => set({ variant: opt })}
@@ -153,6 +153,26 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             <Field label="Unit">
               <input className={inputCls} value={b.unit ?? ""} onChange={(e) => set({ unit: e.target.value })} />
             </Field>
+          )}
+          {variant === "ranked" && (
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Category header (optional)">
+                <input
+                  className={inputCls}
+                  placeholder="e.g. Industry"
+                  value={b.labelA ?? ""}
+                  onChange={(e) => set({ labelA: e.target.value })}
+                />
+              </Field>
+              <Field label="Value header (optional)">
+                <input
+                  className={inputCls}
+                  placeholder="e.g. Score"
+                  value={b.labelB ?? ""}
+                  onChange={(e) => set({ labelB: e.target.value })}
+                />
+              </Field>
+            </div>
           )}
           {b.items.map((it, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setItems(b.items.filter((_, j) => j !== i))}>
