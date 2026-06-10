@@ -28,11 +28,7 @@ import {
   type ProductUiStatus,
 } from "@/lib/types/product-ui";
 import { PRODUCT_UI_PRESETS, cloneProductUiContent, getProductUiPreset } from "@/lib/product-ui-presets";
-import {
-  buildProductUiExternalPrompt,
-  draftProductUiFromText,
-  productUiContentFromDraftJson,
-} from "@/lib/product-ui-draft";
+import { draftProductUiFromText } from "@/lib/product-ui-draft";
 import { Section } from "@/components/infographic/sidebar/Section";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
@@ -190,9 +186,6 @@ export function ProductUiSidebar() {
   } = useEditorStore();
   const [prompt, setPrompt] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [draftError, setDraftError] = useState<string | null>(null);
-  const [jsonDraft, setJsonDraft] = useState("");
-  const [externalPrompt, setExternalPrompt] = useState("");
   const [showBgModal, setShowBgModal] = useState(false);
 
   if (!content) return null;
@@ -215,33 +208,7 @@ export function ProductUiSidebar() {
   function applyDraft() {
     const drafted = draftProductUiFromText(prompt, activeContent);
     setProductUiContent(drafted);
-    setDraftError(null);
     setNotice(`Drafted ${PRODUCT_UI_SCENE_LABELS[drafted.scene]}.`);
-  }
-
-  async function copyExternalPrompt() {
-    const nextPrompt = buildProductUiExternalPrompt(prompt, activeContent);
-    try {
-      await navigator.clipboard.writeText(nextPrompt);
-      setExternalPrompt("");
-      setDraftError(null);
-      setNotice("Claude prompt copied.");
-    } catch {
-      setExternalPrompt(nextPrompt);
-      setDraftError("Copy failed. You can copy the prompt below manually.");
-    }
-  }
-
-  function applyJsonDraft() {
-    const result = productUiContentFromDraftJson(jsonDraft, activeContent);
-    if (result.error || !result.content) {
-      setDraftError(result.error ?? "Could not apply JSON.");
-      return;
-    }
-    setProductUiContent(result.content);
-    setJsonDraft("");
-    setDraftError(null);
-    setNotice(`Applied ${PRODUCT_UI_SCENE_LABELS[result.content.scene]} from JSON.`);
   }
 
   function updateItem(id: string, next: ProductUiItem) {
@@ -310,41 +277,9 @@ export function ProductUiSidebar() {
           rows={5}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[84px]"
         />
-        <div className="flex items-center justify-between gap-2">
-          <button
-            onClick={copyExternalPrompt}
-            disabled={!prompt.trim()}
-            className="text-[11px] font-medium text-studio-muted hover:text-studio-text disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Copy Claude prompt
-          </button>
+        <div className="flex justify-end">
           <AiMagicButton label="Draft" loading={false} disabled={!prompt.trim()} onClick={applyDraft} />
         </div>
-        <details className="mt-3 group">
-          <summary className="cursor-pointer list-none text-[11px] font-medium text-studio-muted hover:text-studio-text">
-            Paste Claude JSON
-          </summary>
-          <textarea
-            value={jsonDraft}
-            onChange={(event) => setJsonDraft(event.target.value)}
-            placeholder='{"scene":"workflow","title":"..."}'
-            rows={4}
-            className={`${inputCls} mt-2 resize-none`}
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              onClick={applyJsonDraft}
-              disabled={!jsonDraft.trim()}
-              className="text-[11px] font-semibold px-3 py-1.5 rounded-md bg-studio-hover text-studio-text hover:bg-studio-border disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Apply JSON
-            </button>
-          </div>
-        </details>
-        {externalPrompt && (
-          <textarea readOnly value={externalPrompt} rows={5} className={`${inputCls} mt-2 resize-none`} />
-        )}
-        {draftError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{draftError}</p>}
         {notice && <p className="mt-1.5 text-[10px] text-studio-muted leading-snug">{notice}</p>}
       </div>
 
