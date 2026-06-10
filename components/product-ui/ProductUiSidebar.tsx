@@ -310,40 +310,42 @@ export function ProductUiSidebar() {
         </div>
       </Section>
 
-      <Section
-        title="Background"
-        action={
-          <button
-            onClick={() => setShowBgModal(true)}
-            title="Background Library"
-            aria-label="Background Library"
-            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
-          >
-            <Plus size={15} />
-          </button>
-        }
-      >
-        <div className="grid grid-cols-3 gap-2">
-          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((background) => (
+      {content.format !== "release" && (
+        <Section
+          title="Background"
+          action={
             <button
-              key={background.id}
-              onClick={() => update({ backgroundId: background.id })}
-              title={background.label}
-              className={[
-                "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
-                content.backgroundId === background.id
-                  ? "border-studio-accent"
-                  : "border-transparent hover:border-studio-muted",
-              ].join(" ")}
+              onClick={() => setShowBgModal(true)}
+              title="Background Library"
+              aria-label="Background Library"
+              className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={background.url} alt="" className="w-full h-full object-cover" />
+              <Plus size={15} />
             </button>
-          ))}
-        </div>
-      </Section>
+          }
+        >
+          <div className="grid grid-cols-3 gap-2">
+            {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((background) => (
+              <button
+                key={background.id}
+                onClick={() => update({ backgroundId: background.id })}
+                title={background.label}
+                className={[
+                  "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
+                  content.backgroundId === background.id
+                    ? "border-studio-accent"
+                    : "border-transparent hover:border-studio-muted",
+                ].join(" ")}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={background.url} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
 
-      {showBgModal && (
+      {showBgModal && content.format !== "release" && (
         <BackgroundPickerModal
           currentId={content.backgroundId}
           customBackgrounds={customBackgrounds}

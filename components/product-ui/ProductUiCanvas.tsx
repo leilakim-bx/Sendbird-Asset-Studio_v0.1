@@ -626,7 +626,8 @@ export function ProductUiCanvas({ content, exportMode, target }: Props) {
   const size = getProductUiCanvasSize(content, exportTarget);
   const compact = exportTarget === "feature-mobile";
   const background = getBackground(content.backgroundId) ?? getBackground("bg-101");
-  const hasPhoto = content.composition !== "plain-stage";
+  const releaseFormat = exportTarget === "release";
+  const hasPhoto = !releaseFormat && content.composition !== "plain-stage";
   const scene = renderScene(content, compact);
   const releaseThumbnail = exportTarget === "release" && content.releasePurpose !== "insert";
   const inset = releaseThumbnail
@@ -656,7 +657,7 @@ export function ProductUiCanvas({ content, exportMode, target }: Props) {
         width: size.width,
         height: size.height,
         overflow: "hidden",
-        background: hasPhoto ? COLORS.blue100 : STAGE,
+        background: releaseFormat ? BORDER_LIGHT : hasPhoto ? COLORS.blue100 : STAGE,
         fontFamily: FONT,
         color: INK,
       }}
