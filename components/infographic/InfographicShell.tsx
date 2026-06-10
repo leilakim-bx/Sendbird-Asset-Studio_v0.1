@@ -12,7 +12,11 @@ import { exportImage, captureThumbnail } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
 import type { InfographicTemplate } from "@/lib/template-registry";
-import type { InfographicFormat } from "@/lib/types/infographic";
+import type { InfographicContent, InfographicFormat } from "@/lib/types/infographic";
+import {
+  extractInfographicCandidates,
+  type ArticleImageCandidate,
+} from "@/lib/infographic-article-extractor";
 
 const PRODUCT_W = 866;
 const PRODUCT_H = 660;
@@ -48,6 +52,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
 
     setFreshStart(false); // consume unconditionally
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);       // MUST be last (opens the autosave gate)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
@@ -65,7 +70,9 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const [leaveOpen, setLeaveOpen] = useState(false);
   const savedBaselineRef = useRef<string>("");
   const contentRef = useRef(infographicContent);
-  contentRef.current = infographicContent;
+  useEffect(() => {
+    contentRef.current = infographicContent;
+  }, [infographicContent]);
   useEffect(() => {
     if (ready) savedBaselineRef.current = JSON.stringify(contentRef.current);
   }, [ready]);
@@ -87,9 +94,12 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
   const productRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
+  const articleImageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [articleImages, setArticleImages] = useState<ArticleImageCandidate[]>([]);
+  const [activeArticleImageId, setActiveArticleImageId] = useState<string | null>(null);
 
   async function handleSave() {
     const ref = format === "product" ? productRef.current : blogRef.current;
@@ -132,13 +142,17 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     return () => ro.disconnect();
   }, []);
 
-  function filename(fmt: InfographicFormat) {
-    const slug = (content.title ?? "infographic")
+  function filenameFor(c: InfographicContent, fmt: InfographicFormat, suffix?: string) {
+    const slug = (c.title ?? "infographic")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40) || "infographic";
-    return `${slug}-${fmt}.png`;
+    return `${slug}${suffix ? `-${suffix}` : ""}-${fmt}.png`;
+  }
+
+  function filename(fmt: InfographicFormat) {
+    return filenameFor(content, fmt);
   }
 
   async function exportOne(fmt: InfographicFormat) {
@@ -166,9 +180,116 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
   }
 
+  async function exportArticleCandidate(candidate: ArticleImageCandidate) {
+    const ref = articleImageRefs.current[candidate.id];
+    if (!ref) return;
+    const candidateContent = candidate.id === activeArticleImageId ? content : candidate.content;
+    const fmt = candidateContent.format;
+    await exportImage(
+      ref,
+      fmt === "product" ? PRODUCT_W : BLOG_W,
+      fmt === "product" ? PRODUCT_H : undefined,
+      filenameFor(candidateContent, fmt, candidate.id),
+    );
+  }
+
+  async function handleExportSelected() {
+    const selected = articleImages.filter((candidate) => candidate.selected);
+    if (selected.length === 0) {
+      await handleExport(format);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    try {
+      for (const candidate of selected) {
+        await exportArticleCandidate(candidate);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Export failed:", err);
+      setExportError(`Export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportAll() {
+    if (articleImages.length === 0) {
+      await handleExport(format);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    try {
+      for (const candidate of articleImages) {
+        await exportArticleCandidate(candidate);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Export failed:", err);
+      setExportError(`Export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleSuggestArticleImages(article: string): number {
+    const next = extractInfographicCandidates(article, {
+      format: content.format,
+      bg: content.bg,
+      accent: content.accent,
+    });
+    setArticleImages(next);
+    const first = next[0];
+    if (first) {
+      setActiveArticleImageId(first.id);
+      setInfographicContent(first.content);
+    } else {
+      setActiveArticleImageId(null);
+    }
+    return next.length;
+  }
+
+  function handleSelectArticleImage(id: string) {
+    const candidate = articleImages.find((item) => item.id === id);
+    if (!candidate) return;
+    if (activeArticleImageId && infographicContent) {
+      setArticleImages((items) =>
+        items.map((item) =>
+          item.id === activeArticleImageId
+            ? {
+                ...item,
+                title: infographicContent.title?.trim() || item.title,
+                blockType: infographicContent.blocks[0]?.type ?? item.blockType,
+                content: infographicContent,
+              }
+            : item,
+        ),
+      );
+    }
+    setActiveArticleImageId(id);
+    setInfographicContent(candidate.content);
+  }
+
+  function handleToggleArticleImage(id: string) {
+    setArticleImages((items) =>
+      items.map((item) =>
+        item.id === id ? { ...item, selected: !item.selected } : item,
+      ),
+    );
+  }
+
   const previewW = format === "product" ? PRODUCT_W : BLOG_W;
   const previewH = format === "product" ? PRODUCT_H : blogHeight;
   const scale = Math.min(1, MAX_PREVIEW_W / previewW);
+  const activeArticleImageIndex = articleImages.findIndex((candidate) => candidate.id === activeArticleImageId);
+  const selectedArticleImageCount = articleImages.filter((candidate) => candidate.selected).length;
+  const previewPrefix = activeArticleImageIndex >= 0
+    ? `Image ${activeArticleImageIndex + 1} of ${articleImages.length} · `
+    : "";
 
   return (
     <div className="flex flex-col h-full">
@@ -194,7 +315,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
           <div className="min-h-full flex flex-col items-center justify-center gap-6 py-8">
           {/* Preview label — format + dimensions (toggle lives in the sidebar) */}
           <p className="text-studio-muted text-xs uppercase tracking-wider">
-            Preview — {format === "product"
+            Preview — {previewPrefix}{format === "product"
               ? `Product feature ${PRODUCT_W}×${PRODUCT_H}`
               : `Blog/Perspective ${BLOG_W}×${blogHeight}`}
           </p>
@@ -239,25 +360,46 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
                       <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
 
                       <Menu.Item
-                        onClick={() => handleExport("product")}
+                        onClick={() => handleExport(format)}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                       >
                         <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
-                          <AppWindow size={16} className="text-studio-text" />
+                          {format === "product"
+                            ? <AppWindow size={16} className="text-studio-text" />
+                            : <FileText size={16} className="text-studio-text" />}
                         </span>
-                        <span className="flex-1">Product feature</span>
-                        <span className="text-[11px] text-studio-muted tabular-nums">{PRODUCT_W}×{PRODUCT_H}</span>
+                        <span className="flex-1">Current image</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {format === "product" ? `${PRODUCT_W}×${PRODUCT_H}` : `${BLOG_W}×${blogHeight}`}
+                        </span>
                       </Menu.Item>
 
                       <Menu.Item
-                        onClick={() => handleExport("blog")}
+                        onClick={handleExportSelected}
+                        disabled={articleImages.length === 0}
                         className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
                       >
                         <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
                           <FileText size={16} className="text-studio-text" />
                         </span>
-                        <span className="flex-1">Blog/Perspective</span>
-                        <span className="text-[11px] text-studio-muted tabular-nums">{BLOG_W}×{blogHeight}</span>
+                        <span className="flex-1">Selected images</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {selectedArticleImageCount || 0}
+                        </span>
+                      </Menu.Item>
+
+                      <Menu.Item
+                        onClick={handleExportAll}
+                        disabled={articleImages.length === 0}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                          <FileText size={16} className="text-studio-text" />
+                        </span>
+                        <span className="flex-1">All article images</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {articleImages.length || 0}
+                        </span>
                       </Menu.Item>
                     </Menu.Popup>
                   </Menu.Positioner>
@@ -278,12 +420,31 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
             <div ref={blogRef}>
               <InfographicCanvas content={{ ...content, format: "blog" }} exportMode />
             </div>
+            {articleImages.map((candidate) => {
+              const candidateContent = candidate.id === activeArticleImageId ? content : candidate.content;
+              return (
+                <div
+                  key={candidate.id}
+                  ref={(node) => {
+                    articleImageRefs.current[candidate.id] = node;
+                  }}
+                >
+                  <InfographicCanvas content={candidateContent} exportMode />
+                </div>
+              );
+            })}
+            </div>
           </div>
           </div>
-        </div>
 
         {/* Right: editing sidebar */}
-        <InfographicSidebar />
+        <InfographicSidebar
+          articleImages={articleImages}
+          activeArticleImageId={activeArticleImageId}
+          onSuggestArticleImages={handleSuggestArticleImages}
+          onSelectArticleImage={handleSelectArticleImage}
+          onToggleArticleImage={handleToggleArticleImage}
+        />
       </div>
 
       {leaveOpen && (

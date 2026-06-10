@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import {
   Sparkles,
   TrendingUp,
@@ -14,6 +14,7 @@ import {
   LineChart,
   Plus,
   Info,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -28,19 +29,12 @@ import {
   type InfographicFormat,
 } from "@/lib/types/infographic";
 import { INFOGRAPHIC_PRESETS, PRESET_META, createBlock } from "@/lib/infographic-presets";
-import {
-  validateSuggestions,
-  suggestionToBlock,
-  type Suggestion,
-} from "@/lib/ai/validate-suggestions";
+import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
-import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
-import { useOnceFlag } from "@/lib/use-once-flag";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
 import { ConfirmDialog } from "./sidebar/ConfirmDialog";
 import { PresetList } from "./sidebar/PresetList";
-import { SuggestionsModal } from "./SuggestionsModal";
 import { PresetLibraryModal } from "./PresetLibraryModal";
 
 const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
@@ -53,6 +47,14 @@ const ACCENT_OPTIONS: InfographicAccent[] = ["lime", "blue", "red", "green"];
 const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
   { id: "product", label: "Product feature" },
   { id: "blog", label: "Blog/Perspective" },
+];
+
+const SIMPLE_BLOCK_TYPES: { id: InfographicBlockType; label: string }[] = [
+  { id: "stat", label: "Big number" },
+  { id: "kpi-group", label: "Metrics" },
+  { id: "compare", label: "Compare" },
+  { id: "step", label: "Steps" },
+  { id: "line-chart", label: "Trend" },
 ];
 
 /** Content types. One image holds exactly one of these. */
@@ -102,6 +104,361 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   );
 }
 
+function SimpleField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="mb-2.5">
+      <label className="block text-[10px] text-studio-muted mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function AddMiniRow({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-studio-border rounded-md text-[11px] text-studio-muted hover:border-studio-accent hover:text-studio-accent transition-colors"
+    >
+      <Plus size={11} />
+      {children}
+    </button>
+  );
+}
+
+function SimpleItem({
+  children,
+  onRemove,
+}: {
+  children: ReactNode;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="bg-studio-hover rounded-lg p-2.5 mb-2">
+      <div className="flex items-start gap-1.5">
+        <div className="min-w-0 flex-1">{children}</div>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Remove"
+            className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center transition-colors"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function blockTypeLabel(type: InfographicBlockType | undefined): string {
+  return SIMPLE_BLOCK_TYPES.find((item) => item.id === type)?.label ?? "Advanced";
+}
+
+function SelectedImageEditor({
+  content,
+  onChange,
+}: {
+  content: InfographicContent;
+  onChange: (next: InfographicContent) => void;
+}) {
+  const block = content.blocks[0];
+  const setTitle = (title: string) => onChange({ ...content, title });
+  const setBlock = (next: InfographicBlock) => onChange({ ...content, blocks: [next] });
+  const setType = (type: InfographicBlockType) =>
+    onChange({
+      ...content,
+      showTitle: type === "stat" ? false : content.showTitle,
+      blocks: [createBlock(type)],
+    });
+
+  if (!block) {
+    return <p className="text-[11px] text-studio-muted leading-relaxed">Pick an article image or preset to edit.</p>;
+  }
+
+  return (
+    <>
+      <SimpleField label="Title">
+        <input className={inputCls} value={content.title ?? ""} onChange={(event) => setTitle(event.target.value)} />
+      </SimpleField>
+
+      <SimpleField label="Type">
+        <select
+          className={inputCls}
+          value={SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) ? block.type : ""}
+          onChange={(event) => {
+            const value = event.target.value as InfographicBlockType;
+            if (value) setType(value);
+          }}
+        >
+          {!SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) && (
+            <option value="">Advanced block</option>
+          )}
+          {SIMPLE_BLOCK_TYPES.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </SimpleField>
+
+      {block.type === "stat" && (
+        <>
+          <SimpleField label="Eyebrow">
+            <input
+              className={inputCls}
+              value={block.eyebrow ?? ""}
+              onChange={(event) => setBlock({ ...block, eyebrow: event.target.value })}
+            />
+          </SimpleField>
+          <SimpleField label="Number">
+            <input
+              className={inputCls}
+              value={block.number}
+              onChange={(event) => setBlock({ ...block, number: event.target.value })}
+            />
+          </SimpleField>
+          <SimpleField label="Label">
+            <input
+              className={inputCls}
+              value={block.label ?? ""}
+              onChange={(event) => setBlock({ ...block, label: event.target.value })}
+            />
+          </SimpleField>
+        </>
+      )}
+
+      {block.type === "kpi-group" && (
+        <>
+          {block.items.map((item, index) => (
+            <SimpleItem
+              key={index}
+              onRemove={block.items.length > 1 ? () => {
+                setBlock({ ...block, items: block.items.filter((_, itemIndex) => itemIndex !== index) });
+              } : undefined}
+            >
+              <div className="grid grid-cols-[76px_1fr] gap-1.5">
+                <input
+                  className={inputCls}
+                  placeholder="Number"
+                  value={item.number}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      items: block.items.map((candidate, itemIndex) =>
+                        itemIndex === index ? { ...candidate, number: event.target.value } : candidate,
+                      ),
+                    })
+                  }
+                />
+                <input
+                  className={inputCls}
+                  placeholder="Label"
+                  value={item.label}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      items: block.items.map((candidate, itemIndex) =>
+                        itemIndex === index ? { ...candidate, label: event.target.value } : candidate,
+                      ),
+                    })
+                  }
+                />
+              </div>
+            </SimpleItem>
+          ))}
+          {block.items.length < 4 && (
+            <AddMiniRow onClick={() => setBlock({ ...block, items: [...block.items, { number: "00", label: "Label" }] })}>
+              Add metric
+            </AddMiniRow>
+          )}
+        </>
+      )}
+
+      {block.type === "compare" && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <SimpleField label="Before">
+              <input
+                className={inputCls}
+                value={block.columnA}
+                onChange={(event) => setBlock({ ...block, columnA: event.target.value })}
+              />
+            </SimpleField>
+            <SimpleField label="After">
+              <input
+                className={inputCls}
+                value={block.columnB}
+                onChange={(event) => setBlock({ ...block, columnB: event.target.value })}
+              />
+            </SimpleField>
+          </div>
+          {block.rows.map((row, index) => (
+            <SimpleItem
+              key={index}
+              onRemove={block.rows.length > 1 ? () => {
+                setBlock({ ...block, rows: block.rows.filter((_, rowIndex) => rowIndex !== index) });
+              } : undefined}
+            >
+              <div className="grid grid-cols-2 gap-1.5">
+                <input
+                  className={inputCls}
+                  placeholder={block.columnA || "Before"}
+                  value={row.a}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      rows: block.rows.map((candidate, rowIndex) =>
+                        rowIndex === index ? { ...candidate, a: event.target.value } : candidate,
+                      ),
+                    })
+                  }
+                />
+                <input
+                  className={inputCls}
+                  placeholder={block.columnB || "After"}
+                  value={row.b}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      rows: block.rows.map((candidate, rowIndex) =>
+                        rowIndex === index ? { ...candidate, b: event.target.value } : candidate,
+                      ),
+                    })
+                  }
+                />
+              </div>
+            </SimpleItem>
+          ))}
+          <AddMiniRow onClick={() => setBlock({ ...block, rows: [...block.rows, { a: "", b: "" }] })}>
+            Add row
+          </AddMiniRow>
+        </>
+      )}
+
+      {block.type === "step" && (
+        <>
+          {block.items.map((item, index) => (
+            <SimpleItem
+              key={index}
+              onRemove={block.items.length > 1 ? () => {
+                setBlock({ ...block, items: block.items.filter((_, itemIndex) => itemIndex !== index) });
+              } : undefined}
+            >
+              <input
+                className={inputCls + " mb-1.5"}
+                placeholder="Step title"
+                value={item.title}
+                onChange={(event) =>
+                  setBlock({
+                    ...block,
+                    items: block.items.map((candidate, itemIndex) =>
+                      itemIndex === index ? { ...candidate, title: event.target.value } : candidate,
+                    ),
+                  })
+                }
+              />
+              <input
+                className={inputCls}
+                placeholder="Step detail"
+                value={item.desc ?? ""}
+                onChange={(event) =>
+                  setBlock({
+                    ...block,
+                    items: block.items.map((candidate, itemIndex) =>
+                      itemIndex === index ? { ...candidate, desc: event.target.value } : candidate,
+                    ),
+                  })
+                }
+              />
+            </SimpleItem>
+          ))}
+          <AddMiniRow onClick={() => setBlock({ ...block, items: [...block.items, { title: "Step", desc: "" }] })}>
+            Add step
+          </AddMiniRow>
+        </>
+      )}
+
+      {block.type === "line-chart" && (
+        <>
+          <SimpleField label="Line label">
+            <input
+              className={inputCls}
+              value={block.seriesA.label}
+              onChange={(event) => setBlock({ ...block, seriesA: { ...block.seriesA, label: event.target.value } })}
+            />
+          </SimpleField>
+          {block.xLabels.map((label, index) => (
+            <SimpleItem
+              key={index}
+              onRemove={block.xLabels.length > 2 ? () => {
+                setBlock({
+                  ...block,
+                  xLabels: block.xLabels.filter((_, labelIndex) => labelIndex !== index),
+                  seriesA: {
+                    ...block.seriesA,
+                    values: block.seriesA.values.filter((_, valueIndex) => valueIndex !== index),
+                  },
+                });
+              } : undefined}
+            >
+              <div className="grid grid-cols-[1fr_76px] gap-1.5">
+                <input
+                  className={inputCls}
+                  placeholder="Label"
+                  value={label}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      xLabels: block.xLabels.map((candidate, labelIndex) =>
+                        labelIndex === index ? event.target.value : candidate,
+                      ),
+                    })
+                  }
+                />
+                <input
+                  className={inputCls}
+                  type="number"
+                  value={block.seriesA.values[index] ?? 0}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      seriesA: {
+                        ...block.seriesA,
+                        values: block.seriesA.values.map((candidate, valueIndex) =>
+                          valueIndex === index ? Number(event.target.value) || 0 : candidate,
+                        ),
+                      },
+                    })
+                  }
+                />
+              </div>
+            </SimpleItem>
+          ))}
+          <AddMiniRow
+            onClick={() =>
+              setBlock({
+                ...block,
+                xLabels: [...block.xLabels, ""],
+                seriesA: { ...block.seriesA, values: [...block.seriesA.values, 0] },
+              })
+            }
+          >
+            Add point
+          </AddMiniRow>
+        </>
+      )}
+
+      {!SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) && (
+        <p className="text-[11px] text-studio-muted leading-relaxed">
+          This block uses advanced controls. Open Advanced settings below to edit it.
+        </p>
+      )}
+    </>
+  );
+}
+
 /** Resizable panel bounds (mirrors the chat FormPanel). Width is session-only. */
 const DEFAULT_PANEL_W = 320; // = the previous fixed w-80
 const MIN_PANEL_W = 240;
@@ -116,7 +473,19 @@ function contentFingerprint(c: InfographicContent | null): string {
   return JSON.stringify({ bg: c.bg, title: c.title ?? "", footnote: c.footnote ?? "", blocks: c.blocks });
 }
 
-export function InfographicSidebar() {
+export function InfographicSidebar({
+  articleImages,
+  activeArticleImageId,
+  onSuggestArticleImages,
+  onSelectArticleImage,
+  onToggleArticleImage,
+}: {
+  articleImages: ArticleImageCandidate[];
+  activeArticleImageId: string | null;
+  onSuggestArticleImages: (article: string) => number;
+  onSelectArticleImage: (id: string) => void;
+  onToggleArticleImage: (id: string) => void;
+}) {
   const {
     infographicContent: content,
     setInfographicContent,
@@ -132,35 +501,12 @@ export function InfographicSidebar() {
   const [activePreset, setActivePreset] = useState("brand-stat");
   const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
-
-  // First-run coachmark nudging the user toward the Preset section. The bubble
-  // floats out of the panel's left edge, so we measure the Preset section's
-  // vertical offset within the panel to align it.
-  const [showPresetCoach, dismissPresetCoach] = useOnceFlag("coach-ig-preset-v1");
   const panelRef = useRef<HTMLDivElement>(null);
-  const presetRef = useRef<HTMLDivElement>(null);
-  const [coachTop, setCoachTop] = useState(0);
-  useEffect(() => {
-    if (!showPresetCoach) return;
-    const measure = () => {
-      if (!panelRef.current || !presetRef.current) return;
-      setCoachTop(
-        presetRef.current.getBoundingClientRect().top -
-          panelRef.current.getBoundingClientRect().top,
-      );
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [showPresetCoach]);
 
-  // ── AI Magic state ──
+  // ── Article suggestions state ──
   const [article, setArticle] = useState("");
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [applyNotice, setApplyNotice] = useState<string | null>(null);
+  const [articleNotice, setArticleNotice] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // ── "Edited since last clean load?" tracking ──
   // Baseline = the fingerprint of the last wholesale load (initial seed, restore,
@@ -177,47 +523,14 @@ export function InfographicSidebar() {
 
   if (!content) return null;
 
-  async function handleAnalyze() {
+  function handleSuggestImages() {
     const text = article.trim();
-    if (!text || analyzing) return;
-    setAnalyzing(true);
-    setAnalyzeError(null);
-    setApplyNotice(null);
-    try {
-      const res = await fetch("/api/analyze-article", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ article: text }),
-      });
-      const data = (await res.json()) as { suggestions?: unknown; error?: string };
-      if (!res.ok) throw new Error(data?.error || `Analysis failed (${res.status})`);
-      // Re-validate client-side as defense-in-depth: the modal only ever
-      // receives suggestions that pass our schema.
-      setSuggestions(validateSuggestions(data));
-      setModalOpen(true);
-    } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : "Analysis failed");
-    } finally {
-      setAnalyzing(false);
-    }
-  }
-
-  function applySuggestions(picked: Suggestion[]) {
-    if (!content || picked.length === 0) return;
-    const first = picked[0];
-    // One image = one content: the suggestion REPLACES the current block. Fill
-    // the title only if the canvas doesn't already have one (don't clobber text
-    // the marketer typed).
-    setInfographicContent({
-      ...content,
-      title: first.suggestedTitle && !content.title?.trim() ? first.suggestedTitle : content.title,
-      blocks: [suggestionToBlock(first)],
-    });
-    setModalOpen(false);
-    setApplyNotice(
-      picked.length > 1
-        ? "Applied the first suggestion. Creating multiple infographics at once is coming later."
-        : "Added to your canvas.",
+    if (!text) return;
+    const count = onSuggestArticleImages(text);
+    setArticleNotice(
+      count > 0
+        ? `Suggested ${count} image${count === 1 ? "" : "s"} from this article.`
+        : "No strong image candidates found. Try a preset in Advanced settings.",
     );
   }
 
@@ -245,7 +558,6 @@ export function InfographicSidebar() {
    *  swap would discard; otherwise load straight away (no dialog by default). */
   function requestPreset(id: string) {
     if (PRESET_META[id]?.soon) return;
-    dismissPresetCoach(); // user engaged with presets — retire the coachmark
     const edited = baselineRef.current !== null && contentFingerprint(content) !== baselineRef.current;
     if (edited) setPendingPreset(id);
     else loadPreset(id);
@@ -304,36 +616,6 @@ export function InfographicSidebar() {
       />
 
       <div className="flex-1 overflow-y-auto">
-      {/* AI Magic */}
-      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
-        <div className="flex items-center gap-1.5 mb-2.5">
-          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
-            <Sparkles size={13} className="text-studio-text" fill="currentColor" />
-          </span>
-          <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
-        </div>
-        {/* Composer — borderless textarea with a bottom-right send button */}
-        <textarea
-          value={article}
-          onChange={(e) => setArticle(e.target.value)}
-          disabled={analyzing}
-          placeholder="Paste article text here…"
-          rows={5}
-          className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] disabled:opacity-60 min-h-[96px]"
-        />
-        <div className="flex justify-end">
-          <AiMagicButton
-            label="Analyze"
-            loading={analyzing}
-            disabled={analyzing || !article.trim()}
-            onClick={handleAnalyze}
-          />
-        </div>
-        {analyzeError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{analyzeError}</p>}
-        {applyNotice && !analyzeError && (
-          <p className="mt-1.5 text-[10px] text-studio-muted leading-snug">{applyNotice}</p>
-        )}
-      </div>
 
       {/* Format */}
       <Section
@@ -361,182 +643,270 @@ export function InfographicSidebar() {
         </div>
       </Section>
 
-      {/* Preset — 4-item preview; the "+" opens a modal with the full set.
-          Wrapped so the floating first-run coachmark can measure its position. */}
-      <div ref={presetRef}>
-        <Section
-          title="Preset"
-          action={
-            <button
-              onClick={() => setPresetModalOpen(true)}
-              title="All presets"
-              aria-label="All presets"
-              className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
-            >
-              <Plus size={15} />
-            </button>
-          }
-        >
-          <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
-        </Section>
+      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
+            <Sparkles size={13} className="text-studio-text" fill="currentColor" />
+          </span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create from article</span>
+        </div>
+        <textarea
+          value={article}
+          onChange={(event) => setArticle(event.target.value)}
+          placeholder="Paste full article..."
+          rows={6}
+          className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
+        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSuggestImages}
+            disabled={!article.trim()}
+            className="flex-1 h-8 rounded-md border border-studio-border text-xs font-semibold text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Suggest images
+          </button>
+          <AiMagicButton
+            label="Suggest images"
+            loading={false}
+            disabled={!article.trim()}
+            onClick={handleSuggestImages}
+          />
+        </div>
+        {articleNotice && <p className="mt-2 text-[10px] text-studio-muted leading-snug">{articleNotice}</p>}
       </div>
 
-      {/* Background — product format is locked to the fixed warm-gray bg. */}
-      <Section title="Background">
-        {content.format === "product" ? (
+      <Section title="Article images">
+        {articleImages.length === 0 ? (
           <p className="text-[11px] text-studio-muted leading-relaxed">
-            Fixed to Warm gray for the product format.
+            Paste an article above to suggest 2-5 infographic images. No API key is required.
           </p>
         ) : (
-          <div className="flex gap-1.5 flex-wrap">
-            {BG_OPTIONS.map((bg) => (
-              <button
-                key={bg.id}
-                onClick={() => setInfographicBg(bg.id)}
-                title={bg.name}
-                className={[
-                  "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
-                  content.bg === bg.id ? "border-studio-accent" : "border-transparent",
-                ].join(" ")}
-                style={{ background: INFOGRAPHIC_BG_HEX[bg.id], boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
-              />
-            ))}
+          <div className="flex flex-col gap-1">
+            {articleImages.map((candidate, index) => {
+              const active = candidate.id === activeArticleImageId;
+              const status = active ? "Editing" : candidate.status === "ready" ? "Ready" : "Draft";
+              const displayTitle = active ? content.title?.trim() || candidate.title : candidate.title;
+              const displayBlockType = active ? block?.type ?? candidate.blockType : candidate.blockType;
+              return (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => onSelectArticleImage(candidate.id)}
+                  className={[
+                    "flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]",
+                    active ? "border-studio-accent" : "border-transparent",
+                  ].join(" ")}
+                >
+                  <input
+                    type="checkbox"
+                    checked={candidate.selected}
+                    onChange={() => onToggleArticleImage(candidate.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    className="sb-checkbox shrink-0"
+                    aria-label={`Export ${candidate.title}`}
+                  />
+                  <span className="flex h-9 w-12 shrink-0 items-center justify-center rounded-md bg-studio-hover text-[9px] font-semibold text-studio-muted">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[11.5px] font-medium text-studio-text">
+                      {displayTitle}
+                    </span>
+                    <span className="mt-1 flex items-center gap-1.5">
+                      <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-studio-muted">
+                        {blockTypeLabel(displayBlockType)}
+                      </span>
+                      <span className="text-[9px] text-studio-muted">{status}</span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </Section>
 
-      {/* Accent */}
-      <Section title="Accent">
-        <div className="flex gap-1.5 flex-wrap">
-          {ACCENT_OPTIONS.map((ac) => (
-            <button
-              key={ac}
-              onClick={() => setInfographicAccent(ac)}
-              title={ac}
-              className={[
-                "w-7 h-7 rounded-full border-2 transition-transform hover:scale-110",
-                content.accent === ac ? "border-studio-accent" : "border-transparent",
-              ].join(" ")}
-              style={{ background: INFOGRAPHIC_ACCENT_HEX[ac], boxShadow: content.accent === ac ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
-            />
-          ))}
-        </div>
+      <Section title="Selected image">
+        <SelectedImageEditor content={content} onChange={setInfographicContent} />
+        {activeArticleImageId && (
+          <p className="mt-2 border-l-2 border-studio-border pl-2 text-[10.5px] italic leading-snug text-studio-muted">
+            {articleImages.find((candidate) => candidate.id === activeArticleImageId)?.sourceSnippet}
+          </p>
+        )}
       </Section>
 
-      {/* Title & footnote */}
-      {(() => {
-        const showTitle = content.showTitle !== false && !titleLocked;
-        // Blog-only feature: the product format is a fixed size, so a title &
-        // footnote would clip. Offer it only in the blog format.
-        if (content.format === "product") {
-          return (
-            <Section title="Title & footnote">
-              <p className="text-[11px] text-studio-muted leading-relaxed">
-                Available in the Blog format only — Product is a fixed size, so a title &amp; footnote would get
-                clipped. Switch to Blog to add them.
-              </p>
-            </Section>
-          );
-        }
-        // Stat layout: no title/footnote at all — show a note instead of the toggle.
-        if (titleLocked) {
-          return (
-            <Section title="Title & footnote">
-              <p className="text-[11px] text-studio-muted leading-relaxed">
-                Not available for the Stat layout — it&apos;s a centered standalone number.
-              </p>
-            </Section>
-          );
-        }
-        return (
-          <Section
-            title="Title & footnote"
-            action={<Toggle on={showTitle} onChange={setInfographicShowTitle} />}
+      <Section
+        title="Advanced settings"
+        action={
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+            aria-label="Toggle advanced settings"
           >
-            {showTitle ? (
-              <>
-                <div className="mb-2.5">
-                  <label className="block text-[10px] text-studio-muted mb-1">Title</label>
-                  <input className={inputCls} value={content.title ?? ""} onChange={(e) => setInfographicTitle(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-studio-muted mb-1">Footnote</label>
-                  <textarea
-                    className={inputCls + " resize-none min-h-12"}
-                    value={content.footnote ?? ""}
-                    onChange={(e) => setInfographicFootnote(e.target.value)}
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="text-[11px] text-studio-muted leading-relaxed">
-                Hidden — graph / centered content only. Toggle on to add a title &amp; footnote.
-              </p>
-            )}
-          </Section>
-        );
-      })()}
-
-      {/* Content — one image holds exactly one content block */}
-      <Section title="Block">
-        {/* Type picker — small icon grid; selecting one replaces the content */}
-        <div className="grid grid-cols-3 gap-1.5 mb-3">
-          {BLOCK_TYPE_META.map(({ type, label, Icon }) => {
-            const active = block?.type === type;
-            return (
-              <button
-                key={type}
-                onClick={() => pickType(type)}
-                aria-pressed={active}
-                title={label}
-                className={[
-                  "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg border transition-colors",
-                  active
-                    ? "border-studio-accent text-studio-text"
-                    : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
-                ].join(" ")}
-              >
-                <Icon size={16} />
-                <span className="text-[10px] font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {block ? (
-          <>
-            <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} format={content.format} />
-            <button
-              onClick={() => setInfographicContent({ ...content, blocks: [] })}
-              className="mt-1 w-full text-[11px] text-studio-muted hover:text-red-400 transition-colors py-1.5"
-            >
-              Clear block
-            </button>
-          </>
+            <ChevronDown size={15} className={advancedOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+          </button>
+        }
+      >
+        {!advancedOpen ? (
+          <p className="text-[11px] text-studio-muted leading-relaxed">
+            Presets, colors, chart variants, and detailed block controls are hidden by default.
+          </p>
         ) : (
-          <p className="text-[11px] text-studio-muted py-2">Pick a content type above to start.</p>
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Preset</span>
+                <button
+                  onClick={() => setPresetModalOpen(true)}
+                  title="All presets"
+                  aria-label="All presets"
+                  className="ml-auto flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+                >
+                  <Plus size={15} />
+                </button>
+              </div>
+              <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
+            </div>
+
+            <div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Background</div>
+              {content.format === "product" ? (
+                <p className="text-[11px] text-studio-muted leading-relaxed">
+                  Fixed to Warm gray for the product format.
+                </p>
+              ) : (
+                <div className="flex gap-1.5 flex-wrap">
+                  {BG_OPTIONS.map((bg) => (
+                    <button
+                      key={bg.id}
+                      onClick={() => setInfographicBg(bg.id)}
+                      title={bg.name}
+                      className={[
+                        "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
+                        content.bg === bg.id ? "border-studio-accent" : "border-transparent",
+                      ].join(" ")}
+                      style={{ background: INFOGRAPHIC_BG_HEX[bg.id], boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Accent</div>
+              <div className="flex gap-1.5 flex-wrap">
+                {ACCENT_OPTIONS.map((ac) => (
+                  <button
+                    key={ac}
+                    onClick={() => setInfographicAccent(ac)}
+                    title={ac}
+                    className={[
+                      "w-7 h-7 rounded-full border-2 transition-transform hover:scale-110",
+                      content.accent === ac ? "border-studio-accent" : "border-transparent",
+                    ].join(" ")}
+                    style={{ background: INFOGRAPHIC_ACCENT_HEX[ac], boxShadow: content.accent === ac ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {(() => {
+              const showTitle = content.showTitle !== false && !titleLocked;
+              if (content.format === "product") {
+                return (
+                  <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title & footnote</div>
+                    <p className="text-[11px] text-studio-muted leading-relaxed">
+                      Available in the Blog format only.
+                    </p>
+                  </div>
+                );
+              }
+              if (titleLocked) {
+                return (
+                  <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title & footnote</div>
+                    <p className="text-[11px] text-studio-muted leading-relaxed">
+                      Not available for a centered Big number block.
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title & footnote</span>
+                    <span className="ml-auto"><Toggle on={showTitle} onChange={setInfographicShowTitle} /></span>
+                  </div>
+                  {showTitle ? (
+                    <>
+                      <div className="mb-2.5">
+                        <label className="block text-[10px] text-studio-muted mb-1">Title</label>
+                        <input className={inputCls} value={content.title ?? ""} onChange={(e) => setInfographicTitle(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-studio-muted mb-1">Footnote</label>
+                        <textarea
+                          className={inputCls + " resize-none min-h-12"}
+                          value={content.footnote ?? ""}
+                          onChange={(e) => setInfographicFootnote(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-studio-muted leading-relaxed">
+                      Hidden. Toggle on to add a title and footnote.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Block</div>
+              <div className="grid grid-cols-3 gap-1.5 mb-3">
+                {BLOCK_TYPE_META.map(({ type, label, Icon }) => {
+                  const active = block?.type === type;
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => pickType(type)}
+                      aria-pressed={active}
+                      title={label}
+                      className={[
+                        "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg border transition-colors",
+                        active
+                          ? "border-studio-accent text-studio-text"
+                          : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
+                      ].join(" ")}
+                    >
+                      <Icon size={16} />
+                      <span className="text-[10px] font-medium">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {block ? (
+                <>
+                  <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} format={content.format} />
+                  <button
+                    onClick={() => setInfographicContent({ ...content, blocks: [] })}
+                    className="mt-1 w-full text-[11px] text-studio-muted hover:text-red-400 transition-colors py-1.5"
+                  >
+                    Clear block
+                  </button>
+                </>
+              ) : (
+                <p className="text-[11px] text-studio-muted py-2">Pick a content type above to start.</p>
+              )}
+            </div>
+          </div>
         )}
       </Section>
       </div>
-
-      {/* First-run coachmark — floats out of the panel's left edge toward the
-          canvas, pointing back at the Preset section. */}
-      {showPresetCoach && coachTop > 0 && (
-        <CoachmarkBubble
-          text="Pick a preset to start 🙂"
-          onDismiss={dismissPresetCoach}
-          top={coachTop}
-        />
-      )}
-
-      <SuggestionsModal
-        open={modalOpen}
-        suggestions={suggestions}
-        bg={content.bg}
-        accent={content.accent}
-        onClose={() => setModalOpen(false)}
-        onCreate={applySuggestions}
-      />
 
       {presetModalOpen && (
         <PresetLibraryModal
