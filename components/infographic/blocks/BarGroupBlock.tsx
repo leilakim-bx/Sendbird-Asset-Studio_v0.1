@@ -304,11 +304,11 @@ function Ranked({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
       {hasHeader && (
-        // Absolute left/right offsets mirror the rows exactly (label paddingLeft +
-        // value right), so each header lands on its column's vertical line.
+        // Headers sit flush to the track's outer edges (labelA hard-left, labelB
+        // hard-right), framing the full chart width.
         <div style={{ position: "relative", height: fs(16), marginBottom: 6 }}>
-          <span style={{ ...headerStyle, position: "absolute", left: RANKED_PAD_L, top: 0 }}>{block.labelA}</span>
-          <span style={{ ...headerStyle, position: "absolute", right: RANKED_PAD_R, top: 0 }}>{block.labelB}</span>
+          <span style={{ ...headerStyle, position: "absolute", left: 0, top: 0 }}>{block.labelA}</span>
+          <span style={{ ...headerStyle, position: "absolute", right: 0, top: 0 }}>{block.labelB}</span>
         </div>
       )}
       {items.map((it, i) => {

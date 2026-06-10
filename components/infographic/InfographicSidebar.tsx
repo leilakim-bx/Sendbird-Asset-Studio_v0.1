@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Sparkles,
   TrendingUp,
@@ -24,6 +24,7 @@ import {
   type InfographicAccent,
   type InfographicBlock,
   type InfographicBlockType,
+  type InfographicContent,
   type InfographicFormat,
 } from "@/lib/types/infographic";
 import { INFOGRAPHIC_PRESETS, PRESET_META, createBlock } from "@/lib/infographic-presets";
@@ -35,6 +36,7 @@ import {
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
+import { ConfirmDialog } from "./sidebar/ConfirmDialog";
 import { PresetList } from "./sidebar/PresetList";
 import { SuggestionsModal } from "./SuggestionsModal";
 import { PresetLibraryModal } from "./PresetLibraryModal";
@@ -56,7 +58,7 @@ const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: Lucide
   { type: "stat", label: "Big number", Icon: TrendingUp },
   { type: "kpi-group", label: "Metrics", Icon: LayoutGrid },
   { type: "bar-group", label: "Bar chart", Icon: BarChart3 },
-  { type: "stacked-bar", label: "Stacked bar", Icon: AlignStartHorizontal },
+  { type: "stacked-bar", label: "Multi-series bar", Icon: AlignStartHorizontal },
   { type: "step", label: "Steps", Icon: ListOrdered },
   { type: "stack", label: "Layers", Icon: Layers },
   { type: "node-list", label: "Hub", Icon: Circle },
@@ -98,6 +100,20 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   );
 }
 
+/** Resizable panel bounds (mirrors the chat FormPanel). Width is session-only. */
+const DEFAULT_PANEL_W = 320; // = the previous fixed w-80
+const MIN_PANEL_W = 240;
+const MAX_PANEL_W = 520;
+
+/** Fingerprint of the fields a preset replaces (bg/title/footnote/blocks). Used
+ *  to tell whether the canvas has diverged from its last clean baseline, so we
+ *  only confirm a destructive preset swap when there are edits to lose. Format +
+ *  accent are excluded: loadPreset preserves them, so they're never lost. */
+function contentFingerprint(c: InfographicContent | null): string {
+  if (!c) return "";
+  return JSON.stringify({ bg: c.bg, title: c.title ?? "", footnote: c.footnote ?? "", blocks: c.blocks });
+}
+
 export function InfographicSidebar() {
   const {
     infographicContent: content,
@@ -113,6 +129,7 @@ export function InfographicSidebar() {
 
   const [activePreset, setActivePreset] = useState("brand-stat");
   const [presetModalOpen, setPresetModalOpen] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
 
   // ── AI Magic state ──
   const [article, setArticle] = useState("");
@@ -121,6 +138,19 @@ export function InfographicSidebar() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [applyNotice, setApplyNotice] = useState<string | null>(null);
+
+  // ── "Edited since last clean load?" tracking ──
+  // Baseline = the fingerprint of the last wholesale load (initial seed, restore,
+  // or a preset). Captured once when content first appears; updated on a clean
+  // preset/type swap. Incremental edits and AI-apply leave it stale, so the
+  // fingerprint diverges → we know there's work a preset swap would destroy.
+  const baselineRef = useRef<string | null>(null);
+  const [pendingPreset, setPendingPreset] = useState<string | null>(null);
+  useEffect(() => {
+    if (content && baselineRef.current === null) {
+      baselineRef.current = contentFingerprint(content);
+    }
+  }, [content]);
 
   if (!content) return null;
 
@@ -175,7 +205,7 @@ export function InfographicSidebar() {
     if (!preset || !content) return;
     setActivePreset(id);
     const blocks = JSON.parse(JSON.stringify(preset.blocks)) as InfographicBlock[];
-    setInfographicContent({
+    const next: InfographicContent = {
       ...content, // keep current format + accent
       bg: preset.bg,
       title: preset.title,
@@ -183,19 +213,34 @@ export function InfographicSidebar() {
       // Stat is a centered standalone number — never carries a title/footnote.
       ...(blocks[0]?.type === "stat" ? { showTitle: false } : {}),
       blocks,
-    });
+    };
+    setInfographicContent(next);
+    baselineRef.current = contentFingerprint(next); // freshly loaded = clean
+  }
+
+  /** Preset clicks go through here: confirm first only if the canvas has edits a
+   *  swap would discard; otherwise load straight away (no dialog by default). */
+  function requestPreset(id: string) {
+    if (PRESET_META[id]?.soon) return;
+    const edited = baselineRef.current !== null && contentFingerprint(content) !== baselineRef.current;
+    if (edited) setPendingPreset(id);
+    else loadPreset(id);
   }
 
   /** Swap the single content block to a fresh default of the chosen type. */
   function pickType(type: InfographicBlockType) {
     if (!content) return;
     if (content.blocks[0]?.type === type) return; // already this type
-    setInfographicContent({
+    const next: InfographicContent = {
       ...content,
       // Stat can't use a title/footnote (centered standalone number).
       ...(type === "stat" ? { showTitle: false } : {}),
       blocks: [createBlock(type)],
-    });
+    };
+    setInfographicContent(next);
+    // A swap drops in a fresh default block (no user data) → treat as clean so a
+    // following preset click doesn't falsely warn about "losing edits".
+    baselineRef.current = contentFingerprint(next);
   }
 
   const block = content.blocks[0];
@@ -203,8 +248,37 @@ export function InfographicSidebar() {
   // disabled for it (and forced off above whenever stat becomes the content).
   const titleLocked = block?.type === "stat";
 
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+    function onMove(ev: MouseEvent) {
+      // Panel sits on the right, so dragging left widens it.
+      const delta = startX - ev.clientX;
+      setPanelWidth(Math.min(MAX_PANEL_W, Math.max(MIN_PANEL_W, startW + delta)));
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   return (
-    <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
+    <div
+      style={{ width: panelWidth }}
+      className="relative shrink-0 h-full flex flex-col bg-studio-sidebar border-l border-studio-border"
+    >
+      {/* Resize handle — left edge (outside the scroll container so it spans the
+          full panel height regardless of scroll). */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        title="Drag to resize panel"
+      />
+
+      <div className="flex-1 overflow-y-auto">
       {/* AI Magic */}
       <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
         <div className="flex items-center gap-1.5 mb-2.5">
@@ -276,7 +350,7 @@ export function InfographicSidebar() {
           </button>
         }
       >
-        <PresetList activeId={activePreset} onPick={loadPreset} limit={4} />
+        <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
       </Section>
 
       {/* Background — product format is locked to the fixed warm-gray bg. */}
@@ -415,6 +489,7 @@ export function InfographicSidebar() {
           <p className="text-[11px] text-studio-muted py-2">Pick a content type above to start.</p>
         )}
       </Section>
+      </div>
 
       <SuggestionsModal
         open={modalOpen}
@@ -428,8 +503,25 @@ export function InfographicSidebar() {
       {presetModalOpen && (
         <PresetLibraryModal
           activeId={activePreset}
-          onSelect={loadPreset}
+          onSelect={(id) => {
+            setPresetModalOpen(false);
+            requestPreset(id);
+          }}
           onClose={() => setPresetModalOpen(false)}
+        />
+      )}
+
+      {pendingPreset && (
+        <ConfirmDialog
+          title="Replace with this preset?"
+          message="Your current edits will be replaced by the preset. This can't be undone."
+          confirmLabel="Replace"
+          cancelLabel="Cancel"
+          onConfirm={() => {
+            loadPreset(pendingPreset);
+            setPendingPreset(null);
+          }}
+          onCancel={() => setPendingPreset(null)}
         />
       )}
     </div>

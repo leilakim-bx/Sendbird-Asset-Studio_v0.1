@@ -675,20 +675,40 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
         set({ rows: [...b.rows, { label: `Row ${b.rows.length + 1}`, values: b.series.map(() => 0) }] });
       const removeRow = (ri: number) => set({ rows: b.rows.filter((_, j) => j !== ri) });
 
+      const layout = b.layout ?? "stacked";
       return (
         <>
+          <Field label="Layout">
+            <div className="flex items-center gap-1 p-1 rounded-md bg-[#0E0E0E]">
+              {(["stacked", "grouped"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => set({ layout: opt })}
+                  aria-pressed={layout === opt}
+                  className={[
+                    "flex-1 px-2 py-1 rounded text-[11px] font-medium capitalize transition-colors",
+                    layout === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </Field>
           <Field label="Unit (optional, e.g. % or k)">
             <input className={inputCls} value={b.unit ?? ""} onChange={(e) => set({ unit: e.target.value })} />
           </Field>
-          <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={b.normalize === true}
-              onChange={(e) => set({ normalize: e.target.checked })}
-              className="sb-checkbox"
-            />
-            Stretch every row to 100%
-          </label>
+          {layout === "stacked" && (
+            <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={b.normalize === true}
+                onChange={(e) => set({ normalize: e.target.checked })}
+                className="sb-checkbox"
+              />
+              Stretch every row to 100%
+            </label>
+          )}
           <Field label="Accent series (lime)">
             <select
               className={inputCls}

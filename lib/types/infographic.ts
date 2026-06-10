@@ -92,12 +92,16 @@ export type InfographicBlock =
   | {
       id: string;
       type: "stacked-bar";
+      /** "stacked" (default) = series stack end-to-end within each bar;
+       *  "grouped" = series render as separate parallel bars per row (clustered),
+       *  scaled to one global max. `normalize` is ignored when "grouped". */
+      layout?: "stacked" | "grouped";
       /** Series legend labels, in stacking order (left→right within each bar). */
       series: string[];
       /** Category rows; each row's `values` align to `series` by index. */
       rows: Array<{ label: string; values: number[] }>;
       /** Normalize every row to 100% width (default false = absolute widths on a
-       *  shared scale, so row totals are comparable). */
+       *  shared scale, so row totals are comparable). Stacked layout only. */
       normalize?: boolean;
       /** Index into `series` rendered in the accent (lime); the rest stay
        *  grayscale. undefined / -1 = pure grayscale. */
