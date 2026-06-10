@@ -3,8 +3,10 @@
 import { useState } from "react";
 import {
   Bot,
+  ChevronDown,
   GitBranch,
   History,
+  Info,
   ListChecks,
   MessageSquareText,
   Plus,
@@ -51,8 +53,8 @@ const sceneIcons: Record<ProductUiScene, LucideIcon> = {
 const statusOptions: ProductUiStatus[] = ["success", "warning", "danger", "neutral", "accent", "live"];
 
 const FORMAT_OPTIONS: Array<{ id: ProductUiFormat; label: string }> = [
-  { id: "feature", label: "Feature" },
-  { id: "release", label: "Release image" },
+  { id: "feature", label: "Product feature" },
+  { id: "release", label: "Product release" },
   { id: "blog", label: "Blog" },
 ];
 
@@ -65,6 +67,17 @@ const BLOG_BACKGROUND_LABELS: Record<(typeof PRODUCT_UI_BLOG_BACKGROUND_COLORS)[
   "#D9D6D2": "Stone",
   "#F7F5F0": "Warm gray",
 };
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex items-center">
+      <Info size={13} className="text-studio-muted hover:text-studio-text cursor-help transition-colors" />
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-60 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
+        {text}
+      </span>
+    </span>
+  );
+}
 
 function nextId(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -228,24 +241,29 @@ export function ProductUiSidebar() {
 
   return (
     <div className="w-80 shrink-0 border-l border-studio-border bg-studio-sidebar overflow-y-auto">
-      <Section title="Format">
-        <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-          {FORMAT_OPTIONS.map((format) => (
-            <button
-              key={format.id}
-              onClick={() => update({ format: format.id })}
-              aria-pressed={content.format === format.id}
-              className={[
-                "flex-1 text-xs py-1.5 rounded-md transition-colors",
-                content.format === format.id
-                  ? "bg-studio-sidebar text-studio-text"
-                  : "text-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              {format.label}
-            </button>
-          ))}
-        </div>
+      <Section
+        title="Format"
+        info={
+          <InfoTooltip text="Product feature images are used on general product pages, such as product capabilities or industry pages." />
+        }
+      >
+        <label className="relative block">
+          <select
+            value={content.format}
+            onChange={(event) => update({ format: event.target.value as ProductUiFormat })}
+            className="w-full appearance-none rounded-lg border border-studio-border bg-studio-hover px-3 py-2.5 pr-9 text-sm font-medium text-studio-text outline-none transition-colors hover:border-studio-muted focus:border-studio-accent focus:ring-1 focus:ring-studio-accent"
+          >
+            {FORMAT_OPTIONS.map((format) => (
+              <option key={format.id} value={format.id}>
+                {format.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={15}
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-studio-muted"
+          />
+        </label>
       </Section>
 
       {content.format === "release" && (
