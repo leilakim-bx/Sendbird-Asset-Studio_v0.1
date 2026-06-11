@@ -153,10 +153,10 @@ export const PRODUCT_VISUAL_DEFAULT_BG_IMAGE = "/background/bg-200.png";
 
 /** Example dashboard shown when a marketer first opens Product Visual. */
 export const PRODUCT_VISUAL_EXAMPLE_SCREENSHOT: ProductVisualScreenshot = {
-  url: "/preview/dashboard.png?v=20260611-1612",
+  url: "/preview/dashboard.png?v=20260611-2306",
   displayMode: "crop",
-  naturalWidth: 1056,
-  naturalHeight: 744,
+  naturalWidth: 1440,
+  naturalHeight: 1320,
 };
 
 // Fonts — same brand stacks the rest of the studio uses (mirrors infographic;
