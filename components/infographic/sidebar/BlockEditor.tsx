@@ -6,7 +6,7 @@ import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographi
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
-  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
+  "w-full bg-studio-sidebar border border-studio-border rounded-lg px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
 const labelCls = "block text-[10px] text-studio-muted mb-1";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

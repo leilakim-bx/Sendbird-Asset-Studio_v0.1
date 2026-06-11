@@ -73,7 +73,7 @@ const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: Lucide
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
-  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
+  "w-full bg-studio-sidebar border border-studio-border rounded-lg px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
 
 /** Info icon with a CSS hover tooltip (sidebar-only UI; never exported). */
 function InfoTooltip({ text }: { text: string }) {
