@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const url = parseSingleUrl(source);
-  if (!url) {
+  const parsedSource = parseSourceInput(source);
+  if (!parsedSource) {
     return Response.json({
       ok: true,
       sourceType: "text",
@@ -43,12 +43,15 @@ export async function POST(request: NextRequest) {
     } satisfies SourceSuccess);
   }
 
+  const { url, context } = parsedSource;
   if (isBlockedHostname(url.hostname)) {
+    const fallback = contextFallback(context);
+    if (fallback) return Response.json(fallback);
     return Response.json(
       {
         ok: false,
         code: "invalid_url",
-        message: "This URL cannot be imported. Paste the article text instead.",
+        message: "This URL cannot be imported. Paste the article text or use an AI-accessible share link.",
       } satisfies SourceFailure,
       { status: 400 },
     );
@@ -67,18 +70,22 @@ export async function POST(request: NextRequest) {
     const raw = await upstream.text();
 
     if (upstream.status === 401 || upstream.status === 403 || isAuthWall(raw)) {
+      const fallback = contextFallback(context);
+      if (fallback) return Response.json(fallback);
       return Response.json({
         ok: false,
         code: "auth_required",
-        message: "This link requires login. Paste the article text or page content instead.",
+        message: "This link requires login. Paste the article text or use an AI-accessible share link.",
       } satisfies SourceFailure);
     }
 
     if (!upstream.ok) {
+      const fallback = contextFallback(context);
+      if (fallback) return Response.json(fallback);
       return Response.json({
         ok: false,
         code: "fetch_failed",
-        message: `Could not read this URL (${upstream.status}). Paste the article text instead.`,
+        message: `Could not read this URL (${upstream.status}). Paste the article text or use an AI-accessible share link.`,
       } satisfies SourceFailure);
     }
 
@@ -86,8 +93,10 @@ export async function POST(request: NextRequest) {
       ? extractFromHtml(raw)
       : { title: undefined, text: raw, imageCount: 0 };
 
-    const text = cleanText(parsed.text).slice(0, MAX_TEXT_LENGTH);
+    const text = cleanText([parsed.text, context].filter(Boolean).join("\n\n")).slice(0, MAX_TEXT_LENGTH);
     if (text.length < MIN_READABLE_LENGTH) {
+      const fallback = contextFallback(context);
+      if (fallback) return Response.json(fallback);
       return Response.json({
         ok: false,
         code: "not_readable",
@@ -103,22 +112,46 @@ export async function POST(request: NextRequest) {
       imageCount: parsed.imageCount,
     } satisfies SourceSuccess);
   } catch {
+    const fallback = contextFallback(context);
+    if (fallback) return Response.json(fallback);
     return Response.json({
       ok: false,
       code: "fetch_failed",
-      message: "Could not read this URL. Paste the article text instead.",
+      message: "Could not read this URL. Paste the article text or use an AI-accessible share link.",
     } satisfies SourceFailure);
   }
 }
 
-function parseSingleUrl(source: string): URL | null {
-  if (/\s/.test(source)) return null;
-  if (!/^https?:\/\//i.test(source)) return null;
+function parseSourceInput(source: string): { url: URL; context: string } | null {
+  if (/^https?:\/\/\S+$/i.test(source)) {
+    try {
+      return { url: new URL(source), context: "" };
+    } catch {
+      return null;
+    }
+  }
+
+  const match = source.match(/https?:\/\/[^\s<>"')]+/i);
+  if (!match || match.index == null) return null;
+
+  const rawUrl = match[0].replace(/[.,;:!?]+$/g, "");
   try {
-    return new URL(source);
+    const url = new URL(rawUrl);
+    const context = `${source.slice(0, match.index)} ${source.slice(match.index + match[0].length)}`;
+    return { url, context: cleanText(context) };
   } catch {
     return null;
   }
+}
+
+function contextFallback(context: string): SourceSuccess | null {
+  const text = cleanText(context).slice(0, MAX_TEXT_LENGTH);
+  if (text.length < MIN_READABLE_LENGTH) return null;
+  return {
+    ok: true,
+    sourceType: "text",
+    text,
+  };
 }
 
 function isBlockedHostname(hostname: string) {

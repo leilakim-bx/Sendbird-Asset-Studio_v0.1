@@ -281,10 +281,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       });
       data = (await response.json()) as SourceContentResponse;
       if (!response.ok && data.ok) {
-        return { count: 0, notice: "Could not read this source. Paste the article text instead." };
+        return { count: 0, notice: "Could not read this source. Paste the article text or use an AI-accessible share link." };
       }
     } catch {
-      return { count: 0, notice: "Could not read this source. Paste the article text instead." };
+      return { count: 0, notice: "Could not read this source. Paste the article text or use an AI-accessible share link." };
     }
 
     if (!data.ok) {

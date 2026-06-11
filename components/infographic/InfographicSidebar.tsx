@@ -50,6 +50,9 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
   { id: "blog", label: "Blog/Perspective" },
 ];
 
+const SOURCE_TEMPLATE = "Article:\n[paste article URL or full article]\n\nImage notes:\n1. \n2. \n3. ";
+const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
+
 const SIMPLE_BLOCK_TYPES: { id: InfographicBlockType; label: string }[] = [
   { id: "stat", label: "Big number" },
   { id: "kpi-group", label: "Metrics" },
@@ -100,7 +103,7 @@ function SourceTipsTooltip() {
       <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <span className="block">Paste an article URL, full article, chart data, or image notes.</span>
         <span className="mt-1 block text-studio-muted">
-          If a URL requires login, paste the article text or page content instead.
+          Use template to add optional Image notes for specific charts, stats, or sections.
         </span>
       </span>
     </span>
@@ -554,10 +557,20 @@ export function InfographicSidebar({
       const result = await onSuggestArticleImages(text);
       setArticleNotice(result.notice);
     } catch {
-      setArticleNotice("Could not read this source. Paste the article text instead.");
+      setArticleNotice("Could not read this source. Paste the article text or use an AI-accessible share link.");
     } finally {
       setSourceLoading(false);
     }
+  }
+
+  function handleUseTemplate() {
+    setArticle((current) => {
+      const trimmed = current.trim();
+      if (!trimmed) return SOURCE_TEMPLATE;
+      if (/(^|\n)\s*Image notes:/i.test(trimmed)) return current;
+      return `${trimmed}\n\n${IMAGE_NOTES_TEMPLATE}`;
+    });
+    setArticleNotice(null);
   }
 
   function loadPreset(id: string) {
@@ -684,7 +697,15 @@ export function InfographicSidebar({
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleUseTemplate}
+            disabled={sourceLoading}
+            className="text-[11px] font-medium text-studio-muted hover:text-studio-text transition-colors disabled:opacity-40"
+          >
+            Use template
+          </button>
           <AiMagicButton
             label="Generate images from source"
             loading={sourceLoading}
