@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Sparkles } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -439,7 +439,6 @@ export function ProductVisualSidebar() {
               onClick={regenerateConcept}
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg hover:opacity-90 transition-opacity"
             >
-              <Sparkles size={13} />
               Generate UI
             </button>
             {content.concept && (
