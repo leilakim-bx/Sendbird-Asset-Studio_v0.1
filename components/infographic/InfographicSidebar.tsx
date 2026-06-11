@@ -87,20 +87,20 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
-function ArticleTipsTooltip() {
+function SourceTipsTooltip() {
   return (
     <span className="group relative inline-flex items-center">
       <button
         type="button"
-        aria-label="Create from article guide and tips"
+        aria-label="Create from source guide and tips"
         className="inline-flex h-5 w-5 items-center justify-center rounded-full text-studio-muted hover:text-studio-text hover:bg-white/[0.06] focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors"
       >
         <CircleAlert size={13} />
       </button>
       <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-        <span className="block">Paste the full article above to suggest 2-5 infographic images.</span>
+        <span className="block">Paste an article URL, full article, chart data, or image notes.</span>
         <span className="mt-1 block text-studio-muted">
-          Keep headings, bullets, numbers, and product names. Remove navigation, comments, and unrelated links.
+          If a URL requires login, paste the article text or page content instead.
         </span>
       </span>
     </span>
@@ -503,7 +503,7 @@ export function InfographicSidebar({
 }: {
   articleImages: ArticleImageCandidate[];
   activeArticleImageId: string | null;
-  onSuggestArticleImages: (article: string) => number;
+  onSuggestArticleImages: (source: string) => Promise<{ count: number; notice: string }>;
   onSelectArticleImage: (id: string) => void;
   onToggleArticleImage: (id: string) => void;
 }) {
@@ -524,9 +524,10 @@ export function InfographicSidebar({
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // ── Article suggestions state ──
+  // ── Source suggestions state ──
   const [article, setArticle] = useState("");
   const [articleNotice, setArticleNotice] = useState<string | null>(null);
+  const [sourceLoading, setSourceLoading] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // ── "Edited since last clean load?" tracking ──
@@ -544,15 +545,19 @@ export function InfographicSidebar({
 
   if (!content) return null;
 
-  function handleSuggestImages() {
+  async function handleSuggestImages() {
     const text = article.trim();
-    if (!text) return;
-    const count = onSuggestArticleImages(text);
-    setArticleNotice(
-      count > 0
-        ? `Suggested ${count} image${count === 1 ? "" : "s"} from this article.`
-        : "No strong image candidates found. Try a preset in Advanced settings.",
-    );
+    if (!text || sourceLoading) return;
+    setSourceLoading(true);
+    setArticleNotice(null);
+    try {
+      const result = await onSuggestArticleImages(text);
+      setArticleNotice(result.notice);
+    } catch {
+      setArticleNotice("Could not read this source. Paste the article text instead.");
+    } finally {
+      setSourceLoading(false);
+    }
   }
 
   function loadPreset(id: string) {
@@ -669,21 +674,21 @@ export function InfographicSidebar({
           <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
-          <span className="text-xs font-semibold text-studio-text tracking-tight">Create from article</span>
-          <ArticleTipsTooltip />
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create from source</span>
+          <SourceTipsTooltip />
         </div>
         <textarea
           value={article}
           onChange={(event) => setArticle(event.target.value)}
-          placeholder="Paste full article..."
+          placeholder="Paste article URL, full article, chart data, or image notes..."
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
         <div className="flex justify-end">
           <AiMagicButton
-            label="Suggest images"
-            loading={false}
-            disabled={!article.trim()}
+            label="Generate images from source"
+            loading={sourceLoading}
+            disabled={sourceLoading || !article.trim()}
             onClick={handleSuggestImages}
           />
         </div>
@@ -691,7 +696,7 @@ export function InfographicSidebar({
       </div>
 
       {articleImages.length > 0 && (
-        <Section title="Article images">
+        <Section title="Generated images">
           <div className="flex flex-col gap-1">
             {articleImages.map((candidate, index) => {
               const active = candidate.id === activeArticleImageId;

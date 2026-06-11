@@ -24,6 +24,24 @@ const BLOG_W = 664;
 const BLOG_MIN_H = 360;
 const MAX_PREVIEW_W = 580;
 
+type SourceContentResponse =
+  | {
+      ok: true;
+      sourceType: "text" | "url";
+      text: string;
+      title?: string;
+      imageCount?: number;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+type SourceSuggestionResult = {
+  count: number;
+  notice: string;
+};
+
 export function InfographicShell({ template }: { template: InfographicTemplate }) {
   const {
     infographicContent, setInfographicContent,
@@ -236,8 +254,8 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
   }
 
-  function handleSuggestArticleImages(article: string): number {
-    const next = extractInfographicCandidates(article, {
+  function applySourceText(sourceText: string) {
+    const next = extractInfographicCandidates(sourceText, {
       format: content.format,
       bg: content.bg,
       accent: content.accent,
@@ -251,6 +269,45 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       setActiveArticleImageId(null);
     }
     return next.length;
+  }
+
+  async function handleSuggestArticleImages(source: string): Promise<SourceSuggestionResult> {
+    let data: SourceContentResponse;
+    try {
+      const response = await fetch("/api/source-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }),
+      });
+      data = (await response.json()) as SourceContentResponse;
+      if (!response.ok && data.ok) {
+        return { count: 0, notice: "Could not read this source. Paste the article text instead." };
+      }
+    } catch {
+      return { count: 0, notice: "Could not read this source. Paste the article text instead." };
+    }
+
+    if (!data.ok) {
+      setArticleImages([]);
+      setActiveArticleImageId(null);
+      return { count: 0, notice: data.message };
+    }
+
+    const count = applySourceText(data.text);
+    const sourceName = data.sourceType === "url" ? "URL" : "source";
+    const imageNote =
+      data.sourceType === "url" && data.imageCount
+        ? ` Found ${data.imageCount} reference image${data.imageCount === 1 ? "" : "s"}.`
+        : "";
+    const titleNote = data.sourceType === "url" && data.title ? `Read "${data.title}". ` : "";
+
+    return {
+      count,
+      notice:
+        count > 0
+          ? `${titleNote}Suggested ${count} image${count === 1 ? "" : "s"} from this ${sourceName}.${imageNote}`
+          : `${titleNote}No strong image candidates found. Paste chart data, image notes, or try a preset in Advanced settings.${imageNote}`,
+    };
   }
 
   function handleSelectArticleImage(id: string) {
