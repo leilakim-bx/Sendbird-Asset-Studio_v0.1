@@ -670,12 +670,15 @@ export function InfographicSidebar({
       </div>
 
       {articleImages.length === 0 ? (
-        <Section title="Guide">
+        <Section title="Guide & tips">
           <div className="flex items-start gap-2 rounded-md border border-studio-accent/30 bg-studio-accent/[0.08] px-2.5 py-2">
             <Lightbulb size={13} className="text-studio-accent shrink-0 mt-px" />
-            <p className="text-[11px] text-studio-text leading-snug">
-              Paste an article above to suggest 2-5 infographic images.
-            </p>
+            <div className="text-[11px] leading-snug">
+              <p className="text-studio-text">Paste the full article above to suggest 2-5 infographic images.</p>
+              <p className="mt-1 text-studio-muted">
+                Keep headings, bullets, numbers, and product names. Remove navigation, comments, and unrelated links.
+              </p>
+            </div>
           </div>
         </Section>
       ) : (
