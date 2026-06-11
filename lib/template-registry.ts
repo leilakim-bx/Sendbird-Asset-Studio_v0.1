@@ -1,6 +1,6 @@
 import type { ChatMessage } from "./store";
 import type { InfographicContent } from "./types/infographic";
-import type { ProductVisualContent } from "./types/product-visual";
+import { PRODUCT_VISUAL_EXAMPLE_SCREENSHOT, type ProductVisualContent } from "./types/product-visual";
 import { getAvatarForName } from "./avatar";
 
 /** Wrap an external image URL through our same-origin proxy */
@@ -169,7 +169,7 @@ export const TEMPLATES: Template[] = [
       format: "release-thumbnail", // most-used format first
       layout: "side-by-side",      // satisfies FORMAT_LAYOUTS["release-thumbnail"]
       bg: "warmgray",
-      screenshot: undefined,       // empty until the marketer uploads one
+      screenshot: PRODUCT_VISUAL_EXAMPLE_SCREENSHOT,
       title: "Introducing AI agent workspace",
       subtitle: "Manage all your AI agents in one workspace.",
     },

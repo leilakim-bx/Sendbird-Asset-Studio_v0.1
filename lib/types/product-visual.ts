@@ -111,6 +111,14 @@ export const isImageBgFormat = (f: ProductVisualFormat): boolean =>
 /** Seed background image for image-bg formats (mirrors the Chat default). */
 export const PRODUCT_VISUAL_DEFAULT_BG_IMAGE = "/background/bg-200.png";
 
+/** Example dashboard shown when a marketer first opens Product Visual. */
+export const PRODUCT_VISUAL_EXAMPLE_SCREENSHOT: ProductVisualScreenshot = {
+  url: "/preview/dashboard.png",
+  displayMode: "crop",
+  naturalWidth: 1056,
+  naturalHeight: 744,
+};
+
 // Fonts — same brand stacks the rest of the studio uses (mirrors infographic;
 // declared locally to keep Product Visual decoupled from infographic types).
 /** Serif display stack (brand "Serrif") — titles. */

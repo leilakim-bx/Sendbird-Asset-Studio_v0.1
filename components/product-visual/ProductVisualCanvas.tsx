@@ -44,11 +44,24 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
-  const pad = paddingFor(format);
+  // release-insert shows the dashboard full-bleed (almost no padding, height
+  // follows the image) whenever the WHOLE dashboard is visible — i.e. no crop,
+  // or highlight mode. Crop mode (only the cut-out region) keeps the normal fit.
+  const hasValidCrop = !!(
+    screenshot?.crop &&
+    screenshot.crop.width > 0 &&
+    screenshot.crop.height > 0 &&
+    screenshot.naturalWidth &&
+    screenshot.naturalHeight
+  );
+  const fullDashboard = !hasValidCrop || screenshot?.displayMode === "highlight";
+  const fillMode = format === "release-insert" && !!screenshot?.url && fullDashboard;
+
+  const pad = fillMode ? 12 : paddingFor(format);
   const innerW = W - pad * 2;
-  // Vertical budget for the screenshot (capped so an auto-height canvas stays
-  // bounded/predictable).
-  const contentH = (fixedH ?? minH) - pad * 2;
+  // Vertical budget for the screenshot. Fill mode leaves it effectively
+  // unbounded so the image fits to width and the auto-height canvas grows.
+  const contentH = fillMode ? 100000 : (fixedH ?? minH) - pad * 2;
 
   return (
     <div
@@ -61,7 +74,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         background: imageBg ? undefined : bgHex,
         overflow: "hidden",
         fontFamily: PRODUCT_VISUAL_SANS,
-        borderRadius: exportMode ? 0 : 12,
+        borderRadius: 0,
         boxShadow: exportMode ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.10)",
       }}
       data-export={exportMode ? "1" : undefined}

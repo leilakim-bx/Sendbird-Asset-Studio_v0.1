@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Crop, Plus } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -225,33 +225,39 @@ export function ProductVisualSidebar() {
             }}
           />
           {content.screenshot?.url ? (
-            <div className="flex flex-col gap-2">
-              <div className="rounded-lg overflow-hidden border border-studio-border bg-[#0E0E0E]">
+            <div className="flex flex-col gap-3">
+              {/* Preview — hover reveals a Replace overlay */}
+              <div className="group relative rounded-lg overflow-hidden border border-studio-border bg-[#0E0E0E]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={content.screenshot.url} alt="Uploaded screenshot" className="w-full h-28 object-contain" />
-              </div>
-              <div className="flex items-center gap-2">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 flex-1 justify-center text-xs font-medium px-3 py-2 rounded-lg border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+                  aria-label="Replace screenshot"
+                  className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <RefreshCw size={13} /> Replace
-                </button>
-                <button
-                  onClick={() => update({ screenshot: undefined })}
-                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg border border-studio-border text-studio-muted hover:text-red-400 hover:border-red-400/40 transition-colors"
-                >
-                  <Trash2 size={13} /> Remove
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 border border-white/25 text-xs font-medium text-white">
+                    <RefreshCw size={13} /> Replace
+                  </span>
                 </button>
               </div>
 
-              {/* Select / edit crop region */}
-              <button
-                onClick={() => setCropOpen(true)}
-                className="flex items-center gap-1.5 justify-center text-xs font-medium px-3 py-2 rounded-lg border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
-              >
-                <Crop size={13} /> {content.screenshot.crop ? "Edit crop" : "Select area"}
-              </button>
+              {/* Actions — Select area (button) + remove icon */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCropOpen(true)}
+                  className="text-xs font-semibold px-3 py-2 rounded-lg bg-studio-accent text-studio-accent-fg hover:opacity-90 transition-opacity"
+                >
+                  {content.screenshot.crop ? "Edit crop" : "Select area"}
+                </button>
+                <button
+                  onClick={() => update({ screenshot: undefined })}
+                  title="Remove"
+                  aria-label="Remove screenshot"
+                  className="ml-auto flex items-center justify-center w-7 h-7 rounded-md text-studio-muted hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
 
               {/* Display mode — enabled once a crop region exists */}
               <div>
@@ -295,7 +301,7 @@ export function ProductVisualSidebar() {
                 handleFile(e.dataTransfer.files?.[0]);
               }}
               className={[
-                "flex flex-col items-center justify-center gap-2 w-full py-7 rounded-lg border-2 border-dashed transition-colors",
+                "flex flex-col items-center justify-center gap-2 w-full py-7 rounded-lg border-[1.6px] border-dashed transition-colors",
                 dragging
                   ? "border-studio-accent bg-studio-accent/[0.06] text-studio-text"
                   : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
