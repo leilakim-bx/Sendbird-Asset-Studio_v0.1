@@ -1,23 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import {
   Sparkles,
-  TrendingUp,
-  LayoutGrid,
-  BarChart3,
-  AlignStartHorizontal,
-  ListOrdered,
-  Layers,
-  Circle,
-  Columns2,
-  LineChart,
   Plus,
   Info,
   CircleAlert,
   ChevronDown,
   WandSparkles,
-  type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -30,14 +20,11 @@ import {
   type InfographicContent,
   type InfographicFormat,
 } from "@/lib/types/infographic";
-import { INFOGRAPHIC_PRESETS, PRESET_META, createBlock } from "@/lib/infographic-presets";
+import { createBlock } from "@/lib/infographic-presets";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
-import { ConfirmDialog } from "./sidebar/ConfirmDialog";
-import { PresetList } from "./sidebar/PresetList";
-import { PresetLibraryModal } from "./PresetLibraryModal";
 
 const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
   { id: "sky", name: "Sky" },
@@ -54,25 +41,16 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
 const SOURCE_TEMPLATE = "Article:\n[paste article URL or full article]\n\nImage notes:\n1. \n2. \n3. ";
 const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
 
-const SIMPLE_BLOCK_TYPES: { id: InfographicBlockType; label: string }[] = [
+const TYPE_OPTIONS: { id: InfographicBlockType; label: string }[] = [
   { id: "stat", label: "Big number" },
   { id: "kpi-group", label: "Metrics" },
-  { id: "compare", label: "Compare" },
+  { id: "bar-group", label: "Bar chart" },
+  { id: "stacked-bar", label: "Multi-series bar" },
+  { id: "compare", label: "Comparison" },
   { id: "step", label: "Steps" },
   { id: "line-chart", label: "Trend" },
-];
-
-/** Content types. One image holds exactly one of these. */
-const BLOCK_TYPE_META: { type: InfographicBlockType; label: string; Icon: LucideIcon }[] = [
-  { type: "stat", label: "Big number", Icon: TrendingUp },
-  { type: "kpi-group", label: "Metrics", Icon: LayoutGrid },
-  { type: "bar-group", label: "Bar chart", Icon: BarChart3 },
-  { type: "stacked-bar", label: "Multi-series bar", Icon: AlignStartHorizontal },
-  { type: "step", label: "Steps", Icon: ListOrdered },
-  { type: "stack", label: "Layers", Icon: Layers },
-  { type: "node-list", label: "Hub", Icon: Circle },
-  { type: "compare", label: "Compare", Icon: Columns2 },
-  { type: "line-chart", label: "Trend", Icon: LineChart },
+  { id: "node-list", label: "Hub map" },
+  { id: "stack", label: "Layer diagram" },
 ];
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
@@ -180,7 +158,232 @@ function SimpleItem({
 }
 
 function blockTypeLabel(type: InfographicBlockType | undefined): string {
-  return SIMPLE_BLOCK_TYPES.find((item) => item.id === type)?.label ?? "Advanced";
+  return TYPE_OPTIONS.find((item) => item.id === type)?.label ?? "Image";
+}
+
+type PortableRow = {
+  label: string;
+  value: number;
+  valueText?: string;
+  desc?: string;
+  highlight?: boolean;
+};
+
+function parsePortableNumber(value: string | number | undefined): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (!value) return 0;
+  const match = value.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/);
+  if (!match) return 0;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatPortableNumber(value: number, fallback?: string): string {
+  if (fallback?.trim()) return fallback.trim();
+  if (Number.isInteger(value)) return String(value);
+  return String(Number(value.toFixed(1)));
+}
+
+function compactLabel(label: string | undefined, fallback: string): string {
+  const trimmed = label?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
+function rowsFromBlock(block: InfographicBlock): PortableRow[] {
+  switch (block.type) {
+    case "stat":
+      return [
+        {
+          label: compactLabel(block.label || block.eyebrow, "Value"),
+          value: parsePortableNumber(block.number),
+          valueText: block.number,
+          highlight: block.highlightNumber,
+        },
+      ];
+    case "kpi-group":
+      return block.items.map((item, index) => ({
+        label: compactLabel(item.label, `Metric ${index + 1}`),
+        value: parsePortableNumber(item.number),
+        valueText: item.number,
+      }));
+    case "bar-group":
+      return block.items.map((item, index) => ({
+        label: compactLabel(item.label, `Row ${index + 1}`),
+        value: item.valueA,
+        valueText: block.unit ? `${item.valueA}${block.unit}` : String(item.valueA),
+        desc: item.desc,
+        highlight: item.highlight,
+      }));
+    case "stacked-bar":
+      return block.rows.map((row, index) => {
+        const value = row.values.reduce((sum, current) => sum + current, 0);
+        return {
+          label: compactLabel(row.label, `Row ${index + 1}`),
+          value,
+          valueText: block.unit ? `${value}${block.unit}` : String(value),
+        };
+      });
+    case "compare":
+      return block.rows.map((row, index) => {
+        const label = compactLabel(row.label || row.b || row.a, `Row ${index + 1}`);
+        const valueText = row.b.match(/-?\d[\d,.]*(?:\.\d+)?%?/)?.[0] ?? row.a.match(/-?\d[\d,.]*(?:\.\d+)?%?/)?.[0];
+        return {
+          label,
+          value: parsePortableNumber(valueText) || index + 1,
+          valueText,
+          desc: [row.a, row.b].filter(Boolean).join(" -> "),
+        };
+      });
+    case "step":
+      return block.items.map((item, index) => ({
+        label: compactLabel(item.title, `Step ${index + 1}`),
+        value: index + 1,
+        valueText: item.badge,
+        desc: item.desc,
+      }));
+    case "stack":
+      return block.layers.map((layer, index) => ({
+        label: compactLabel(layer.title, `Layer ${index + 1}`),
+        value: index + 1,
+        desc: layer.caption,
+        highlight: layer.highlight,
+      }));
+    case "node-list":
+      return block.items.map((item, index) => ({
+        label: compactLabel(item.label, `Node ${index + 1}`),
+        value: index + 1,
+        valueText: item.tag,
+        desc: item.desc,
+      }));
+    case "line-chart":
+      return block.xLabels.map((label, index) => ({
+        label: compactLabel(label, `Point ${index + 1}`),
+        value: block.seriesA.values[index] ?? 0,
+        valueText: String(block.seriesA.values[index] ?? 0),
+      }));
+  }
+}
+
+function portableRows(block: InfographicBlock): PortableRow[] {
+  const rows = rowsFromBlock(block).filter((row) => row.label.trim() || row.valueText?.trim() || row.value);
+  return rows.length ? rows : [{ label: "Value", value: 0, valueText: "0" }];
+}
+
+function inferSharedUnit(rows: PortableRow[]): string {
+  const valueTexts = rows.map((row) => row.valueText?.trim()).filter(Boolean) as string[];
+  if (valueTexts.length > 0 && valueTexts.every((value) => value.includes("%"))) return "%";
+  return "";
+}
+
+function convertBlock(block: InfographicBlock, type: InfographicBlockType, title?: string): InfographicBlock {
+  if (block.type === type) return block;
+
+  const rows = portableRows(block);
+  const unit = inferSharedUnit(rows);
+  const id = createBlock(type).id;
+
+  switch (type) {
+    case "stat": {
+      const first = rows[0];
+      return {
+        id,
+        type: "stat",
+        eyebrow: "",
+        number: formatPortableNumber(first.value, first.valueText),
+        highlightNumber: true,
+        label: first.label,
+      };
+    }
+    case "kpi-group":
+      return {
+        id,
+        type: "kpi-group",
+        items: rows.slice(0, 4).map((row) => ({
+          number: formatPortableNumber(row.value, row.valueText),
+          label: row.label,
+        })),
+      };
+    case "bar-group":
+      return {
+        id,
+        type: "bar-group",
+        variant: "ranked",
+        labelA: "",
+        labelB: "",
+        unit,
+        items: rows.slice(0, 6).map((row, index) => ({
+          label: row.label,
+          valueA: row.value,
+          highlight: row.highlight ?? index === 0,
+        })),
+      };
+    case "stacked-bar":
+      return {
+        id,
+        type: "stacked-bar",
+        series: ["Value"],
+        unit,
+        rows: rows.slice(0, 6).map((row) => ({ label: row.label, values: [row.value] })),
+      };
+    case "compare":
+      return {
+        id,
+        type: "compare",
+        layout: "table",
+        columnA: "Item",
+        columnB: "Value",
+        highlightB: true,
+        rows: rows.slice(0, 6).map((row) => ({
+          label: "",
+          a: row.label,
+          b: formatPortableNumber(row.value, row.valueText),
+        })),
+      };
+    case "step":
+      return {
+        id,
+        type: "step",
+        items: rows.slice(0, 5).map((row) => ({
+          title: row.label,
+          desc: row.desc || formatPortableNumber(row.value, row.valueText),
+        })),
+      };
+    case "line-chart":
+      return {
+        id,
+        type: "line-chart",
+        xLabels: rows.slice(0, 8).map((row) => row.label),
+        seriesA: { label: title || "Value", values: rows.slice(0, 8).map((row) => row.value) },
+        fill: true,
+      };
+    case "node-list":
+      return {
+        id,
+        type: "node-list",
+        hubTitle: title?.trim() || "Hub",
+        hubSub: "",
+        items: rows.slice(0, 6).map((row) => ({
+          label: row.label,
+          tag: row.valueText,
+          desc: row.desc,
+        })),
+      };
+    case "stack":
+      return {
+        id,
+        type: "stack",
+        layers: rows.slice(0, 5).map((row, index) => ({
+          title: row.label,
+          caption: row.desc || formatPortableNumber(row.value, row.valueText),
+          highlight: row.highlight ?? index === 0,
+          cells: [],
+        })),
+      };
+  }
+}
+
+function usesDetailedBlockEditor(type: InfographicBlockType): boolean {
+  return type === "bar-group" || type === "stacked-bar" || type === "node-list" || type === "stack";
 }
 
 function SelectedImageEditor({
@@ -193,12 +396,14 @@ function SelectedImageEditor({
   const block = content.blocks[0];
   const setTitle = (title: string) => onChange({ ...content, title });
   const setBlock = (next: InfographicBlock) => onChange({ ...content, blocks: [next] });
-  const setType = (type: InfographicBlockType) =>
+  const setType = (type: InfographicBlockType) => {
+    if (!block || block.type === type) return;
     onChange({
       ...content,
       showTitle: type === "stat" ? false : content.showTitle,
-      blocks: [createBlock(type)],
+      blocks: [convertBlock(block, type, content.title)],
     });
+  };
 
   if (!block) {
     return <p className="text-[11px] text-studio-muted leading-relaxed">Pick an article image or preset to edit.</p>;
@@ -213,22 +418,23 @@ function SelectedImageEditor({
       <SimpleField label="Type">
         <select
           className={inputCls}
-          value={SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) ? block.type : ""}
+          value={block.type}
           onChange={(event) => {
             const value = event.target.value as InfographicBlockType;
-            if (value) setType(value);
+            setType(value);
           }}
         >
-          {!SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) && (
-            <option value="">Advanced block</option>
-          )}
-          {SIMPLE_BLOCK_TYPES.map((item) => (
+          {TYPE_OPTIONS.map((item) => (
             <option key={item.id} value={item.id}>
               {item.label}
             </option>
           ))}
         </select>
       </SimpleField>
+
+      {usesDetailedBlockEditor(block.type) && (
+        <BlockEditor block={block} onChange={setBlock} format={content.format} />
+      )}
 
       {block.type === "stat" && (
         <>
@@ -477,11 +683,6 @@ function SelectedImageEditor({
         </>
       )}
 
-      {!SIMPLE_BLOCK_TYPES.some((item) => item.id === block.type) && (
-        <p className="text-[11px] text-studio-muted leading-relaxed">
-          This block uses advanced controls. Open Advanced settings below to edit it.
-        </p>
-      )}
     </>
   );
 }
@@ -490,15 +691,6 @@ function SelectedImageEditor({
 const DEFAULT_PANEL_W = 320; // = the previous fixed w-80
 const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
-
-/** Fingerprint of the fields a preset replaces (bg/title/footnote/blocks). Used
- *  to tell whether the canvas has diverged from its last clean baseline, so we
- *  only confirm a destructive preset swap when there are edits to lose. Format +
- *  accent are excluded: loadPreset preserves them, so they're never lost. */
-function contentFingerprint(c: InfographicContent | null): string {
-  if (!c) return "";
-  return JSON.stringify({ bg: c.bg, title: c.title ?? "", footnote: c.footnote ?? "", blocks: c.blocks });
-}
 
 export function InfographicSidebar({
   articleImages,
@@ -522,11 +714,8 @@ export function InfographicSidebar({
     setInfographicTitle,
     setInfographicFootnote,
     setInfographicShowTitle,
-    updateInfographicBlock,
   } = useEditorStore();
 
-  const [activePreset, setActivePreset] = useState("brand-stat");
-  const [presetModalOpen, setPresetModalOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -535,19 +724,6 @@ export function InfographicSidebar({
   const [articleNotice, setArticleNotice] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-
-  // ── "Edited since last clean load?" tracking ──
-  // Baseline = the fingerprint of the last wholesale load (initial seed, restore,
-  // or a preset). Captured once when content first appears; updated on a clean
-  // preset/type swap. Incremental edits and AI-apply leave it stale, so the
-  // fingerprint diverges → we know there's work a preset swap would destroy.
-  const baselineRef = useRef<string | null>(null);
-  const [pendingPreset, setPendingPreset] = useState<string | null>(null);
-  useEffect(() => {
-    if (content && baselineRef.current === null) {
-      baselineRef.current = contentFingerprint(content);
-    }
-  }, [content]);
 
   if (!content) return null;
 
@@ -574,51 +750,6 @@ export function InfographicSidebar({
       return `${trimmed}\n\n${IMAGE_NOTES_TEMPLATE}`;
     });
     setArticleNotice(null);
-  }
-
-  function loadPreset(id: string) {
-    const meta = PRESET_META[id];
-    if (meta?.soon) return;
-    const preset = INFOGRAPHIC_PRESETS.find((p) => p.id === id);
-    if (!preset || !content) return;
-    setActivePreset(id);
-    const blocks = JSON.parse(JSON.stringify(preset.blocks)) as InfographicBlock[];
-    const next: InfographicContent = {
-      ...content, // keep current format + accent
-      bg: preset.bg,
-      title: preset.title,
-      footnote: preset.footnote,
-      // Stat is a centered standalone number — never carries a title/footnote.
-      ...(blocks[0]?.type === "stat" ? { showTitle: false } : {}),
-      blocks,
-    };
-    setInfographicContent(next);
-    baselineRef.current = contentFingerprint(next); // freshly loaded = clean
-  }
-
-  /** Preset clicks go through here: confirm first only if the canvas has edits a
-   *  swap would discard; otherwise load straight away (no dialog by default). */
-  function requestPreset(id: string) {
-    if (PRESET_META[id]?.soon) return;
-    const edited = baselineRef.current !== null && contentFingerprint(content) !== baselineRef.current;
-    if (edited) setPendingPreset(id);
-    else loadPreset(id);
-  }
-
-  /** Swap the single content block to a fresh default of the chosen type. */
-  function pickType(type: InfographicBlockType) {
-    if (!content) return;
-    if (content.blocks[0]?.type === type) return; // already this type
-    const next: InfographicContent = {
-      ...content,
-      // Stat can't use a title/footnote (centered standalone number).
-      ...(type === "stat" ? { showTitle: false } : {}),
-      blocks: [createBlock(type)],
-    };
-    setInfographicContent(next);
-    // A swap drops in a fresh default block (no user data) → treat as clean so a
-    // following preset click doesn't falsely warn about "losing edits".
-    baselineRef.current = contentFingerprint(next);
   }
 
   const block = content.blocks[0];
@@ -796,25 +927,10 @@ export function InfographicSidebar({
       >
         {!advancedOpen ? (
           <p className="text-[11px] text-studio-muted leading-relaxed">
-            Presets, colors, chart variants, and detailed block controls are hidden by default.
+            Background, accent, and title settings are hidden by default.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Preset</span>
-                <button
-                  onClick={() => setPresetModalOpen(true)}
-                  title="All presets"
-                  aria-label="All presets"
-                  className="ml-auto flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
-                >
-                  <Plus size={15} />
-                </button>
-              </div>
-              <PresetList activeId={activePreset} onPick={requestPreset} limit={4} />
-            </div>
-
             <div>
               <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Background</div>
               {content.format === "product" ? (
@@ -908,75 +1024,10 @@ export function InfographicSidebar({
                 </div>
               );
             })()}
-
-            <div>
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Block</div>
-              <div className="grid grid-cols-3 gap-1.5 mb-3">
-                {BLOCK_TYPE_META.map(({ type, label, Icon }) => {
-                  const active = block?.type === type;
-                  return (
-                    <button
-                      key={type}
-                      onClick={() => pickType(type)}
-                      aria-pressed={active}
-                      title={label}
-                      className={[
-                        "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-lg border transition-colors",
-                        active
-                          ? "border-studio-accent text-studio-text"
-                          : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
-                      ].join(" ")}
-                    >
-                      <Icon size={16} />
-                      <span className="text-[10px] font-medium">{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {block ? (
-                <>
-                  <BlockEditor block={block} onChange={(nb) => updateInfographicBlock(block.id, nb)} format={content.format} />
-                  <button
-                    onClick={() => setInfographicContent({ ...content, blocks: [] })}
-                    className="mt-1 w-full text-[11px] text-studio-muted hover:text-red-400 transition-colors py-1.5"
-                  >
-                    Clear block
-                  </button>
-                </>
-              ) : (
-                <p className="text-[11px] text-studio-muted py-2">Pick a content type above to start.</p>
-              )}
-            </div>
           </div>
         )}
       </Section>
       </div>
-
-      {presetModalOpen && (
-        <PresetLibraryModal
-          activeId={activePreset}
-          onSelect={(id) => {
-            setPresetModalOpen(false);
-            requestPreset(id);
-          }}
-          onClose={() => setPresetModalOpen(false)}
-        />
-      )}
-
-      {pendingPreset && (
-        <ConfirmDialog
-          title="Replace with this preset?"
-          message="Your current edits will be replaced by the preset. This can't be undone."
-          confirmLabel="Replace"
-          cancelLabel="Cancel"
-          onConfirm={() => {
-            loadPreset(pendingPreset);
-            setPendingPreset(null);
-          }}
-          onCancel={() => setPendingPreset(null)}
-        />
-      )}
     </div>
   );
 }
