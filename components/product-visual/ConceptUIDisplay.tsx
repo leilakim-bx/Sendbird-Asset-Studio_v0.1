@@ -1,5 +1,4 @@
-import type { CSSProperties } from "react";
-import { ChartLine, Home, Send, Sparkles, SquarePen, type LucideIcon } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
 import type { ProductVisualConcept, ProductVisualTone } from "@/lib/types/product-visual";
 
 type Props = {
@@ -113,13 +112,64 @@ function LogoMark({ size }: { size: number }) {
   );
 }
 
+function SolidIconSvg({ size, children }: { size: number; children: ReactNode }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ display: "block", fill: "currentColor" }}>
+      {children}
+    </svg>
+  );
+}
+
+function SolidHome({ size }: { size: number }) {
+  return (
+    <SolidIconSvg size={size}>
+      <path d="M12 3.1 3.5 10.2c-.8.7-.4 2.1.7 2.1h1.2v6.5c0 1.2.8 2 2 2h3v-5.4h3.2v5.4h3c1.2 0 2-.8 2-2v-6.5h1.2c1.1 0 1.5-1.4.7-2.1L12 3.1Z" />
+    </SolidIconSvg>
+  );
+}
+
+function SolidSparkles({ size }: { size: number }) {
+  return (
+    <SolidIconSvg size={size}>
+      <path d="M9.2 2.7a1 1 0 0 1 1.9 0l.8 3.1a2.7 2.7 0 0 0 1.9 1.9l3.1.8a1 1 0 0 1 0 1.9l-3.1.8a2.7 2.7 0 0 0-1.9 1.9l-.8 3.1a1 1 0 0 1-1.9 0l-.8-3.1a2.7 2.7 0 0 0-1.9-1.9l-3.1-.8a1 1 0 0 1 0-1.9l3.1-.8a2.7 2.7 0 0 0 1.9-1.9l.8-3.1Z" />
+      <path d="M18.3 14.3a.8.8 0 0 1 1.4 0l.4 1.4c.2.6.6 1 1.2 1.2l1.4.4a.8.8 0 0 1 0 1.4l-1.4.4c-.6.2-1 .6-1.2 1.2l-.4 1.4a.8.8 0 0 1-1.4 0l-.4-1.4c-.2-.6-.6-1-1.2-1.2l-1.4-.4a.8.8 0 0 1 0-1.4l1.4-.4c.6-.2 1-.6 1.2-1.2l.4-1.4Z" />
+    </SolidIconSvg>
+  );
+}
+
+function SolidEdit({ size }: { size: number }) {
+  return (
+    <SolidIconSvg size={size}>
+      <path d="M6.5 4h7.1l-2.1 2.1H7.1a1 1 0 0 0-1 1v9.8a1 1 0 0 0 1 1h9.8a1 1 0 0 0 1-1v-4.4l2.1-2.1v7.1a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5v-11A2.5 2.5 0 0 1 6.5 4Z" />
+      <path d="M13 11.8 18.8 6a1.7 1.7 0 0 1 2.4 2.4l-5.8 5.8-3.5.9 1.1-3.3Z" />
+    </SolidIconSvg>
+  );
+}
+
+function SolidAnalytics({ size }: { size: number }) {
+  return (
+    <SolidIconSvg size={size}>
+      <path d="M5.6 4.2a1.1 1.1 0 0 1 1.1 1.1v12h12a1.1 1.1 0 1 1 0 2.2H5.6a1.1 1.1 0 0 1-1.1-1.1V5.3a1.1 1.1 0 0 1 1.1-1.1Z" />
+      <path d="M8.6 14.4v-2.2l2.7-2.4 2.4 2 4.2-5a1.1 1.1 0 0 1 1.7 1.4l-4.9 5.9a1.1 1.1 0 0 1-1.6.1l-1.8-1.5-2.7 1.7Z" />
+    </SolidIconSvg>
+  );
+}
+
+function SolidSend({ size }: { size: number }) {
+  return (
+    <SolidIconSvg size={size}>
+      <path d="M20.9 3.2 3.7 10.1a1.2 1.2 0 0 0 .1 2.3l6.5 2.1 2.1 6.5a1.2 1.2 0 0 0 2.3.1l6.9-17.2a.6.6 0 0 0-.7-.7ZM11.4 13.1l-4.2-1.4 9.1-3.7-4.9 5.1Z" />
+    </SolidIconSvg>
+  );
+}
+
 function Sidebar({ compact, activeKind }: { compact: boolean; activeKind: ProductVisualConcept["kind"] }) {
-  const items: { id: string; icon: LucideIcon }[] = [
-    { id: "home", icon: Home },
-    { id: "build", icon: Sparkles },
-    { id: "edit", icon: SquarePen },
-    { id: "analytics", icon: ChartLine },
-    { id: "network", icon: Send },
+  const items: { id: string; icon: (props: { size: number }) => ReactNode }[] = [
+    { id: "home", icon: SolidHome },
+    { id: "build", icon: SolidSparkles },
+    { id: "edit", icon: SolidEdit },
+    { id: "analytics", icon: SolidAnalytics },
+    { id: "network", icon: SolidSend },
   ];
   const activeId =
     activeKind === "analytics" || activeKind === "evaluation"
@@ -160,7 +210,7 @@ function Sidebar({ compact, activeKind }: { compact: boolean; activeKind: Produc
               justifyContent: "center",
             }}
           >
-            <Icon size={compact ? 15 : 19} strokeWidth={active ? 2.8 : 2.5} />
+            <Icon size={compact ? 15 : 19} />
           </span>
         );
       })}
