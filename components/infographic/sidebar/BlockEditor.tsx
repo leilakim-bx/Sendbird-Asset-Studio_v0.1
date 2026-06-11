@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Plus, X, Lightbulb } from "lucide-react";
-import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
+import { Check, ChevronDown, Plus, X, Lightbulb } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
+import type { InfographicBlock, InfographicFormat, OrbitIconKey } from "@/lib/types/infographic";
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
@@ -30,7 +31,7 @@ function AddRow({ onClick, children }: { onClick: () => void; children: ReactNod
   );
 }
 
-function ItemCard({ idx, onRemove, children }: { idx: number; onRemove: () => void; children: ReactNode }) {
+function ItemCard({ idx, onRemove, children }: { idx: number; onRemove?: () => void; children: ReactNode }) {
   // Mirrors the chat message card: elevated bg-studio-hover panel (no border),
   // rounded-lg, with a title + ✕ header. Inner inputs (bg-studio-sidebar) read
   // as the darker fields, same as chat.
@@ -38,13 +39,15 @@ function ItemCard({ idx, onRemove, children }: { idx: number; onRemove: () => vo
     <div className="bg-studio-hover rounded-lg p-2.5 mb-2">
       <div className="flex items-center gap-1.5 mb-1.5">
         <span className="text-xs font-medium text-studio-text flex-1">#{idx + 1}</span>
-        <button
-          onClick={onRemove}
-          title="Remove"
-          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center transition-colors"
-        >
-          <X size={12} />
-        </button>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            title="Remove"
+            className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center transition-colors"
+          >
+            <X size={12} />
+          </button>
+        )}
       </div>
       {children}
     </div>
@@ -70,6 +73,75 @@ const MAX_COMPARE_ROWS_PRODUCT = 6;
 /** Hub title sits on one (nowrap) line under the logo — cap it so a long title
  *  never spills past the hub column / canvas edge. ~"Steward hub hub". */
 const MAX_HUB_TITLE = 16;
+
+const MAX_CARD_GRID_CARDS = 4;
+const MAX_ORBIT_LABEL = 20;
+const ORBIT_ICON_OPTIONS: Array<{ key: OrbitIconKey; label: string }> = [
+  { key: "mobile", label: "Mobile" },
+  { key: "chat", label: "Chat" },
+  { key: "web", label: "Web" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "voice", label: "Voice" },
+  { key: "audio", label: "Audio" },
+  { key: "email", label: "Email" },
+  { key: "site", label: "Site" },
+];
+const DEFAULT_ORBIT_NODES = [
+  { label: "Detect" },
+  { label: "Activate" },
+  { label: "Orchestrate", highlight: true },
+  { label: "Resolve" },
+];
+const DEFAULT_ORBIT_SATELLITES: Array<{ key: OrbitIconKey }> = [
+  { key: "mobile" },
+  { key: "web" },
+  { key: "chat" },
+  { key: "email" },
+  { key: "whatsapp" },
+  { key: "site" },
+];
+
+function orbitIconLabel(key: OrbitIconKey): string {
+  return ORBIT_ICON_OPTIONS.find((option) => option.key === key)?.label ?? "Icon";
+}
+
+function OrbitIconDropdown({
+  value,
+  onChange,
+}: {
+  value: OrbitIconKey;
+  onChange: (value: OrbitIconKey) => void;
+}) {
+  return (
+    <Menu.Root>
+      <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1.5 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none focus:ring-1 focus:ring-studio-accent">
+        <span className="font-medium">{orbitIconLabel(value)}</span>
+        <ChevronDown size={14} className="text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={6} className="z-50">
+          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+            {ORBIT_ICON_OPTIONS.map((option) => {
+              const active = option.key === value;
+              return (
+                <Menu.Item
+                  key={option.key}
+                  onClick={() => onChange(option.key)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white rounded-md mx-1"
+                >
+                  <span className="w-4 shrink-0">
+                    {active && <Check size={13} className="text-studio-accent" />}
+                  </span>
+                  <span className="flex-1">{option.label}</span>
+                </Menu.Item>
+              );
+            })}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
 
 /** Per-type edit form shown when a block row is expanded. */
 export function BlockEditor({ block, onChange, format }: EditorProps) {
@@ -124,6 +196,90 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
           ))}
           {b.items.length < 4 && (
             <AddRow onClick={() => setItems([...b.items, { number: "00", label: "Label" }])}>Add KPI</AddRow>
+          )}
+        </>
+      );
+    }
+
+    case "card-grid": {
+      const b = block;
+      const rawCards = b.cards.slice(0, MAX_CARD_GRID_CARDS);
+      const badgesEnabled = rawCards.some((card) => !!card.badge?.trim());
+      const cards = rawCards.map((card, i) => ({
+        ...card,
+        badge: badgesEnabled ? card.badge?.trim() || `Panel ${i + 1}` : "",
+      }));
+      const setCards = (next: typeof b.cards) => onChange({ ...b, cards: next.slice(0, MAX_CARD_GRID_CARDS) });
+      const setBadgesEnabled = (enabled: boolean) =>
+        setCards(
+          cards.map((card, i) => ({
+            ...card,
+            badge: enabled ? card.badge?.trim() || `Panel ${i + 1}` : "",
+          })),
+        );
+      return (
+        <>
+          <label className="mb-2.5 flex items-center gap-2 text-[11px] text-studio-text cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={badgesEnabled}
+              onChange={(e) => setBadgesEnabled(e.target.checked)}
+              className="sb-checkbox"
+            />
+            Use badges
+          </label>
+          {cards.map((card, i) => (
+            <ItemCard
+              key={i}
+              idx={i}
+              onRemove={cards.length > 1 ? () => setCards(cards.filter((_, j) => j !== i)) : undefined}
+            >
+              <input
+                className={inputCls + " mb-1.5"}
+                placeholder="Title"
+                maxLength={48}
+                value={card.title}
+                onChange={(e) =>
+                  setCards(cards.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))
+                }
+              />
+              <textarea
+                className={inputCls + " resize-none min-h-16"}
+                placeholder="Body"
+                maxLength={170}
+                value={card.body}
+                onChange={(e) =>
+                  setCards(cards.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))
+                }
+              />
+              {badgesEnabled && (
+                <input
+                  className={inputCls + " mt-1.5"}
+                  placeholder="Badge"
+                  maxLength={18}
+                  value={card.badge ?? ""}
+                  onChange={(e) =>
+                    setCards(cards.map((x, j) => (j === i ? { ...x, badge: e.target.value } : x)))
+                  }
+                />
+              )}
+            </ItemCard>
+          ))}
+          {cards.length < MAX_CARD_GRID_CARDS && (
+            <AddRow
+              onClick={() =>
+                setCards([
+                  ...cards,
+                  {
+                    badge: badgesEnabled ? `Panel ${cards.length + 1}` : "",
+                    title: "Card title",
+                    body: "Add one concise explanation for this card.",
+                  },
+                ])
+              }
+            >
+              Add card
+            </AddRow>
           )}
         </>
       );
@@ -434,6 +590,104 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             </ItemCard>
           ))}
           <AddRow onClick={() => setItems([...b.items, { label: "Node" }])}>Add node</AddRow>
+        </>
+      );
+    }
+
+    case "orbit": {
+      const b = block;
+      const variant = b.variant;
+      const nodes = b.nodes?.length ? b.nodes : DEFAULT_ORBIT_NODES;
+      const satellites = b.satellites?.length ? b.satellites : DEFAULT_ORBIT_SATELLITES;
+      const setVariant = (next: typeof b.variant) => {
+        if (next === "cycle") {
+          onChange({ ...b, variant: "cycle", center: b.center || "delight", nodes });
+        } else {
+          onChange({ ...b, variant: "hub-spoke", center: b.center || "delight", satellites });
+        }
+      };
+      const setNodes = (next: typeof nodes) => onChange({ ...b, nodes: next });
+      const setSatellites = (next: typeof satellites) => onChange({ ...b, satellites: next });
+      return (
+        <>
+          <Field label="Shape">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+              {(["cycle", "hub-spoke"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => setVariant(opt)}
+                  aria-pressed={variant === opt}
+                  className={[
+                    "flex-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors",
+                    variant === opt ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {opt === "hub-spoke" ? "Hub" : "Cycle"}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {variant === "cycle" ? (
+            <>
+              {nodes.map((node, i) => (
+                <ItemCard
+                  key={i}
+                  idx={i}
+                  onRemove={nodes.length > 3 ? () => setNodes(nodes.filter((_, j) => j !== i)) : undefined}
+                >
+                  <input
+                    className={inputCls + " mb-1.5"}
+                    placeholder="Step label"
+                    maxLength={MAX_ORBIT_LABEL}
+                    value={node.label}
+                    onChange={(e) =>
+                      setNodes(nodes.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))
+                    }
+                  />
+                  <label className="flex items-center gap-2 text-[11px] text-studio-text cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!node.highlight}
+                      onChange={(e) =>
+                        setNodes(nodes.map((x, j) => (j === i ? { ...x, highlight: e.target.checked } : x)))
+                      }
+                      className="sb-checkbox"
+                    />
+                    Highlight node
+                  </label>
+                </ItemCard>
+              ))}
+              {nodes.length < 8 && (
+                <AddRow onClick={() => setNodes([...nodes, { label: "Step" }])}>Add cycle node</AddRow>
+              )}
+            </>
+          ) : (
+            <>
+              {satellites.map((satellite, i) => (
+                <ItemCard
+                  key={i}
+                  idx={i}
+                  onRemove={
+                    satellites.length > 3 ? () => setSatellites(satellites.filter((_, j) => j !== i)) : undefined
+                  }
+                >
+                  <OrbitIconDropdown
+                    value={satellite.key}
+                    onChange={(value) =>
+                      setSatellites(
+                        satellites.map((x, j) =>
+                          j === i ? { key: value } : x,
+                        ),
+                      )
+                    }
+                  />
+                </ItemCard>
+              ))}
+              {satellites.length < 8 && (
+                <AddRow onClick={() => setSatellites([...satellites, { key: "site" }])}>Add satellite</AddRow>
+              )}
+            </>
+          )}
         </>
       );
     }

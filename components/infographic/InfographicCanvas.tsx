@@ -20,6 +20,7 @@ const PRODUCT = { width: 866, height: 660 };
 // Blog height is free, so keep the minimum modest — short content (e.g. a lone
 // stat with no title/footnote) shouldn't get padded out to a tall box.
 const BLOG = { width: 664, minHeight: 360 };
+const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
 /**
  * Flat/branded infographic canvas. Always renders at full pixel size — the
@@ -34,12 +35,15 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
   // regardless of the stored bg (which only applies to the blog format).
   const effectiveBg = isProduct ? "warmgray" : bg;
   // Stat is a centered standalone number — it never carries a title/footnote.
-  const isStat = blocks[0]?.type === "stat";
-  // Title & footnote are a Blog-only feature: the product format is a fixed
-  // height (660px), so a title/footnote on tall content would get clipped.
-  const showHeader = !isProduct && content.showTitle !== false && !isStat;
-  const showTitle = showHeader && !!title;
-  const showFootnote = showHeader && !!footnote;
+  const primaryBlock = blocks[0];
+  const isStat = primaryBlock?.type === "stat";
+  const isHubOrbit = primaryBlock?.type === "orbit" && primaryBlock.variant === "hub-spoke";
+  const renderedFootnote = footnote?.trim() || (isHubOrbit ? HUB_ORBIT_DEFAULT_FOOTNOTE : "");
+  // Product format keeps title hidden, but may carry a compact footnote.
+  // Blog format can show both title and footnote when the section is enabled.
+  const showBlogHeader = !isProduct && content.showTitle !== false && !isStat;
+  const showTitle = showBlogHeader && !!title;
+  const showFootnote = !!renderedFootnote && !isStat && (isProduct || showBlogHeader);
 
   const rootStyle = {
     boxSizing: "border-box",
@@ -112,9 +116,9 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
             fontFamily: INFOGRAPHIC_SANS,
             margin: 0,
             marginTop: "auto",
-            fontSize: 12,
+            fontSize: isProduct ? 14 : 12,
             lineHeight: 1.5,
-            color: INFOGRAPHIC_INK_MUTED,
+            color: isProduct ? INFOGRAPHIC_INK : INFOGRAPHIC_INK_MUTED,
             maxWidth: 560,
             alignSelf: "center",
             textAlign: "center",
@@ -124,7 +128,7 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
             textOverflow: "ellipsis",
           }}
         >
-          {footnote}
+          {renderedFootnote}
         </p>
       )}
     </div>

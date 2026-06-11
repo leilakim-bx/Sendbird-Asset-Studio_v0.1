@@ -1,6 +1,7 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { StatBlock } from "./StatBlock";
 import { KpiGroupBlock } from "./KpiGroupBlock";
+import { CardGridBlock } from "./CardGridBlock";
 import { BarGroupBlock } from "./BarGroupBlock";
 import { StackedBarBlock } from "./StackedBarBlock";
 import { StepBlock } from "./StepBlock";
@@ -8,6 +9,7 @@ import { StackBlock } from "./StackBlock";
 import { NodeListBlock } from "./NodeListBlock";
 import { CompareBlock } from "./CompareBlock";
 import { LineChartBlock } from "./LineChartBlock";
+import { OrbitBlock } from "./OrbitBlock";
 
 /**
  * Renders a single infographic block by type.
@@ -23,6 +25,8 @@ export function BlockRenderer({ block, scale = 1 }: { block: InfographicBlock; s
       return <StatBlock block={block} scale={scale} />;
     case "kpi-group":
       return <KpiGroupBlock block={block} scale={scale} />;
+    case "card-grid":
+      return <CardGridBlock block={block} scale={scale} />;
     case "bar-group":
       return <BarGroupBlock block={block} scale={scale} />;
     case "stacked-bar":
@@ -37,5 +41,7 @@ export function BlockRenderer({ block, scale = 1 }: { block: InfographicBlock; s
       return <CompareBlock block={block} scale={scale} />;
     case "line-chart":
       return <LineChartBlock block={block} />;
+    case "orbit":
+      return <OrbitBlock block={block} scale={scale} />;
   }
 }

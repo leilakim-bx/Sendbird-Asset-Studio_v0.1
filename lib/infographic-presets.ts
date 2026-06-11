@@ -8,6 +8,7 @@ import {
   LineChart,
   Columns2,
   Plus,
+  Orbit,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -40,6 +41,7 @@ export const PRESET_META: Record<string, PresetMeta> = {
   "how-it-works": { Icon: ListOrdered, typeLabel: "step", soon: false },
   architecture: { Icon: Layers, typeLabel: "layers", soon: false },
   "agent-overview": { Icon: Circle, typeLabel: "hub", soon: false },
+  "agent-loop": { Icon: Orbit, typeLabel: "orbit", soon: false },
   empty: { Icon: Plus, typeLabel: "blank", soon: false },
 };
 
@@ -251,6 +253,37 @@ export const INFOGRAPHIC_PRESETS: InfographicPreset[] = [
     ],
   },
   {
+    id: "agent-loop",
+    name: "Orbit diagram",
+    bg: "warmgray",
+    title: "How the agent loop compounds",
+    footnote: "",
+    blocks: [
+      {
+        id: "p-orbit-1",
+        type: "orbit",
+        variant: "cycle",
+        center: "delight",
+        nodes: [
+          { label: "Human Loop", highlight: false },
+          { label: "Activate", highlight: false },
+          { label: "Orchestrate", highlight: true },
+          { label: "Detect", highlight: true },
+          { label: "Track", highlight: true },
+          { label: "Resolve", highlight: false },
+        ],
+        satellites: [
+          { key: "mobile" },
+          { key: "web" },
+          { key: "chat" },
+          { key: "email" },
+          { key: "whatsapp" },
+          { key: "site" },
+        ],
+      },
+    ],
+  },
+  {
     id: "empty",
     name: "Empty",
     bg: "warmgray",
@@ -279,6 +312,33 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       return { id, type: "stat", eyebrow: "", number: "00%", highlightNumber: true, label: "" };
     case "kpi-group":
       return { id, type: "kpi-group", items: [{ number: "00", label: "Label" }] };
+    case "card-grid":
+      return {
+        id,
+        type: "card-grid",
+        cards: [
+          {
+            badge: "Panel 1",
+            title: "Customer understanding",
+            body: "Does the AI gather the right information and use it correctly over time?",
+          },
+          {
+            badge: "Panel 2",
+            title: "Continuity",
+            body: "Does the experience stay coherent as customers move between channels?",
+          },
+          {
+            badge: "Panel 3",
+            title: "Outcome quality",
+            body: "Do customers leave informed, confident, and less likely to return?",
+          },
+          {
+            badge: "Panel 4",
+            title: "Long-term value",
+            body: "Does the experience reduce friction and build trust over time?",
+          },
+        ],
+      };
     case "bar-group":
       return {
         id,
@@ -340,6 +400,29 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
         xLabels: ["Wk 1", "Wk 4", "Wk 8", "Wk 12"],
         seriesA: { label: "With AI", values: [40, 58, 74, 90] },
         fill: true,
+      };
+    case "orbit":
+      return {
+        id,
+        type: "orbit",
+        variant: "cycle",
+        center: "delight",
+        nodes: [
+          { label: "Human Loop" },
+          { label: "Activate" },
+          { label: "Orchestrate", highlight: true },
+          { label: "Detect", highlight: true },
+          { label: "Track", highlight: true },
+          { label: "Resolve" },
+        ],
+        satellites: [
+          { key: "mobile" },
+          { key: "web" },
+          { key: "chat" },
+          { key: "email" },
+          { key: "whatsapp" },
+          { key: "site" },
+        ],
       };
   }
 }

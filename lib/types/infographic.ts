@@ -21,6 +21,12 @@ export type InfographicBlock =
     }
   | {
       id: string;
+      type: "card-grid";
+      /** General-purpose information cards. Supports 1-4. */
+      cards: Array<{ badge?: string; title: string; body: string }>;
+    }
+  | {
+      id: string;
       type: "bar-group";
       /** Bar shape. "bars" = horizontal A/B rows (default); "split" = one bar
        *  divided into proportional segments; "columns" = vertical columns;
@@ -125,9 +131,31 @@ export type InfographicBlock =
       fill?: boolean;
       /** Y-axis max; auto-computed from the data when omitted. */
       yMax?: number;
+    }
+  | {
+      id: string;
+      type: "orbit";
+      /** "cycle" = labeled process loop; "hub-spoke" = center mark + channel icons. */
+      variant: "cycle" | "hub-spoke";
+      /** Center label shown under/inside the mark, depending on variant. */
+      center?: string;
+      /** Cycle nodes, placed clockwise around the center. Supports 3-8. */
+      nodes?: Array<{ label: string; highlight?: boolean }>;
+      /** Hub-spoke satellites, placed on a dashed ring. Supports 3-8. */
+      satellites?: Array<{ key: OrbitIconKey }>;
     };
 
 export type InfographicBlockType = InfographicBlock["type"];
+
+export type OrbitIconKey =
+  | "mobile"
+  | "voice"
+  | "whatsapp"
+  | "email"
+  | "chat"
+  | "web"
+  | "audio"
+  | "site";
 
 /** Export aspect: `product` = 866×660 fixed, `blog` = 664×variable height. */
 export type InfographicFormat = "product" | "blog";

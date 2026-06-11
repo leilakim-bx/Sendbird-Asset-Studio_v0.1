@@ -2,12 +2,14 @@
 
 import { useState, useRef, type ReactNode } from "react";
 import {
+  Check,
   Sparkles,
   Plus,
   Info,
   CircleAlert,
   ChevronDown,
 } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
   INFOGRAPHIC_ACCENT_HEX,
@@ -16,6 +18,7 @@ import {
   type InfographicBlockType,
   type InfographicContent,
   type InfographicFormat,
+  type OrbitIconKey,
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
@@ -32,8 +35,11 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
 
 const SOURCE_TEMPLATE = "Article:\n[paste article URL or full article]\n\nImage notes:\n1. \n2. \n3. ";
 const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
+const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
 const TYPE_OPTIONS: { id: InfographicBlockType; label: string }[] = [
+  { id: "orbit", label: "Orbit diagram" },
+  { id: "card-grid", label: "Card grid" },
   { id: "stat", label: "Big number" },
   { id: "kpi-group", label: "Metrics" },
   { id: "bar-group", label: "Bar chart" },
@@ -44,6 +50,17 @@ const TYPE_OPTIONS: { id: InfographicBlockType; label: string }[] = [
   { id: "node-list", label: "Hub map" },
   { id: "stack", label: "Layer diagram" },
 ];
+
+const ORBIT_ICON_LABELS: Record<OrbitIconKey, string> = {
+  mobile: "Mobile",
+  voice: "Voice",
+  whatsapp: "WhatsApp",
+  email: "Email",
+  chat: "Chat",
+  web: "Web",
+  audio: "Audio",
+  site: "Site",
+};
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
 const inputCls =
@@ -153,6 +170,46 @@ function blockTypeLabel(type: InfographicBlockType | undefined): string {
   return TYPE_OPTIONS.find((item) => item.id === type)?.label ?? "Image";
 }
 
+function TypeDropdown({
+  value,
+  onChange,
+}: {
+  value: InfographicBlockType;
+  onChange: (type: InfographicBlockType) => void;
+}) {
+  const current = TYPE_OPTIONS.find((item) => item.id === value);
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1.5 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none focus:ring-1 focus:ring-studio-accent">
+        <span className="font-medium">{current?.label ?? "Select"}</span>
+        <ChevronDown size={14} className="text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={6} className="z-50">
+          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+            {TYPE_OPTIONS.map((item) => {
+              const active = item.id === value;
+              return (
+                <Menu.Item
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white rounded-md mx-1"
+                >
+                  <span className="w-4 shrink-0">
+                    {active && <Check size={13} className="text-studio-accent" />}
+                  </span>
+                  <span className="flex-1">{item.label}</span>
+                </Menu.Item>
+              );
+            })}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
 type PortableRow = {
   label: string;
   value: number;
@@ -197,6 +254,13 @@ function rowsFromBlock(block: InfographicBlock): PortableRow[] {
         label: compactLabel(item.label, `Metric ${index + 1}`),
         value: parsePortableNumber(item.number),
         valueText: item.number,
+      }));
+    case "card-grid":
+      return block.cards.map((card, index) => ({
+        label: compactLabel(card.title, `Card ${index + 1}`),
+        value: index + 1,
+        valueText: card.badge,
+        desc: card.body,
       }));
     case "bar-group":
       return block.items.map((item, index) => ({
@@ -253,6 +317,19 @@ function rowsFromBlock(block: InfographicBlock): PortableRow[] {
         value: block.seriesA.values[index] ?? 0,
         valueText: String(block.seriesA.values[index] ?? 0),
       }));
+    case "orbit":
+      if (block.variant === "hub-spoke") {
+        return (block.satellites ?? []).map((satellite, index) => ({
+          label: ORBIT_ICON_LABELS[satellite.key] ?? `Channel ${index + 1}`,
+          value: index + 1,
+          valueText: satellite.key,
+        }));
+      }
+      return (block.nodes ?? []).map((node, index) => ({
+        label: compactLabel(node.label, `Step ${index + 1}`),
+        value: index + 1,
+        highlight: node.highlight,
+      }));
   }
 }
 
@@ -293,6 +370,16 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
         items: rows.slice(0, 4).map((row) => ({
           number: formatPortableNumber(row.value, row.valueText),
           label: row.label,
+        })),
+      };
+    case "card-grid":
+      return {
+        id,
+        type: "card-grid",
+        cards: rows.slice(0, 4).map((row, index) => ({
+          badge: row.valueText || `Panel ${index + 1}`,
+          title: row.label,
+          body: row.desc || formatPortableNumber(row.value, row.valueText),
         })),
       };
     case "bar-group":
@@ -371,11 +458,29 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
           cells: [],
         })),
       };
+    case "orbit":
+      return {
+        id,
+        type: "orbit",
+        variant: "cycle",
+        center: title?.trim() || "delight",
+        nodes: rows.slice(0, 8).map((row, index) => ({
+          label: row.label,
+          highlight: row.highlight ?? index === 0,
+        })),
+      };
   }
 }
 
 function usesDetailedBlockEditor(type: InfographicBlockType): boolean {
-  return type === "bar-group" || type === "stacked-bar" || type === "node-list" || type === "stack";
+  return (
+    type === "bar-group" ||
+    type === "stacked-bar" ||
+    type === "node-list" ||
+    type === "stack" ||
+    type === "orbit" ||
+    type === "card-grid"
+  );
 }
 
 function SelectedImageEditor({
@@ -387,7 +492,15 @@ function SelectedImageEditor({
 }) {
   const block = content.blocks[0];
   const setTitle = (title: string) => onChange({ ...content, title });
-  const setBlock = (next: InfographicBlock) => onChange({ ...content, blocks: [next] });
+  const setBlock = (next: InfographicBlock) => {
+    const shouldSeedHubFootnote =
+      next.type === "orbit" && next.variant === "hub-spoke" && !(content.footnote ?? "").trim();
+    onChange({
+      ...content,
+      footnote: shouldSeedHubFootnote ? HUB_ORBIT_DEFAULT_FOOTNOTE : content.footnote,
+      blocks: [next],
+    });
+  };
   const setType = (type: InfographicBlockType) => {
     if (!block || block.type === type) return;
     onChange({
@@ -408,20 +521,7 @@ function SelectedImageEditor({
       </SimpleField>
 
       <SimpleField label="Type">
-        <select
-          className={inputCls}
-          value={block.type}
-          onChange={(event) => {
-            const value = event.target.value as InfographicBlockType;
-            setType(value);
-          }}
-        >
-          {TYPE_OPTIONS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.label}
-            </option>
-          ))}
-        </select>
+        <TypeDropdown value={block.type} onChange={setType} />
       </SimpleField>
 
       {usesDetailedBlockEditor(block.type) && (
@@ -936,16 +1036,6 @@ export function InfographicSidebar({
 
             {(() => {
               const showTitle = content.showTitle !== false && !titleLocked;
-              if (content.format === "product") {
-                return (
-                  <div>
-                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title & footnote</div>
-                    <p className="text-[11px] text-studio-muted leading-relaxed">
-                      Available in the Blog format only.
-                    </p>
-                  </div>
-                );
-              }
               if (titleLocked) {
                 return (
                   <div>
@@ -953,6 +1043,19 @@ export function InfographicSidebar({
                     <p className="text-[11px] text-studio-muted leading-relaxed">
                       Not available for a centered Big number block.
                     </p>
+                  </div>
+                );
+              }
+              if (content.format === "product") {
+                return (
+                  <div>
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Footnote</div>
+                    <textarea
+                      className={inputCls + " resize-none min-h-12"}
+                      value={content.footnote ?? ""}
+                      placeholder="Optional source or note shown at the bottom"
+                      onChange={(e) => setInfographicFootnote(e.target.value)}
+                    />
                   </div>
                 );
               }
