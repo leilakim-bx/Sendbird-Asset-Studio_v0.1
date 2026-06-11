@@ -6,12 +6,11 @@ import Image from "next/image";
 import { Home } from "lucide-react";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
-import { captureThumbnail } from "@/lib/export";
+import { captureThumbnail, type ExportedImage } from "@/lib/export";
 import { exportProductVisual, productVisualFilename } from "@/lib/product-visual/export";
 import { ProductVisualCanvas } from "./ProductVisualCanvas";
 import { ProductVisualSidebar } from "./ProductVisualSidebar";
 import type { ProductVisualTemplate } from "@/lib/template-registry";
-import type { ProductVisualContent } from "@/lib/types/product-visual";
 import { FORMAT_SIZES, FORMAT_MIN_HEIGHT } from "@/lib/types/product-visual";
 
 const MAX_PREVIEW_W = 620;
@@ -24,8 +23,8 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
 
   const [ready, setReady] = useState(false);
 
-  // On mount: restore a saved asset (image was stripped at save → user
-  // re-uploads), else seed the template default. No freshStart/autosave for PV.
+  // On mount: restore a saved asset, else seed the template default.
+  // No freshStart/autosave for PV.
   // Guard so this seeds exactly once: StrictMode (dev) double-invokes the effect,
   // and a second run — after `pending` was consumed below — would otherwise fall
   // through to the else-branch and clobber the restored content with defaults.
@@ -52,7 +51,9 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
   const [leaveOpen, setLeaveOpen] = useState(false);
   const savedBaselineRef = useRef<string>("");
   const contentRef = useRef(content);
-  contentRef.current = content;
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
   useEffect(() => {
     if (ready) savedBaselineRef.current = JSON.stringify(contentRef.current);
   }, [ready]);
@@ -85,9 +86,24 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
   }, []);
 
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDownloads, setExportDownloads] = useState<ExportedImage[]>([]);
+  const exportDownloadsRef = useRef<ExportedImage[]>([]);
+
+  useEffect(() => {
+    return () => {
+      exportDownloadsRef.current.forEach((download) => download.revoke());
+    };
+  }, []);
+
+  function replaceExportDownloads(downloads: ExportedImage[]) {
+    exportDownloadsRef.current.forEach((download) => download.revoke());
+    exportDownloadsRef.current = downloads;
+    setExportDownloads(downloads);
+  }
 
   async function handleExport() {
     const el = canvasRef.current;
@@ -95,12 +111,16 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
     setExporting(true);
     setExportError(null);
     setExportNote(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
     try {
       const ts = Date.now();
-      await exportProductVisual(el, format, ts);
+      downloads.push(await exportProductVisual(el, format, ts));
+      replaceExportDownloads(downloads);
       setExportNote(`Downloaded as ${productVisualFilename(format, ts)}`);
       setTimeout(() => setExportNote(null), 4000);
     } catch (err) {
+      downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
@@ -113,13 +133,12 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
     const el = canvasRef.current;
     if (!el || saveState !== "idle") return;
     setSaveState("saving");
+    setSaveError(null);
     try {
       const previewDataUrl = await captureThumbnail(el);
       const now = Date.now();
       const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       const appName = content.title?.trim() || "Product Visual";
-      // Strip the base64 screenshot — too large for the shared localStorage blob.
-      const stripped: ProductVisualContent = { ...content, screenshot: undefined };
       const asset: SavedAsset = {
         id:             `asset-${now}`,
         templateId:     template.id,
@@ -127,13 +146,16 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
         name:           `${appName} · ${dateStr}`,
         previewDataUrl,
         savedAt:        now,
-        productVisual:  stripped,
+        productVisual:  content,
       };
       saveAsset(asset);
       savedBaselineRef.current = JSON.stringify(contentRef.current);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Save failed:", err);
+      setSaveError(`Save failed — ${msg || "unknown error"}`);
       setSaveState("idle");
     }
   }
@@ -193,6 +215,24 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
               </div>
               {exportError ? (
                 <p className="text-red-400 text-xs">{exportError}</p>
+              ) : saveError ? (
+                <p className="text-red-400 text-xs">{saveError}</p>
+              ) : exportDownloads.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-studio-muted">
+                  <span>Download ready:</span>
+                  {exportDownloads.map((download) => (
+                    <a
+                      key={download.href}
+                      href={download.href}
+                      download={download.filename}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-studio-accent underline underline-offset-2"
+                    >
+                      {download.filename}
+                    </a>
+                  ))}
+                </div>
               ) : exportNote ? (
                 <p className="text-studio-muted text-xs">{exportNote}</p>
               ) : null}

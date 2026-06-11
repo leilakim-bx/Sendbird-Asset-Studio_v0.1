@@ -1,8 +1,8 @@
-// Client-side screenshot upload for Product Visual (STEP 2).
+// Client-side screenshot upload for Product Visual.
 //
-// No server / R2 yet (Phase: post-beta) — the file is read into a base64 data
-// URL and held in transient store state. Validates type + size and returns a
-// discriminated result so callers can show an inline error without try/catch.
+// The screenshot is uploaded to the app backend first, then stored in editor
+// state as a URL. That keeps saved Product Visual assets re-openable without
+// putting a multi-MB base64 image into localStorage.
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -11,14 +11,15 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 export const UPLOAD_ACCEPT = ACCEPTED_TYPES.join(",");
 
 export type UploadResult =
-  | { ok: true; dataUrl: string; naturalWidth: number; naturalHeight: number }
+  | { ok: true; url: string; naturalWidth: number; naturalHeight: number }
   | { ok: false; error: string };
 
-/** Decode a data URL into an Image to read its natural pixel dimensions. */
-async function measureNatural(dataUrl: string): Promise<{ w: number; h: number } | null> {
+/** Decode the selected File into an Image to read its natural pixel dimensions. */
+async function measureNatural(file: File): Promise<{ w: number; h: number } | null> {
+  const objectUrl = URL.createObjectURL(file);
   try {
     const img = new Image();
-    img.src = dataUrl;
+    img.src = objectUrl;
     await img.decode();
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
       return { w: img.naturalWidth, h: img.naturalHeight };
@@ -26,12 +27,12 @@ async function measureNatural(dataUrl: string): Promise<{ w: number; h: number }
     return null;
   } catch {
     return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
 }
 
-/** Read an image File into a base64 data URL (+ natural dimensions) after
- *  validating type + size. */
-export async function readImageAsDataUrl(file: File): Promise<UploadResult> {
+export async function uploadProductVisualScreenshot(file: File): Promise<UploadResult> {
   if (!(ACCEPTED_TYPES as readonly string[]).includes(file.type)) {
     return { ok: false, error: "Unsupported format — use PNG, JPG, or WebP." };
   }
@@ -39,24 +40,26 @@ export async function readImageAsDataUrl(file: File): Promise<UploadResult> {
     return { ok: false, error: "Image is too large — keep it under 10 MB." };
   }
 
-  const dataUrl = await new Promise<string | null>((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      resolve(typeof result === "string" && result.startsWith("data:image/") ? result : null);
-    };
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
-
-  if (!dataUrl) {
-    return { ok: false, error: "Could not read the image — please try again." };
-  }
-
-  const dims = await measureNatural(dataUrl);
+  const dims = await measureNatural(file);
   if (!dims) {
     return { ok: false, error: "Could not read the image — please try again." };
   }
 
-  return { ok: true, dataUrl, naturalWidth: dims.w, naturalHeight: dims.h };
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch("/api/upload-product-visual-screenshot", {
+      method: "POST",
+      body: formData,
+    });
+    const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+    if (!response.ok || !data.url) {
+      return { ok: false, error: data.error || "Could not upload the image — please try again." };
+    }
+
+    return { ok: true, url: data.url, naturalWidth: dims.w, naturalHeight: dims.h };
+  } catch {
+    return { ok: false, error: "Could not upload the image — please try again." };
+  }
 }

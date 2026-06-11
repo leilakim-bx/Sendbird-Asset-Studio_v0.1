@@ -29,8 +29,17 @@ function verticalPaddingFor(format: ProductVisualContent["format"], horizontalPa
   return horizontalPadding;
 }
 
-function screenshotAspect(content: ProductVisualContent): number | null {
+function screenshotForFormat(content: ProductVisualContent): ProductVisualContent["screenshot"] {
   const { screenshot } = content;
+  if (!screenshot) return undefined;
+  if (isImageBgFormat(content.format) && screenshot.displayMode === "highlight") {
+    return { ...screenshot, displayMode: "crop" };
+  }
+  return screenshot;
+}
+
+function screenshotAspect(content: ProductVisualContent): number | null {
+  const screenshot = screenshotForFormat(content);
   if (!screenshot?.url || !screenshot.naturalWidth || !screenshot.naturalHeight) return null;
   if (
     screenshot.crop &&
@@ -67,7 +76,7 @@ function screenshotDisplayHeight(content: ProductVisualContent, maxWidth: number
  * always inlines correctly.
  */
 export function ProductVisualCanvas({ content, className, exportMode }: Props) {
-  const { format, bg, bgImage, screenshot } = content;
+  const { format, bg, bgImage } = content;
 
   const size = FORMAT_SIZES[format];
   const W = size.w;
@@ -75,6 +84,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const minH = FORMAT_MIN_HEIGHT[format];
 
   const imageBg = isImageBgFormat(format);
+  const displayedScreenshot = screenshotForFormat(content);
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
@@ -82,14 +92,14 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   // follows the image) whenever the WHOLE dashboard is visible — i.e. no crop,
   // or highlight mode. Crop mode (only the cut-out region) keeps the normal fit.
   const hasValidCrop = !!(
-    screenshot?.crop &&
-    screenshot.crop.width > 0 &&
-    screenshot.crop.height > 0 &&
-    screenshot.naturalWidth &&
-    screenshot.naturalHeight
+    displayedScreenshot?.crop &&
+    displayedScreenshot.crop.width > 0 &&
+    displayedScreenshot.crop.height > 0 &&
+    displayedScreenshot.naturalWidth &&
+    displayedScreenshot.naturalHeight
   );
-  const fullDashboard = !hasValidCrop || screenshot?.displayMode === "highlight";
-  const fillMode = format === "release-insert" && !!screenshot?.url && fullDashboard;
+  const fullDashboard = !hasValidCrop || displayedScreenshot?.displayMode === "highlight";
+  const fillMode = format === "release-insert" && !!displayedScreenshot?.url && fullDashboard;
 
   const padX = fillMode ? 12 : paddingFor(format);
   const padY = fillMode ? 12 : verticalPaddingFor(format, padX);
@@ -141,7 +151,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         }}
       >
         <ScreenshotDisplay
-          screenshot={screenshot}
+          screenshot={displayedScreenshot}
           maxWidth={innerW}
           maxHeight={contentH}
         />

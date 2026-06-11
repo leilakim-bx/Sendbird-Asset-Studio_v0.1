@@ -27,21 +27,22 @@ function makeClient(r2: R2Config): S3Client {
 
 // ── 파일명 ────────────────────────────────────────────────
 
-/** backgrounds/{uuid}.{ext} */
-function makeKey(mimeType: string): string {
-  return `backgrounds/${crypto.randomUUID()}.${EXT_MAP[mimeType]}`;
+/** {folder}/{uuid}.{ext} */
+function makeKey(mimeType: string, folder: string): string {
+  return `${folder}/${crypto.randomUUID()}.${EXT_MAP[mimeType]}`;
 }
 
 // ── Upload ────────────────────────────────────────────────
 
 export type UploadResult = {
-  key:       string;  // "backgrounds/uuid.jpg"
-  publicUrl: string;  // "https://pub-xxx.r2.dev/backgrounds/uuid.jpg"
+  key:       string;  // "{folder}/uuid.jpg"
+  publicUrl: string;  // "https://pub-xxx.r2.dev/{folder}/uuid.jpg"
 };
 
 export async function uploadToR2(
   file: File,
   originalName: string,
+  folder = "backgrounds",
 ): Promise<UploadResult> {
   // ① 파일 형식 검증
   if (!EXT_MAP[file.type]) {
@@ -58,7 +59,7 @@ export async function uploadToR2(
   const r2 = env.r2;
   if (!r2) throw new Error("R2 미설정 — 개발 환경에서는 filesystem 사용");
 
-  const key    = makeKey(file.type);
+  const key    = makeKey(file.type, folder);
   const buffer = Buffer.from(await file.arrayBuffer());
 
   await makeClient(r2).send(

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -12,7 +12,7 @@ import {
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
-import { readImageAsDataUrl, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
+import { uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
@@ -21,6 +21,10 @@ const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "crop", label: "Crop" },
   { id: "highlight", label: "Highlight" },
 ];
+
+const DEFAULT_PANEL_W = 320;
+const MIN_PANEL_W = 240;
+const MAX_PANEL_W = 520;
 
 function IconTooltip({ label }: { label: string }) {
   return (
@@ -74,9 +78,19 @@ export function ProductVisualSidebar() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
+
+  useEffect(() => {
+    if (!content?.screenshot || !isImageBgFormat(content.format) || content.screenshot.displayMode === "crop") return;
+    setProductVisualContent({
+      ...content,
+      screenshot: { ...content.screenshot, displayMode: "crop" },
+    });
+  }, [content, setProductVisualContent]);
 
   if (!content) return null;
 
@@ -86,28 +100,38 @@ export function ProductVisualSidebar() {
   }
 
   async function handleFile(file: File | undefined) {
-    if (!file) return;
+    if (!file || uploading) return;
     setUploadError(null);
-    const res = await readImageAsDataUrl(file);
-    if (!res.ok) {
-      setUploadError(res.error);
-      return;
+    setUploading(true);
+    try {
+      const res = await uploadProductVisualScreenshot(file);
+      if (!res.ok) {
+        setUploadError(res.error);
+        return;
+      }
+      const latest = useEditorStore.getState().productVisualContent;
+      if (!latest) return;
+      // New/replaced image → fresh screenshot (crop reset; natural dims captured).
+      setProductVisualContent({
+        ...latest,
+        screenshot: {
+          url: res.url,
+          displayMode: "crop",
+          naturalWidth: res.naturalWidth,
+          naturalHeight: res.naturalHeight,
+        },
+      });
+    } finally {
+      setUploading(false);
     }
-    // New/replaced image → fresh screenshot (crop reset; natural dims captured).
-    update({
-      screenshot: {
-        url: res.dataUrl,
-        displayMode: "crop",
-        naturalWidth: res.naturalWidth,
-        naturalHeight: res.naturalHeight,
-      },
-    });
   }
 
   // Product Feature formats use a full-bleed background image (same library as
   // the Chat editor); other formats use a solid/fixed color. No title/subtitle
   // or layout chrome on any format — just background + screenshot.
   const imageBg = isImageBgFormat(content.format);
+  const cropOnly = imageBg;
+  const displayModes = cropOnly ? DISPLAY_MODES.filter((m) => m.id === "crop") : DISPLAY_MODES;
   // Solid-color swatches: hidden for image-bg formats and for formats whose
   // background is locked to a fixed hex (canvas ignores `bg` there).
   const showSolidBg = !imageBg && !FORMAT_FIXED_BG[content.format];
@@ -115,8 +139,33 @@ export function ProductVisualSidebar() {
   const selectedBgId = bgList.find((b) => b.url === content.bgImage)?.id ?? "";
   const current = FORMAT_FLAT.find((f) => f.id === content.format);
 
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+    function onMove(ev: MouseEvent) {
+      const delta = startX - ev.clientX;
+      setPanelWidth(Math.min(MAX_PANEL_W, Math.max(MIN_PANEL_W, startW + delta)));
+    }
+    function onUp() {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }
+
   return (
-    <div className="relative shrink-0 w-80 h-full flex flex-col bg-studio-sidebar border-l border-studio-border">
+    <div
+      style={{ width: panelWidth }}
+      className="relative shrink-0 h-full flex flex-col bg-studio-sidebar border-l border-studio-border"
+    >
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        title="Drag to resize panel"
+      />
+
       <div className="flex-1 overflow-y-auto">
         {/* FORMAT — grouped dropdown */}
         <Section title="Format">
@@ -241,10 +290,11 @@ export function ProductVisualSidebar() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   aria-label="Replace screenshot"
+                  disabled={uploading}
                   className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 border border-white/25 text-xs font-medium text-white">
-                    <RefreshCw size={13} /> Replace
+                    <RefreshCw size={13} /> {uploading ? "Uploading…" : "Replace"}
                   </span>
                 </button>
               </div>
@@ -283,15 +333,17 @@ export function ProductVisualSidebar() {
                 setDragging(false);
                 handleFile(e.dataTransfer.files?.[0]);
               }}
+              disabled={uploading}
               className={[
                 "flex flex-col items-center justify-center gap-2 w-full py-7 rounded-lg border-[1.6px] border-dashed transition-colors",
+                uploading ? "opacity-60 cursor-wait" : "",
                 dragging
                   ? "border-studio-accent bg-studio-accent/[0.06] text-studio-text"
                   : "border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted",
               ].join(" ")}
             >
               <Upload size={20} />
-              <span className="text-xs font-medium">Click or drag to upload</span>
+              <span className="text-xs font-medium">{uploading ? "Uploading…" : "Click or drag to upload"}</span>
             </button>
           )}
           {uploadError ? (
@@ -299,22 +351,33 @@ export function ProductVisualSidebar() {
           ) : (
             <p className="mt-1.5 text-[11px] text-studio-muted leading-snug">PNG · JPG · WebP · max 10 MB</p>
           )}
+          {content.format === "release-thumbnail" && (
+            <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-studio-accent leading-snug">
+              <Lightbulb size={12} className="mt-[1px] shrink-0" />
+              <p>Tip: For thumbnails, crop to the key UI instead of showing the full dashboard.</p>
+            </div>
+          )}
         </Section>
 
         {content.screenshot?.url && (
           <Section title="Settings">
             {!content.screenshot.crop && (
-              <p className="mb-2 text-[11px] text-studio-muted leading-snug">Select a key area first to crop or highlight.</p>
+              <p className="mb-2 text-[11px] text-studio-muted leading-snug">
+                {cropOnly ? "Select a key area first to crop." : "Select a key area first to crop or highlight."}
+              </p>
             )}
             <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-              {DISPLAY_MODES.map((m) => {
+              {displayModes.map((m) => {
                 const enabled = !!content.screenshot?.crop;
-                const active = content.screenshot?.displayMode === m.id;
+                const active = cropOnly ? m.id === "crop" : content.screenshot?.displayMode === m.id;
                 return (
                   <button
                     key={m.id}
                     disabled={!enabled}
-                    onClick={() => content.screenshot && update({ screenshot: { ...content.screenshot, displayMode: m.id } })}
+                    onClick={() =>
+                      content.screenshot &&
+                      update({ screenshot: { ...content.screenshot, displayMode: cropOnly ? "crop" : m.id } })
+                    }
                     aria-pressed={active}
                     className={[
                       "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
@@ -351,7 +414,15 @@ export function ProductVisualSidebar() {
           imageUrl={content.screenshot.url}
           crop={content.screenshot.crop}
           onApply={(crop) => {
-            if (content.screenshot) update({ screenshot: { ...content.screenshot, crop } });
+            if (content.screenshot) {
+              update({
+                screenshot: {
+                  ...content.screenshot,
+                  crop,
+                  displayMode: cropOnly ? "crop" : content.screenshot.displayMode,
+                },
+              });
+            }
             setCropOpen(false);
           }}
           onCancel={() => setCropOpen(false)}

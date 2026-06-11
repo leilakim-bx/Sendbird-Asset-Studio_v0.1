@@ -68,7 +68,11 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Save or export",
-        desc: "Save keeps the asset in Recent Assets. Export downloads a clean PNG, usually at @2x for website-ready output.",
+        desc: "Save keeps the asset in this browser's Recent Assets/Open asset list. Export downloads a clean PNG, usually at @2x for website-ready output.",
+      },
+      {
+        title: "Local files are personal",
+        desc: "Saved assets are stored locally per browser and per device. They are meant as each marketer's personal working files; use Export PNG for the final file to share or publish.",
       },
     ],
   },
@@ -91,7 +95,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Finish the frame",
-        desc: "Adjust the user profile, app name, and export size. Export Desktop or Mobile from the top export menu, or Save to keep it in Recent Assets.",
+        desc: "Adjust the user profile, app name, and export size. Export Desktop or Mobile from the top export menu, or Save to keep it in this browser's Recent Assets.",
       },
     ],
   },
@@ -122,7 +126,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Export the set",
-        desc: "Export the current image, selected images, or all article images from the top export menu. Exports are PNG files at @2x.",
+        desc: "Save keeps the editable infographic locally in this browser. Export the current image, selected images, or all article images as PNG files at @2x.",
       },
     ],
   },
@@ -149,7 +153,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Save or export",
-        desc: "Save stores the composition in Recent Assets. Export PNG downloads the finished visual at the correct format size.",
+        desc: "Save stores the editable composition locally in this browser, including the uploaded screenshot. Export PNG downloads the finished visual at the correct format size.",
       },
     ],
   },

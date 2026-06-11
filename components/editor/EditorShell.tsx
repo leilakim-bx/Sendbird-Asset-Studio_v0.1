@@ -13,7 +13,7 @@ import { DEFAULT_SCENARIO } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
-import { exportImage, exportSvgToClipboard, captureThumbnail } from "@/lib/export";
+import { exportImage, exportSvgToClipboard, captureThumbnail, type ExportedImage } from "@/lib/export";
 import type { SavedAsset } from "@/lib/store";
 import type { ChatTemplate } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
@@ -85,7 +85,9 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
     }
 
     setFreshStart(false); // consume unconditionally — never let it linger
-    setReady(true);       // MUST be the last line (opens the autosave gate)
+    // Open the autosave gate after this restore/seed effect has flushed.
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(frame);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template.id]);
 
@@ -107,7 +109,9 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const savedBaselineRef = useRef<string>("");
   const chatDraftRef = useRef(chatDraft);
-  chatDraftRef.current = chatDraft;
+  useEffect(() => {
+    chatDraftRef.current = chatDraft;
+  }, [chatDraft]);
   // Capture the baseline once the mount effect has restored/seeded content.
   useEffect(() => {
     if (ready) savedBaselineRef.current = JSON.stringify(chatDraftRef.current);
@@ -130,7 +134,10 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDownloads, setExportDownloads] = useState<ExportedImage[]>([]);
+  const exportDownloadsRef = useRef<ExportedImage[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -148,6 +155,18 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      exportDownloadsRef.current.forEach((download) => download.revoke());
+    };
+  }, []);
+
+  function replaceExportDownloads(downloads: ExportedImage[]) {
+    exportDownloadsRef.current.forEach((download) => download.revoke());
+    exportDownloadsRef.current = downloads;
+    setExportDownloads(downloads);
+  }
 
   // Tracks the last messages state that did NOT overflow, used for rollback
   const lastSafeMessagesRef = useRef(messages);
@@ -208,24 +227,28 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   async function exportOne(size: "desktop" | "mobile") {
     const isDesktop = size === "desktop";
     const ref = isDesktop ? desktopRef.current : mobileRef.current;
-    if (!ref) return;
+    if (!ref) throw new Error("Export canvas is not ready");
     const { width, height } = isDesktop ? desktopSize : mobileSize;
-    await exportImage(ref, width, isDesktop ? height : undefined, exportFilename(size, "png"));
+    return await exportImage(ref, width, isDesktop ? height : undefined, exportFilename(size, "png"));
   }
 
   async function handleExport(mode: "desktop" | "mobile" | "both") {
     setExporting(true);
     setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
     try {
       if (mode === "both") {
-        await exportOne("desktop");
+        downloads.push(await exportOne("desktop"));
         // Brief gap so the browser treats these as two distinct downloads.
         await new Promise((r) => setTimeout(r, 400));
-        await exportOne("mobile");
+        downloads.push(await exportOne("mobile"));
       } else {
-        await exportOne(mode);
+        downloads.push(await exportOne(mode));
       }
+      replaceExportDownloads(downloads);
     } catch (err) {
+      downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error
         ? err.message
         : (err as { message?: string })?.message ?? String(err);
@@ -260,6 +283,7 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   async function handleSave() {
     if (!desktopRef.current || saveState !== "idle") return;
     setSaveState("saving");
+    setSaveError(null);
     try {
       const previewDataUrl = await captureThumbnail(desktopRef.current);
       const now = Date.now();
@@ -283,7 +307,10 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
       savedBaselineRef.current = JSON.stringify(chatDraftRef.current);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Save failed:", err);
+      setSaveError(`Save failed — ${msg || "unknown error"}`);
       setSaveState("idle");
     }
   }
@@ -466,6 +493,26 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
           </div>
           {exportError && (
             <p className="text-red-400 text-xs">{exportError}</p>
+          )}
+          {saveError && (
+            <p className="text-red-400 text-xs">{saveError}</p>
+          )}
+          {!exportError && exportDownloads.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-studio-muted">
+              <span>Download ready:</span>
+              {exportDownloads.map((download) => (
+                <a
+                  key={download.href}
+                  href={download.href}
+                  download={download.filename}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-studio-accent underline underline-offset-2"
+                >
+                  {download.filename}
+                </a>
+              ))}
+            </div>
           )}
         </div>
 

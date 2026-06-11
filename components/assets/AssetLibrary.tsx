@@ -143,9 +143,18 @@ function AssetCard({ asset, onDelete, onRename, onEdit }: { asset: SavedAsset; o
 type Props = {
   title: string;
   mounted: boolean;
+  templateIds?: string[];
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
-export function AssetLibrary({ title, mounted }: Props) {
+export function AssetLibrary({
+  title,
+  mounted,
+  templateIds,
+  emptyTitle = "No saved files yet",
+  emptyDescription = "Open a template and hit Save to add it here.",
+}: Props) {
   const { savedAssets, deleteSavedAsset, renameSavedAsset, setPendingAssetRestore } = useEditorStore();
   const router = useRouter();
 
@@ -157,9 +166,11 @@ export function AssetLibrary({ title, mounted }: Props) {
     router.push(`/editor/${asset.templateId}`);
   }
 
-  const filtered = savedAssets.filter((a) =>
-    a.appName.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = savedAssets.filter((a) => {
+    if (templateIds && !templateIds.includes(a.templateId)) return false;
+    const haystack = `${a.appName} ${a.name ?? ""}`.toLowerCase();
+    return haystack.includes(query.toLowerCase());
+  });
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -198,8 +209,8 @@ export function AssetLibrary({ title, mounted }: Props) {
       {/* Body */}
       {!mounted ? null : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center py-20">
-          <p className="text-studio-text text-sm font-medium">No saved files yet</p>
-          <p className="text-studio-muted text-xs">Open a template and hit Save to add it here.</p>
+          <p className="text-studio-text text-sm font-medium">{emptyTitle}</p>
+          <p className="text-studio-muted text-xs">{emptyDescription}</p>
         </div>
       ) : viewMode === "list" ? (
         <div className="overflow-y-auto flex-1">

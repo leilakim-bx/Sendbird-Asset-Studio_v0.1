@@ -24,7 +24,7 @@ export type ProductVisualBg =
   | "dark";
 
 export type ProductVisualScreenshot = {
-  /** Uploaded image (R2 or temporary base64) */
+  /** Uploaded screenshot URL (R2 in production, local public file in dev). */
   url: string;
   crop?: {
     /** 0~1 ratios relative to the source image */
@@ -37,8 +37,7 @@ export type ProductVisualScreenshot = {
   displayMode: "crop" | "highlight";
   /** Source image pixel dimensions, captured at upload. Used to map normalized
    *  crop ratios to the correct aspect without object-fit letterbox guesswork.
-   *  Absent → crop/highlight fall back to showing the full image. Stripped on
-   *  save alongside `url`. */
+   *  Absent → crop/highlight fall back to showing the full image. */
   naturalWidth?: number;
   naturalHeight?: number;
 };
@@ -114,7 +113,7 @@ export const PRODUCT_VISUAL_DEFAULT_BG_IMAGE = "/background/bg-200.png";
 
 /** Example dashboard shown when a marketer first opens Product Visual. */
 export const PRODUCT_VISUAL_EXAMPLE_SCREENSHOT: ProductVisualScreenshot = {
-  url: "/preview/dashboard.png",
+  url: "/preview/dashboard.png?v=20260611-1612",
   displayMode: "crop",
   naturalWidth: 1056,
   naturalHeight: 744,

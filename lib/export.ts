@@ -1,9 +1,15 @@
-import { toPng, toJpeg, toSvg } from "html-to-image";
+import { toBlob, toJpeg, toSvg } from "html-to-image";
 
 const SHARED_OPTIONS = {
   pixelRatio: 2,
   skipFonts: false,
   cacheBust: false, // we pre-inline images ourselves, so no need to bust
+};
+
+export type ExportedImage = {
+  filename: string;
+  href: string;
+  revoke: () => void;
 };
 
 /**
@@ -42,11 +48,11 @@ async function inlineImages(element: HTMLElement): Promise<() => void> {
   return () => restores.forEach((fn) => fn());
 }
 
-async function captureWithRetry(
+async function captureBlob(
   element: HTMLElement,
   width: number,
   height?: number,
-): Promise<string> {
+): Promise<Blob> {
   const options = {
     ...SHARED_OPTIONS,
     width,
@@ -55,10 +61,11 @@ async function captureWithRetry(
   };
   const restore = await inlineImages(element);
   try {
-    // Warm html-to-image's style / font cache
-    try { await toPng(element, options); } catch { /* ignore first-pass errors */ }
-    // Actual capture — all images are now data-URIs
-    return await toPng(element, options);
+    const blob = await toBlob(element, options);
+    if (!blob) {
+      throw new Error("Unable to create export image");
+    }
+    return blob;
   } finally {
     restore();
   }
@@ -69,12 +76,26 @@ export async function exportImage(
   width: number,
   height: number | undefined,
   filename: string
-): Promise<void> {
-  const dataUrl = await captureWithRetry(element, width, height);
+): Promise<ExportedImage> {
+  const blob = await captureBlob(element, width, height);
+  const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.download = filename;
-  link.href = dataUrl;
-  link.click();
+  link.href = objectUrl;
+  link.rel = "noopener";
+  link.target = "_blank";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  try {
+    link.click();
+  } finally {
+    document.body.removeChild(link);
+  }
+  return {
+    filename,
+    href: objectUrl,
+    revoke: () => URL.revokeObjectURL(objectUrl),
+  };
 }
 
 /**

@@ -7,8 +7,7 @@ type Props = {
 };
 
 const RADIUS = 8;             // screenshot (dashboard) corner radius
-const HIGHLIGHT_RADIUS = 6;   // lime highlight rect — slightly rounded
-const HIGHLIGHT_STROKE = "#F2FF66";
+const HIGHLIGHT_RADIUS = 6;   // spotlight rect — slightly rounded
 const SHADOW = "0 4px 24px rgba(0,0,0,0.08)";
 
 /** Fit an aspect ratio (w/h) into a box with object-fit: contain semantics. */
@@ -136,7 +135,6 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
           width: pct(c.width),
           height: pct(c.height),
           borderRadius: HIGHLIGHT_RADIUS,
-          border: `1px solid ${HIGHLIGHT_STROKE}`,
           boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)",
           boxSizing: "border-box",
         }}

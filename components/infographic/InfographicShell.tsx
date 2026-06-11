@@ -8,7 +8,7 @@ import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
-import { exportImage, captureThumbnail } from "@/lib/export";
+import { exportImage, captureThumbnail, type ExportedImage } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
 import type { InfographicTemplate } from "@/lib/template-registry";
@@ -115,14 +115,30 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const articleImageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDownloads, setExportDownloads] = useState<ExportedImage[]>([]);
+  const exportDownloadsRef = useRef<ExportedImage[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [articleImages, setArticleImages] = useState<ArticleImageCandidate[]>([]);
   const [activeArticleImageId, setActiveArticleImageId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      exportDownloadsRef.current.forEach((download) => download.revoke());
+    };
+  }, []);
+
+  function replaceExportDownloads(downloads: ExportedImage[]) {
+    exportDownloadsRef.current.forEach((download) => download.revoke());
+    exportDownloadsRef.current = downloads;
+    setExportDownloads(downloads);
+  }
 
   async function handleSave() {
     const ref = format === "product" ? productRef.current : blogRef.current;
     if (!ref || saveState !== "idle") return;
     setSaveState("saving");
+    setSaveError(null);
     try {
       const previewDataUrl = await captureThumbnail(ref);
       const now = Date.now();
@@ -141,7 +157,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       savedBaselineRef.current = JSON.stringify(contentRef.current);
       setSaveState("saved");
       setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Save failed:", err);
+      setSaveError(`Save failed — ${msg || "unknown error"}`);
       setSaveState("idle");
     }
   }
@@ -175,21 +194,25 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
   async function exportOne(fmt: InfographicFormat) {
     const ref = fmt === "product" ? productRef.current : blogRef.current;
-    if (!ref) return;
+    if (!ref) throw new Error("Export canvas is not ready");
     if (fmt === "product") {
-      await exportImage(ref, PRODUCT_W, PRODUCT_H, filename("product"));
+      return await exportImage(ref, PRODUCT_W, PRODUCT_H, filename("product"));
     } else {
       // height undefined → variable height (captures natural element height)
-      await exportImage(ref, BLOG_W, undefined, filename("blog"));
+      return await exportImage(ref, BLOG_W, undefined, filename("blog"));
     }
   }
 
   async function handleExport(fmt: InfographicFormat) {
     setExporting(true);
     setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
     try {
-      await exportOne(fmt);
+      downloads.push(await exportOne(fmt));
+      replaceExportDownloads(downloads);
     } catch (err) {
+      downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
@@ -200,10 +223,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
   async function exportArticleCandidate(candidate: ArticleImageCandidate) {
     const ref = articleImageRefs.current[candidate.id];
-    if (!ref) return;
+    if (!ref) throw new Error("Export canvas is not ready");
     const candidateContent = candidate.id === activeArticleImageId ? content : candidate.content;
     const fmt = candidateContent.format;
-    await exportImage(
+    return await exportImage(
       ref,
       fmt === "product" ? PRODUCT_W : BLOG_W,
       fmt === "product" ? PRODUCT_H : undefined,
@@ -219,12 +242,16 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
     setExporting(true);
     setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
     try {
       for (const candidate of selected) {
-        await exportArticleCandidate(candidate);
+        downloads.push(await exportArticleCandidate(candidate));
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
+      replaceExportDownloads(downloads);
     } catch (err) {
+      downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
@@ -240,12 +267,16 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
     setExporting(true);
     setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
     try {
       for (const candidate of articleImages) {
-        await exportArticleCandidate(candidate);
+        downloads.push(await exportArticleCandidate(candidate));
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
+      replaceExportDownloads(downloads);
     } catch (err) {
+      downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
@@ -464,6 +495,24 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
               </Menu.Root>
             </div>
             {exportError && <p className="text-red-400 text-xs">{exportError}</p>}
+            {saveError && <p className="text-red-400 text-xs">{saveError}</p>}
+            {!exportError && exportDownloads.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-studio-muted">
+                <span>Download ready:</span>
+                {exportDownloads.map((download) => (
+                  <a
+                    key={download.href}
+                    href={download.href}
+                    download={download.filename}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-studio-accent underline underline-offset-2"
+                  >
+                    {download.filename}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Hidden full-size export targets — off-screen */}

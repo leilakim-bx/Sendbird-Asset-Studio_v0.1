@@ -10,7 +10,7 @@ import type {
   InfographicBlock,
 } from "@/lib/types/infographic";
 import type { ProductVisualContent, ProductVisualFormat } from "@/lib/types/product-visual";
-import { FORMAT_DEFAULTS } from "@/lib/types/product-visual";
+import { FORMAT_DEFAULTS, isImageBgFormat } from "@/lib/types/product-visual";
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -154,9 +154,8 @@ export type SavedAsset = {
   /** Infographic content snapshot — present for infographic assets (v1.3+) */
   infographic?: InfographicContent;
   /** Product Visual content snapshot — present for product-visual assets.
-   *  NOTE: `screenshot` is stripped before save (base64 too large for the
-   *  shared localStorage blob → would blow quota and stall chat/infographic
-   *  autosave). The marketer re-uploads the image on restore. */
+   *  Screenshots are stored as uploaded URLs, not inline base64, so assets can
+   *  be re-opened without filling localStorage. */
   productVisual?: ProductVisualContent;
 };
 
@@ -521,7 +520,10 @@ export const useEditorStore = create<EditorState>()(
                 productVisualContent: {
                   ...FORMAT_DEFAULTS[format],
                   // preserve the uploaded screenshot across format switches
-                  screenshot: s.productVisualContent.screenshot,
+                  screenshot:
+                    s.productVisualContent.screenshot && isImageBgFormat(format)
+                      ? { ...s.productVisualContent.screenshot, displayMode: "crop" }
+                      : s.productVisualContent.screenshot,
                 },
               }
             : s,

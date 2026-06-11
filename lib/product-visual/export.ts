@@ -2,7 +2,7 @@
 // `exportImage` (lib/export.ts) so PV stays on the same html-to-image pipeline
 // as Chat/Infographic: pixelRatio 2 (@2x output) + in-place <img> inlining.
 
-import { exportImage } from "@/lib/export";
+import { exportImage, type ExportedImage } from "@/lib/export";
 import { FORMAT_SIZES, type ProductVisualFormat } from "@/lib/types/product-visual";
 
 /** product-visual-{format}-{timestamp}.png */
@@ -19,8 +19,8 @@ export async function exportProductVisual(
   element: HTMLElement,
   format: ProductVisualFormat,
   ts: number,
-): Promise<void> {
+): Promise<ExportedImage> {
   const size = FORMAT_SIZES[format];
   const height = typeof size.h === "number" ? size.h : undefined;
-  await exportImage(element, size.w, height, productVisualFilename(format, ts));
+  return await exportImage(element, size.w, height, productVisualFilename(format, ts));
 }
