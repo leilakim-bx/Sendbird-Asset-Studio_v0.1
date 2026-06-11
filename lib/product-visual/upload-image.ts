@@ -1,11 +1,13 @@
-// Client-side screenshot upload for Product Visual.
+// Client-side screenshot import for Product Visual.
 //
-// The screenshot is uploaded to the app backend first, then stored in editor
-// state as a URL. That keeps saved Product Visual assets re-openable without
-// putting a multi-MB base64 image into localStorage.
+// Product Visual intentionally keeps screenshots browser-local: the selected
+// file is converted to a data URL and saved with the local editor asset. This
+// avoids paid external storage, but means file size must stay conservative
+// because saved assets live in localStorage.
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+export const MAX_UPLOAD_MB = 2;
+const MAX_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 
 /** Comma-joined list for the <input accept> attribute. */
 export const UPLOAD_ACCEPT = ACCEPTED_TYPES.join(",");
@@ -32,12 +34,24 @@ async function measureNatural(file: File): Promise<{ w: number; h: number } | nu
   }
 }
 
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Could not read the image."));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Could not read the image."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function uploadProductVisualScreenshot(file: File): Promise<UploadResult> {
   if (!(ACCEPTED_TYPES as readonly string[]).includes(file.type)) {
     return { ok: false, error: "Unsupported format — use PNG, JPG, or WebP." };
   }
   if (file.size > MAX_BYTES) {
-    return { ok: false, error: "Image is too large — keep it under 10 MB." };
+    return { ok: false, error: `Image is too large — keep it under ${MAX_UPLOAD_MB} MB.` };
   }
 
   const dims = await measureNatural(file);
@@ -45,21 +59,10 @@ export async function uploadProductVisualScreenshot(file: File): Promise<UploadR
     return { ok: false, error: "Could not read the image — please try again." };
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
-
   try {
-    const response = await fetch("/api/upload-product-visual-screenshot", {
-      method: "POST",
-      body: formData,
-    });
-    const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!response.ok || !data.url) {
-      return { ok: false, error: data.error || "Could not upload the image — please try again." };
-    }
-
-    return { ok: true, url: data.url, naturalWidth: dims.w, naturalHeight: dims.h };
+    const url = await readAsDataUrl(file);
+    return { ok: true, url, naturalWidth: dims.w, naturalHeight: dims.h };
   } catch {
-    return { ok: false, error: "Could not upload the image — please try again." };
+    return { ok: false, error: "Could not read the image — please try again." };
   }
 }

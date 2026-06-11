@@ -26,7 +26,7 @@ export type ProductVisualBg =
 export type ProductVisualSourceMode = "screenshot" | "concept";
 
 export type ProductVisualScreenshot = {
-  /** Uploaded screenshot URL (R2 in production, local public file in dev). */
+  /** Browser-local data URL for uploaded screenshots, or a built-in preview URL. */
   url: string;
   crop?: {
     /** 0~1 ratios relative to the source image */

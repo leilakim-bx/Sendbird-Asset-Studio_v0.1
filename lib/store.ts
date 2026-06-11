@@ -154,8 +154,8 @@ export type SavedAsset = {
   /** Infographic content snapshot — present for infographic assets (v1.3+) */
   infographic?: InfographicContent;
   /** Product Visual content snapshot — present for product-visual assets.
-   *  Screenshots are stored as uploaded URLs, not inline base64, so assets can
-   *  be re-opened without filling localStorage. */
+   *  Uploaded screenshots are browser-local data URLs so this stays free, but
+   *  large images can hit localStorage limits. */
   productVisual?: ProductVisualContent;
 };
 

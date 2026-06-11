@@ -13,7 +13,7 @@ import {
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
-import { uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
+import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
@@ -414,7 +414,9 @@ export function ProductVisualSidebar() {
           {uploadError ? (
             <p className="mt-1.5 text-[11px] text-red-400 leading-snug">{uploadError}</p>
           ) : (
-            <p className="mt-1.5 text-[11px] text-studio-muted leading-snug">PNG · JPG · WebP · max 10 MB</p>
+            <p className="mt-1.5 text-[11px] text-studio-muted leading-snug">
+              PNG · JPG · WebP · max {MAX_UPLOAD_MB} MB
+            </p>
           )}
           {content.format === "release-thumbnail" && (
             <div className="mt-1.5 flex items-start gap-1.5 text-[11px] text-studio-accent leading-snug">
