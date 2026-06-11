@@ -106,7 +106,11 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Create from article",
-        desc: "Paste the full article and click Suggest images. Asset Studio will suggest 2-5 infographic images from the article content.",
+        desc: "Paste an article URL or the full article and click Generate images from source. Asset Studio will suggest 2-5 infographic images from the article content.",
+      },
+      {
+        title: "Use protected links safely",
+        desc: "If a PMM Space or Vercel link requires login, paste the article text instead or ask the workspace owner for an AI-accessible share link. Do not share protection bypass secrets in open channels.",
       },
       {
         title: "Review each suggested image",

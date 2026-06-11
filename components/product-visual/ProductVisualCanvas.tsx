@@ -24,6 +24,40 @@ function paddingFor(format: ProductVisualContent["format"]): number {
   return 48;
 }
 
+function verticalPaddingFor(format: ProductVisualContent["format"], horizontalPadding: number): number {
+  if (format === "blog") return 80;
+  return horizontalPadding;
+}
+
+function screenshotAspect(content: ProductVisualContent): number | null {
+  const { screenshot } = content;
+  if (!screenshot?.url || !screenshot.naturalWidth || !screenshot.naturalHeight) return null;
+  if (
+    screenshot.crop &&
+    screenshot.crop.width > 0 &&
+    screenshot.crop.height > 0 &&
+    screenshot.displayMode === "crop"
+  ) {
+    return (screenshot.crop.width * screenshot.naturalWidth) / (screenshot.crop.height * screenshot.naturalHeight);
+  }
+  return screenshot.naturalWidth / screenshot.naturalHeight;
+}
+
+function screenshotDisplayHeight(content: ProductVisualContent, maxWidth: number): number | null {
+  const { screenshot } = content;
+  const aspect = screenshotAspect(content);
+  if (!screenshot?.url || !aspect || !screenshot.naturalWidth || !screenshot.naturalHeight) return null;
+  if (
+    screenshot.crop &&
+    screenshot.crop.width > 0 &&
+    screenshot.crop.height > 0 &&
+    screenshot.displayMode === "crop"
+  ) {
+    return maxWidth / aspect;
+  }
+  return Math.min(maxWidth, screenshot.naturalWidth) / aspect;
+}
+
 /**
  * Product Visual canvas — a background with the polished screenshot centered on
  * top. No title/subtitle/layout: every format is just screenshot-on-background.
@@ -57,11 +91,18 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const fullDashboard = !hasValidCrop || screenshot?.displayMode === "highlight";
   const fillMode = format === "release-insert" && !!screenshot?.url && fullDashboard;
 
-  const pad = fillMode ? 12 : paddingFor(format);
-  const innerW = W - pad * 2;
+  const padX = fillMode ? 12 : paddingFor(format);
+  const padY = fillMode ? 12 : verticalPaddingFor(format, padX);
+  const innerW = W - padX * 2;
+  const screenshotH = screenshotDisplayHeight(content, innerW);
+  const imageDrivenH =
+    (format === "feature-mobile" || format === "blog") && screenshotH
+      ? screenshotH + padY * 2
+      : null;
+  const canvasH = fixedH ?? imageDrivenH ?? minH;
   // Vertical budget for the screenshot. Fill mode leaves it effectively
   // unbounded so the image fits to width and the auto-height canvas grows.
-  const contentH = fillMode ? 100000 : (fixedH ?? minH) - pad * 2;
+  const contentH = fillMode ? 100000 : canvasH - padY * 2;
 
   return (
     <div
@@ -70,7 +111,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         position: "relative",
         boxSizing: "border-box",
         width: W,
-        ...(fixedH ? { height: fixedH } : { minHeight: minH }),
+        ...(fixedH ? { height: fixedH } : { minHeight: canvasH }),
         background: imageBg ? undefined : bgHex,
         overflow: "hidden",
         fontFamily: PRODUCT_VISUAL_SANS,
@@ -91,11 +132,11 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         style={{
           position: "relative",
           zIndex: 1,
-          minHeight: fixedH ?? minH,
+          minHeight: canvasH,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: pad,
+          padding: `${padY}px ${padX}px`,
           boxSizing: "border-box",
         }}
       >

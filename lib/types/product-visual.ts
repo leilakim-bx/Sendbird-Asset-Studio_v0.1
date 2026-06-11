@@ -99,6 +99,7 @@ export const PRODUCT_VISUAL_BG_HEX: Record<ProductVisualBg, string> = {
 export const FORMAT_FIXED_BG: Partial<Record<ProductVisualFormat, string>> = {
   "release-thumbnail": "#E5E3DF",
   "release-insert":    "#F7F5F0",
+  "blog":              "#F7F5F0",
 };
 
 /** Formats that use a full-bleed background IMAGE (same library as the Chat
@@ -167,7 +168,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
   "blog": {
     format: "blog",
     layout: "center",
-    bg: "warmgray",
+    bg: "stone",
     title: "Why we built AI agent workspace",
     subtitle: "The thinking behind our latest release.",
   },

@@ -31,7 +31,10 @@ export function CropSelector({ imageUrl, crop, onApply, onCancel }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState | null>(null);
   const selRef = useRef<Crop | null>(sel);
-  selRef.current = sel;
+
+  useEffect(() => {
+    selRef.current = sel;
+  }, [sel]);
 
   // Keyboard: Esc = cancel, Enter = apply.
   useEffect(() => {
@@ -144,7 +147,7 @@ export function CropSelector({ imageUrl, crop, onApply, onCancel }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-studio-border shrink-0">
           <div>
-            <span className="text-sm font-semibold text-studio-text">Select area</span>
+            <span className="text-sm font-semibold text-studio-text">Select key area</span>
             <p className="text-studio-muted text-xs mt-0.5">Drag to choose the region to feature.</p>
           </div>
           <button

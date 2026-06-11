@@ -22,6 +22,14 @@ const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "highlight", label: "Highlight" },
 ];
 
+function IconTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute bottom-full right-0 z-30 mb-1.5 rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[10px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover/action:opacity-100 group-focus-within/action:opacity-100">
+      {label}
+    </span>
+  );
+}
+
 // ── Static option tables ──────────────────────────────────
 
 const FORMAT_GROUPS: { group: string; items: { id: ProductVisualFormat; label: string; size: string }[] }[] = [
@@ -241,54 +249,29 @@ export function ProductVisualSidebar() {
                 </button>
               </div>
 
-              {/* Actions — Select area (button) + remove icon */}
+              {/* Actions — Select key area (button) + delete icon */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCropOpen(true)}
                   className="text-xs font-semibold px-3 py-2 rounded-lg bg-studio-accent text-studio-accent-fg hover:opacity-90 transition-opacity"
                 >
-                  {content.screenshot.crop ? "Edit crop" : "Select area"}
+                  {content.screenshot.crop ? "Edit crop" : "Select key area"}
                 </button>
-                <button
-                  onClick={() => update({ screenshot: undefined })}
-                  title="Remove"
-                  aria-label="Remove screenshot"
-                  className="ml-auto flex items-center justify-center w-7 h-7 rounded-md text-studio-muted hover:text-red-400 hover:bg-white/[0.06] transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="ml-auto flex items-center gap-1">
+                  <span className="group/action relative inline-flex">
+                    <button
+                      type="button"
+                      onClick={() => update({ screenshot: undefined })}
+                      aria-label="Delete screenshot"
+                      className="flex items-center justify-center w-7 h-7 rounded-md text-studio-muted hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <IconTooltip label="Delete" />
+                  </span>
+                </div>
               </div>
 
-              {/* Display mode — enabled once a crop region exists */}
-              <div>
-                <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-                  {DISPLAY_MODES.map((m) => {
-                    const enabled = !!content.screenshot?.crop;
-                    const active = content.screenshot?.displayMode === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        disabled={!enabled}
-                        onClick={() => content.screenshot && update({ screenshot: { ...content.screenshot, displayMode: m.id } })}
-                        aria-pressed={active}
-                        className={[
-                          "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
-                          !enabled
-                            ? "text-studio-muted/40 cursor-not-allowed"
-                            : active
-                              ? "bg-studio-hover text-studio-text"
-                              : "text-studio-muted hover:text-studio-text",
-                        ].join(" ")}
-                      >
-                        {m.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {!content.screenshot.crop && (
-                  <p className="mt-1.5 text-[11px] text-studio-muted leading-snug">Select an area first to crop or highlight.</p>
-                )}
-              </div>
             </div>
           ) : (
             <button
@@ -318,12 +301,45 @@ export function ProductVisualSidebar() {
           )}
         </Section>
 
+        {content.screenshot?.url && (
+          <Section title="Settings">
+            {!content.screenshot.crop && (
+              <p className="mb-2 text-[11px] text-studio-muted leading-snug">Select a key area first to crop or highlight.</p>
+            )}
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+              {DISPLAY_MODES.map((m) => {
+                const enabled = !!content.screenshot?.crop;
+                const active = content.screenshot?.displayMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    disabled={!enabled}
+                    onClick={() => content.screenshot && update({ screenshot: { ...content.screenshot, displayMode: m.id } })}
+                    aria-pressed={active}
+                    className={[
+                      "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
+                      !enabled
+                        ? "text-studio-muted/40 cursor-not-allowed"
+                        : active
+                          ? "bg-studio-hover text-studio-text"
+                          : "text-studio-muted hover:text-studio-text",
+                    ].join(" ")}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        )}
+
       </div>
 
       {bgModalOpen && (
         <BackgroundPickerModal
           currentId={selectedBgId}
           customBackgrounds={customBackgrounds}
+          hiddenGroups={["industry"]}
           onSelect={(bg) => update({ bgImage: bg.url })}
           onUpload={(bg) => { addCustomBackground(bg); update({ bgImage: bg.url }); }}
           onClose={() => setBgModalOpen(false)}
