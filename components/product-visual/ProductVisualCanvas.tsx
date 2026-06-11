@@ -25,7 +25,7 @@ function paddingFor(format: ProductVisualContent["format"]): number {
 }
 
 function verticalPaddingFor(format: ProductVisualContent["format"], horizontalPadding: number): number {
-  if (format === "blog") return 80;
+  if (format === "blog") return 60;
   return horizontalPadding;
 }
 
