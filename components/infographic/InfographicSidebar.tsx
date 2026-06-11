@@ -658,15 +658,7 @@ export function InfographicSidebar({
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSuggestImages}
-            disabled={!article.trim()}
-            className="flex-1 h-8 rounded-md border border-studio-border text-xs font-semibold text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Suggest images
-          </button>
+        <div className="flex justify-end">
           <AiMagicButton
             label="Suggest images"
             loading={false}
