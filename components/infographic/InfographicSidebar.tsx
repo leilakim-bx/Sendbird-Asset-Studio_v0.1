@@ -12,9 +12,7 @@ import {
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import {
-  INFOGRAPHIC_BG_HEX,
   INFOGRAPHIC_ACCENT_HEX,
-  type InfographicBg,
   type InfographicAccent,
   type InfographicBlock,
   type InfographicBlockType,
@@ -27,11 +25,6 @@ import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
 
-const BG_OPTIONS: { id: InfographicBg; name: string }[] = [
-  { id: "sky", name: "Sky" },
-  { id: "stone", name: "Stone" },
-  { id: "warmgray", name: "Warm gray" },
-];
 const ACCENT_OPTIONS: InfographicAccent[] = ["lime", "blue", "red", "green"];
 
 const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
@@ -710,7 +703,6 @@ export function InfographicSidebar({
     infographicContent: content,
     setInfographicContent,
     setInfographicFormat,
-    setInfographicBg,
     setInfographicAccent,
     setInfographicTitle,
     setInfographicFootnote,
@@ -931,34 +923,10 @@ export function InfographicSidebar({
       >
         {!advancedOpen ? (
           <p className="text-[11px] text-studio-muted leading-relaxed">
-            Background, accent, and title settings are hidden by default.
+            Accent and title settings are hidden by default.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
-            <div>
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Background</div>
-              {content.format === "product" ? (
-                <p className="text-[11px] text-studio-muted leading-relaxed">
-                  Fixed to Warm gray for the product format.
-                </p>
-              ) : (
-                <div className="flex gap-1.5 flex-wrap">
-                  {BG_OPTIONS.map((bg) => (
-                    <button
-                      key={bg.id}
-                      onClick={() => setInfographicBg(bg.id)}
-                      title={bg.name}
-                      className={[
-                        "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
-                        content.bg === bg.id ? "border-studio-accent" : "border-transparent",
-                      ].join(" ")}
-                      style={{ background: INFOGRAPHIC_BG_HEX[bg.id], boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
             <div>
               <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Accent</div>
               <div className="flex gap-1.5 flex-wrap">
