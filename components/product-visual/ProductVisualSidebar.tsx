@@ -14,6 +14,7 @@ import {
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
 import { uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
@@ -426,21 +427,24 @@ export function ProductVisualSidebar() {
 
         {sourceMode === "concept" && (
           <Section title="Concept UI">
-            <textarea
-              value={conceptPrompt}
-              onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
-              placeholder={CONCEPT_UI_PLACEHOLDER}
-              rows={5}
-              className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
-            />
+            <div className="relative">
+              <textarea
+                value={conceptPrompt}
+                onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
+                placeholder={CONCEPT_UI_PLACEHOLDER}
+                rows={5}
+                className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 pb-10 pr-12 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+              />
+              <div className="absolute bottom-2 right-2">
+                <AiMagicButton
+                  label="Generate UI"
+                  loading={false}
+                  disabled={false}
+                  onClick={regenerateConcept}
+                />
+              </div>
+            </div>
             <p className="mt-1.5 text-[11px] leading-snug text-studio-muted">{CONCEPT_UI_HELPER}</p>
-            <button
-              type="button"
-              onClick={regenerateConcept}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg hover:opacity-90 transition-opacity"
-            >
-              Generate UI
-            </button>
             {content.concept && (
               <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-studio-muted">
                 <span className="truncate">{content.concept.title}</span>
