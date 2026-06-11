@@ -433,9 +433,9 @@ export function ProductVisualSidebar() {
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}
-                className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 pb-10 pr-12 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+                className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 pb-14 pr-14 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
               />
-              <div className="absolute bottom-2 right-2">
+              <div className="absolute bottom-4 right-3">
                 <AiMagicButton
                   label="Generate UI"
                   loading={false}
