@@ -100,10 +100,13 @@ function SourceTipsTooltip() {
       >
         <CircleAlert size={13} />
       </button>
-      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-72 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
         <span className="block">Paste an article URL, full article, chart data, or image notes.</span>
         <span className="mt-1 block text-studio-muted">
-          Use template to add optional Image notes for specific charts, stats, or sections.
+          Protected URLs cannot be read. If a link requires login, paste the article text or use a share link Studio can access.
+        </span>
+        <span className="mt-1 block text-studio-muted">
+          Use template to request specific charts, stats, or sections.
         </span>
       </span>
     </span>
