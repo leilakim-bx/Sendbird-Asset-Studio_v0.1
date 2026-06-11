@@ -14,8 +14,8 @@ import {
   LineChart,
   Plus,
   Info,
+  CircleHelp,
   ChevronDown,
-  Lightbulb,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -82,6 +82,26 @@ function InfoTooltip({ text }: { text: string }) {
       <Info size={13} className="text-studio-muted hover:text-studio-text cursor-help transition-colors" />
       <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-60 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100">
         {text}
+      </span>
+    </span>
+  );
+}
+
+function ArticleTipsTooltip() {
+  return (
+    <span className="group relative inline-flex items-center">
+      <button
+        type="button"
+        aria-label="Create from article guide and tips"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-studio-muted hover:text-studio-text hover:bg-white/[0.06] focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors"
+      >
+        <CircleHelp size={13} />
+      </button>
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+        <span className="block">Paste the full article above to suggest 2-5 infographic images.</span>
+        <span className="mt-1 block text-studio-muted">
+          Keep headings, bullets, numbers, and product names. Remove navigation, comments, and unrelated links.
+        </span>
       </span>
     </span>
   );
@@ -650,6 +670,7 @@ export function InfographicSidebar({
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
           <span className="text-xs font-semibold text-studio-text tracking-tight">Create from article</span>
+          <ArticleTipsTooltip />
         </div>
         <textarea
           value={article}
@@ -669,19 +690,7 @@ export function InfographicSidebar({
         {articleNotice && <p className="mt-2 text-[10px] text-studio-muted leading-snug">{articleNotice}</p>}
       </div>
 
-      {articleImages.length === 0 ? (
-        <Section title="Guide & tips">
-          <div className="flex items-start gap-2 rounded-md border border-studio-accent/30 bg-studio-accent/[0.08] px-2.5 py-2">
-            <Lightbulb size={13} className="text-studio-accent shrink-0 mt-px" />
-            <div className="text-[11px] leading-snug">
-              <p className="text-studio-text">Paste the full article above to suggest 2-5 infographic images.</p>
-              <p className="mt-1 text-studio-muted">
-                Keep headings, bullets, numbers, and product names. Remove navigation, comments, and unrelated links.
-              </p>
-            </div>
-          </div>
-        </Section>
-      ) : (
+      {articleImages.length > 0 && (
         <Section title="Article images">
           <div className="flex flex-col gap-1">
             {articleImages.map((candidate, index) => {
