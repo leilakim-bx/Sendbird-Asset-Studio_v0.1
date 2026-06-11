@@ -7,6 +7,8 @@ import {
   isImageBgFormat,
   PRODUCT_VISUAL_SANS,
 } from "@/lib/types/product-visual";
+import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
+import { ConceptUIDisplay } from "./ConceptUIDisplay";
 import { ScreenshotDisplay } from "./ScreenshotDisplay";
 
 type Props = {
@@ -77,6 +79,7 @@ function screenshotDisplayHeight(content: ProductVisualContent, maxWidth: number
  */
 export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const { format, bg, bgImage } = content;
+  const sourceMode = content.sourceMode ?? "screenshot";
 
   const size = FORMAT_SIZES[format];
   const W = size.w;
@@ -84,7 +87,11 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const minH = FORMAT_MIN_HEIGHT[format];
 
   const imageBg = isImageBgFormat(format);
-  const displayedScreenshot = screenshotForFormat(content);
+  const displayedScreenshot = sourceMode === "screenshot" ? screenshotForFormat(content) : undefined;
+  const displayedConcept =
+    sourceMode === "concept"
+      ? (content.concept ?? buildProductVisualConcept(content.title))
+      : undefined;
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
@@ -104,7 +111,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const padX = fillMode ? 12 : paddingFor(format);
   const padY = fillMode ? 12 : verticalPaddingFor(format, padX);
   const innerW = W - padX * 2;
-  const screenshotH = screenshotDisplayHeight(content, innerW);
+  const screenshotH = sourceMode === "screenshot" ? screenshotDisplayHeight(content, innerW) : null;
   const imageDrivenH =
     (format === "feature-mobile" || format === "blog") && screenshotH
       ? screenshotH + padY * 2
@@ -150,11 +157,19 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
           boxSizing: "border-box",
         }}
       >
-        <ScreenshotDisplay
-          screenshot={displayedScreenshot}
-          maxWidth={innerW}
-          maxHeight={contentH}
-        />
+        {sourceMode === "concept" ? (
+          <ConceptUIDisplay
+            concept={displayedConcept}
+            maxWidth={innerW}
+            maxHeight={contentH}
+          />
+        ) : (
+          <ScreenshotDisplay
+            screenshot={displayedScreenshot}
+            maxWidth={innerW}
+            maxHeight={contentH}
+          />
+        )}
       </div>
     </div>
   );

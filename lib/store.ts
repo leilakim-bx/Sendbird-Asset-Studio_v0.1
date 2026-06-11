@@ -519,6 +519,8 @@ export const useEditorStore = create<EditorState>()(
             ? {
                 productVisualContent: {
                   ...FORMAT_DEFAULTS[format],
+                  sourceMode: s.productVisualContent.sourceMode,
+                  concept:    s.productVisualContent.concept,
                   // preserve the uploaded screenshot across format switches
                   screenshot:
                     s.productVisualContent.screenshot && isImageBgFormat(format)

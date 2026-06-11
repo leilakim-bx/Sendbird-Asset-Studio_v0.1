@@ -23,6 +23,8 @@ export type ProductVisualBg =
   | "warmgray"
   | "dark";
 
+export type ProductVisualSourceMode = "screenshot" | "concept";
+
 export type ProductVisualScreenshot = {
   /** Uploaded screenshot URL (R2 in production, local public file in dev). */
   url: string;
@@ -42,16 +44,54 @@ export type ProductVisualScreenshot = {
   naturalHeight?: number;
 };
 
+export type ProductVisualConceptKind =
+  | "deployment"
+  | "conversation"
+  | "evaluation"
+  | "analytics"
+  | "settings"
+  | "workspace";
+
+export type ProductVisualTone = "neutral" | "good" | "warn" | "accent";
+
+export type ProductVisualConcept = {
+  /** Marketer's source description. Kept so it can be edited and regenerated. */
+  prompt: string;
+  kind: ProductVisualConceptKind;
+  title: string;
+  subtitle: string;
+  badge: string;
+  primaryLabel: string;
+  primaryValue: string;
+  metrics: {
+    label: string;
+    value: string;
+    delta?: string;
+    tone?: ProductVisualTone;
+  }[];
+  chips: {
+    label: string;
+    tone?: ProductVisualTone;
+  }[];
+  rows: {
+    label: string;
+    value: string;
+    tone?: ProductVisualTone;
+  }[];
+};
+
 export type ProductVisualContent = {
   format: ProductVisualFormat;
   layout: ProductVisualLayout;
   bg: ProductVisualBg;
+  sourceMode?: ProductVisualSourceMode;
   /** Background image URL — only for image-bg formats (Product Feature). Stored
    *  as the resolved URL (built-in `/background/*` path or a custom data URL) so
    *  the canvas renders it as a plain `<img>` with no store lookup. Ignored by
    *  swatch/fixed-bg formats. */
   bgImage?: string;
   screenshot?: ProductVisualScreenshot;
+  concept?: ProductVisualConcept;
   title: string;
   subtitle?: string;
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Sparkles } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -12,6 +12,7 @@ import {
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
+import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
 import { uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
@@ -25,6 +26,9 @@ const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
 const DEFAULT_PANEL_W = 320;
 const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
+const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
+const CONCEPT_UI_HELPER =
+  "Describe what the feature does, what context it uses, and what result it shows.";
 
 function IconTooltip({ label }: { label: string }) {
   return (
@@ -99,6 +103,35 @@ export function ProductVisualSidebar() {
     setProductVisualContent({ ...content, ...patch });
   }
 
+  function switchSourceMode(sourceMode: "screenshot" | "concept") {
+    if (!content) return;
+    if (sourceMode === "concept") {
+      const prompt = content.concept?.prompt || content.title || "A/B test production traffic between agent versions";
+      update({
+        sourceMode,
+        concept: content.concept ?? buildProductVisualConcept(prompt),
+      });
+      return;
+    }
+    update({ sourceMode });
+  }
+
+  function updateConceptPrompt(prompt: string) {
+    const currentConcept = content!.concept ?? buildProductVisualConcept(prompt);
+    update({
+      sourceMode: "concept",
+      concept: { ...currentConcept, prompt },
+    });
+  }
+
+  function regenerateConcept() {
+    const prompt = content!.concept?.prompt || content!.title || "A/B test production traffic between agent versions";
+    update({
+      sourceMode: "concept",
+      concept: buildProductVisualConcept(prompt),
+    });
+  }
+
   async function handleFile(file: File | undefined) {
     if (!file || uploading) return;
     setUploadError(null);
@@ -114,6 +147,7 @@ export function ProductVisualSidebar() {
       // New/replaced image → fresh screenshot (crop reset; natural dims captured).
       setProductVisualContent({
         ...latest,
+        sourceMode: "screenshot",
         screenshot: {
           url: res.url,
           displayMode: "crop",
@@ -131,6 +165,8 @@ export function ProductVisualSidebar() {
   // or layout chrome on any format — just background + screenshot.
   const imageBg = isImageBgFormat(content.format);
   const cropOnly = imageBg;
+  const sourceMode = content.sourceMode ?? "screenshot";
+  const conceptPrompt = content.concept?.prompt ?? "";
   const displayModes = cropOnly ? DISPLAY_MODES.filter((m) => m.id === "crop") : DISPLAY_MODES;
   // Solid-color swatches: hidden for image-bg formats and for formats whose
   // background is locked to a fixed hex (canvas ignores `bg` there).
@@ -269,7 +305,35 @@ export function ProductVisualSidebar() {
           </Section>
         )}
 
+        <Section title="Source">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            {([
+              { id: "screenshot", label: "Screenshot" },
+              { id: "concept", label: "Concept UI" },
+            ] as const).map((item) => {
+              const active = sourceMode === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => switchSourceMode(item.id)}
+                  aria-pressed={active}
+                  className={[
+                    "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
+                    active
+                      ? "bg-studio-hover text-studio-text"
+                      : "text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+
         {/* SCREENSHOT */}
+        {sourceMode === "screenshot" && (
         <Section title="Screenshot">
           <input
             ref={fileInputRef}
@@ -358,8 +422,38 @@ export function ProductVisualSidebar() {
             </div>
           )}
         </Section>
+        )}
 
-        {content.screenshot?.url && (
+        {sourceMode === "concept" && (
+          <Section title="Concept UI">
+            <textarea
+              value={conceptPrompt}
+              onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
+              placeholder={CONCEPT_UI_PLACEHOLDER}
+              rows={5}
+              className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+            />
+            <p className="mt-1.5 text-[11px] leading-snug text-studio-muted">{CONCEPT_UI_HELPER}</p>
+            <button
+              type="button"
+              onClick={regenerateConcept}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg hover:opacity-90 transition-opacity"
+            >
+              <Sparkles size={13} />
+              Generate UI
+            </button>
+            {content.concept && (
+              <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-studio-muted">
+                <span className="truncate">{content.concept.title}</span>
+                <span className="shrink-0 rounded-full border border-studio-border px-2 py-0.5 uppercase tracking-wide">
+                  {content.concept.kind}
+                </span>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {sourceMode === "screenshot" && content.screenshot?.url && (
           <Section title="Settings">
             {!content.screenshot.crop && (
               <p className="mb-2 text-[11px] text-studio-muted leading-snug">
@@ -409,7 +503,7 @@ export function ProductVisualSidebar() {
         />
       )}
 
-      {cropOpen && content.screenshot?.url && (
+      {sourceMode === "screenshot" && cropOpen && content.screenshot?.url && (
         <CropSelector
           imageUrl={content.screenshot.url}
           crop={content.screenshot.crop}
