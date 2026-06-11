@@ -55,16 +55,20 @@ const GUIDE_SECTIONS: GuideSection[] = [
     icon: BookOpen,
     steps: [
       {
-        title: "What is Asset Studio?",
-        desc: "A no-code tool for creating on-brand product marketing visuals. Pick a template, edit the content, and export a clean PNG — no design file needed.",
+        title: "Choose the right template",
+        desc: "Use Chat UI for conversation mockups, Infographic for article or data visuals, and Product Visual when you already have a product screenshot to polish.",
       },
       {
-        title: "What can I customize?",
-        desc: "App name, background image, layout (Split / Center), and the full chat conversation — messages, product cards, and action buttons.",
+        title: "Start with source material",
+        desc: "Begin from a scenario, a full article, or an uploaded dashboard screenshot. The editor gives you a clean first draft, then you only adjust the details.",
       },
       {
-        title: "Who do I contact?",
-        desc: "For new background images or template requests, reach out to the design team on Slack.",
+        title: "Polish in the right sidebar",
+        desc: "Most edits live in the right panel: format, background, layout, title, text, blocks, and image selection. Advanced controls are optional.",
+      },
+      {
+        title: "Save or export",
+        desc: "Save keeps the asset in Recent Assets. Export downloads a clean PNG, usually at @2x for website-ready output.",
       },
     ],
   },
@@ -74,20 +78,20 @@ const GUIDE_SECTIONS: GuideSection[] = [
     icon: MessageSquare,
     steps: [
       {
-        title: "Pick or generate a scenario",
-        desc: "In the right panel, choose a preset (Hotel concierge, Order tracking, Agent handoff) or describe your own in the AI Generate box and press Enter.",
+        title: "Pick a scenario",
+        desc: "Start from a scenario card, open the full scenario library with +, or write a short prompt in Create with AI to generate a draft conversation.",
       },
       {
-        title: "Edit the messages",
-        desc: "Click any message to edit the text. Use the icons to toggle between User and delight.ai. Add product cards or action buttons at the bottom of the panel.",
+        title: "Edit the conversation",
+        desc: "Use Messages to revise each bubble. Add text, activity logs, product cards, action buttons, checklists, status chips, or itinerary blocks when needed.",
       },
       {
-        title: "Choose a background & layout",
-        desc: "Select a background from the grid or open the picker with the + button. Switch between Split and Center layout to see what fits best.",
+        title: "Set the scene",
+        desc: "Choose one of the six visible backgrounds or open the background library with +. Use Split for people photos and Center for simple scenery.",
       },
       {
-        title: "Save or export",
-        desc: "Hit Save to add it to your library, or Export PNG to download. Desktop (4:3) and Mobile (4:5) are both available.",
+        title: "Finish the frame",
+        desc: "Adjust the user profile, app name, and export size. Export Desktop or Mobile from the top export menu, or Save to keep it in Recent Assets.",
       },
     ],
   },
@@ -95,15 +99,55 @@ const GUIDE_SECTIONS: GuideSection[] = [
     id: "infographic",
     label: "Infographic",
     icon: BarChart3,
-    soon: true,
-    comingSoon: true,
+    steps: [
+      {
+        title: "Choose a format first",
+        desc: "Use Product feature for product, capabilities, and industry pages. Use Blog/Perspective for article images with a 664px-wide flexible height.",
+      },
+      {
+        title: "Create from article",
+        desc: "Paste the full article and click Suggest images. Asset Studio will suggest 2-5 infographic images from the article content.",
+      },
+      {
+        title: "Review each suggested image",
+        desc: "Open Article images, click an image to edit it, and use the checkbox to decide which images should be exported.",
+      },
+      {
+        title: "Keep advanced edits optional",
+        desc: "Use Advanced settings only when you need to change presets, colors, backgrounds, chart variants, or detailed block values.",
+      },
+      {
+        title: "Export the set",
+        desc: "Export the current image, selected images, or all article images from the top export menu. Exports are PNG files at @2x.",
+      },
+    ],
   },
   {
     id: "product-visual",
     label: "Product Visual",
     icon: LayoutDashboard,
-    soon: true,
-    comingSoon: true,
+    steps: [
+      {
+        title: "Pick where the image will be used",
+        desc: "Choose Product Feature, Product Release, or Blog from Format. Release thumbnail is fixed at 667×316; insert, blog, and mobile formats use flexible height.",
+      },
+      {
+        title: "Upload the real product screenshot",
+        desc: "Drag in a PNG, JPG, or WebP screenshot. Product Visual is best when you start from the actual dashboard or feature UI.",
+      },
+      {
+        title: "Select the important area",
+        desc: "Use Select area to crop into the key feature or highlight it while dimming the rest of the screenshot.",
+      },
+      {
+        title: "Polish the frame",
+        desc: "Choose a background, layout, title, and subtitle. Keep copy short so the screenshot remains the main focus.",
+      },
+      {
+        title: "Save or export",
+        desc: "Save stores the composition in Recent Assets. Export PNG downloads the finished visual at the correct format size.",
+      },
+    ],
   },
 ];
 
