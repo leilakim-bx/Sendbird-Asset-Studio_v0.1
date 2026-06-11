@@ -701,18 +701,18 @@ export function InfographicSidebar({
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <span className="group relative inline-flex">
             <button
               type="button"
               onClick={handleUseTemplate}
               disabled={sourceLoading}
               aria-label="Use template"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#2E2E2E] text-studio-text transition-colors hover:bg-[#3A3A3A] focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#2E2E2E] text-studio-text transition-colors hover:bg-[#3A3A3A] focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <WandSparkles size={16} />
+              <WandSparkles size={14} />
             </button>
-            <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 whitespace-nowrap rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[11px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+            <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[11px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
               Use template
             </span>
           </span>
