@@ -38,6 +38,31 @@
   font-display: swap;
 }
 
+/* ── Helvetica Now Text — brand body/UI font ──
+   Only 3 weights ship (Regular/Medium/Bold). Semibold (600) maps to Medium so
+   600-weight text gets the brand face instead of a synthesized bold. */
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowText.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowTextMedium.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowTextBold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ============================================================
    Sendbird Design System — CSS Variables
    ============================================================
