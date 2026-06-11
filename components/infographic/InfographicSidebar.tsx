@@ -16,6 +16,7 @@ import {
   Info,
   CircleAlert,
   ChevronDown,
+  WandSparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
@@ -701,14 +702,20 @@ export function InfographicSidebar({
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
         <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={handleUseTemplate}
-            disabled={sourceLoading}
-            className="text-[11px] font-medium text-studio-muted hover:text-studio-text transition-colors disabled:opacity-40"
-          >
-            Use template
-          </button>
+          <span className="group relative inline-flex">
+            <button
+              type="button"
+              onClick={handleUseTemplate}
+              disabled={sourceLoading}
+              aria-label="Use template"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#2E2E2E] text-studio-text transition-colors hover:bg-[#3A3A3A] focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <WandSparkles size={16} />
+            </button>
+            <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 whitespace-nowrap rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[11px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+              Use template
+            </span>
+          </span>
           <AiMagicButton
             label="Generate images from source"
             loading={sourceLoading}
