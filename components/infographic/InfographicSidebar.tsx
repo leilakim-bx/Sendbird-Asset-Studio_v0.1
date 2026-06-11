@@ -7,7 +7,8 @@ import {
   Info,
   CircleAlert,
   ChevronDown,
-  WandSparkles,
+  Image as ImageIcon,
+  Sparkle,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -837,13 +838,16 @@ export function InfographicSidebar({
               type="button"
               onClick={handleUseTemplate}
               disabled={sourceLoading}
-              aria-label="Use template"
+              aria-label="Image note"
               className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#2E2E2E] text-studio-text transition-colors hover:bg-[#3A3A3A] focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <WandSparkles size={14} />
+              <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                <ImageIcon size={16} strokeWidth={2.4} />
+                <Sparkle size={7} strokeWidth={2.6} className="absolute -right-1 -top-1 fill-current" />
+              </span>
             </button>
             <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[11px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-              Use template
+              Image note
             </span>
           </span>
           <AiMagicButton
