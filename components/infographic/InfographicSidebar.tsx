@@ -7,9 +7,6 @@ import {
   Info,
   CircleAlert,
   ChevronDown,
-  Image as ImageIcon,
-  Loader2,
-  Sparkle,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import {
@@ -22,6 +19,7 @@ import {
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
 
@@ -824,39 +822,21 @@ export function InfographicSidebar({
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
         />
-        <div className="mt-6 flex items-center gap-2">
+        <div className="mt-6 flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={handleSuggestImages}
+            onClick={handleUseTemplate}
             disabled={sourceLoading}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-[10px] bg-studio-accent px-3 text-sm font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-[11px] font-medium text-studio-muted transition-colors hover:text-studio-text disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {sourceLoading ? (
-              <>
-                <Loader2 size={13} className="mr-1.5 animate-spin" />
-                Creating
-              </>
-            ) : (
-              "Create"
-            )}
+            Add image notes
           </button>
-          <span className="group relative inline-flex">
-            <button
-              type="button"
-              onClick={handleUseTemplate}
-              disabled={sourceLoading}
-              aria-label="Image note"
-              className="inline-flex h-12 w-12 items-center justify-center rounded-[10px] border border-white/80 bg-white text-[#18140F] shadow-sm transition-colors hover:bg-[#F7F5F0] focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span className="relative inline-flex h-4 w-4 items-center justify-center">
-                <ImageIcon size={16} strokeWidth={2.3} />
-                <Sparkle size={7} strokeWidth={2.5} className="absolute -right-1 -top-1 fill-current" />
-              </span>
-            </button>
-            <span className="pointer-events-none absolute bottom-full right-0 z-50 mb-1.5 whitespace-nowrap rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[11px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-              Image note
-            </span>
-          </span>
+          <AiMagicButton
+            label="Generate images from source"
+            loading={sourceLoading}
+            disabled={sourceLoading}
+            onClick={handleSuggestImages}
+          />
         </div>
         {articleNotice && <p className="mt-2 text-[10px] text-studio-muted leading-snug">{articleNotice}</p>}
       </div>
