@@ -47,6 +47,11 @@ export type ProductVisualContent = {
   format: ProductVisualFormat;
   layout: ProductVisualLayout;
   bg: ProductVisualBg;
+  /** Background image URL — only for image-bg formats (Product Feature). Stored
+   *  as the resolved URL (built-in `/background/*` path or a custom data URL) so
+   *  the canvas renders it as a plain `<img>` with no store lookup. Ignored by
+   *  swatch/fixed-bg formats. */
+  bgImage?: string;
   screenshot?: ProductVisualScreenshot;
   title: string;
   subtitle?: string;
@@ -89,6 +94,23 @@ export const PRODUCT_VISUAL_BG_HEX: Record<ProductVisualBg, string> = {
   dark:     "#1C1917",
 };
 
+/** Formats with a single fixed (non-selectable) background. The canvas renders
+ *  this hex regardless of `bg`, and the sidebar hides the Background picker. */
+export const FORMAT_FIXED_BG: Partial<Record<ProductVisualFormat, string>> = {
+  "release-thumbnail": "#E5E3DF",
+  "release-insert":    "#F7F5F0",
+};
+
+/** Formats that use a full-bleed background IMAGE (same library as the Chat
+ *  editor) instead of a solid color. These show only the screenshot on the
+ *  photo — no title/subtitle/layout chrome. */
+export const FORMAT_IMAGE_BG: ProductVisualFormat[] = ["feature-desktop", "feature-mobile"];
+export const isImageBgFormat = (f: ProductVisualFormat): boolean =>
+  FORMAT_IMAGE_BG.includes(f);
+
+/** Seed background image for image-bg formats (mirrors the Chat default). */
+export const PRODUCT_VISUAL_DEFAULT_BG_IMAGE = "/background/bg-200.png";
+
 // Fonts — same brand stacks the rest of the studio uses (mirrors infographic;
 // declared locally to keep Product Visual decoupled from infographic types).
 /** Serif display stack (brand "Serrif") — titles. */
@@ -108,6 +130,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     format: "feature-desktop",
     layout: "center",
     bg: "warmgray",
+    bgImage: PRODUCT_VISUAL_DEFAULT_BG_IMAGE,
     title: "Now you can manage agent versions in one place",
     subtitle: "Compare versions, roll back instantly, and ship with confidence.",
   },
@@ -115,6 +138,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     format: "feature-mobile",
     layout: "text-top-fill",
     bg: "white",
+    bgImage: PRODUCT_VISUAL_DEFAULT_BG_IMAGE,
     title: "Built for marketers, ready in minutes",
     subtitle: "Create polished assets on the go.",
   },

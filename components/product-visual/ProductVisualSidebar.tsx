@@ -1,19 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Crop } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Crop, Plus } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
-  FORMAT_LAYOUTS,
   PRODUCT_VISUAL_BG_HEX,
+  FORMAT_FIXED_BG,
+  isImageBgFormat,
   type ProductVisualFormat,
-  type ProductVisualLayout,
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
+import { BACKGROUNDS } from "@/lib/backgrounds";
 import { readImageAsDataUrl, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
+import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
 
 const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "crop", label: "Crop" },
@@ -45,12 +47,6 @@ const FORMAT_GROUPS: { group: string; items: { id: ProductVisualFormat; label: s
 
 const FORMAT_FLAT = FORMAT_GROUPS.flatMap((g) => g.items);
 
-const LAYOUT_LABELS: Record<ProductVisualLayout, string> = {
-  "center": "Center",
-  "side-by-side": "Side by side",
-  "text-top-fill": "Text top",
-};
-
 const BG_OPTIONS: { id: ProductVisualBg; name: string }[] = [
   { id: "white", name: "White" },
   { id: "sky", name: "Sky" },
@@ -59,21 +55,20 @@ const BG_OPTIONS: { id: ProductVisualBg; name: string }[] = [
   { id: "dark", name: "Dark" },
 ];
 
-// Same field style as the chat / infographic sidebars.
-const inputCls =
-  "w-full bg-studio-sidebar border border-studio-border rounded-md px-2.5 py-1.5 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent transition-colors";
-
 export function ProductVisualSidebar() {
   const {
     productVisualContent: content,
     setProductVisualContent,
     setProductVisualFormat,
+    customBackgrounds,
+    addCustomBackground,
   } = useEditorStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
+  const [bgModalOpen, setBgModalOpen] = useState(false);
 
   if (!content) return null;
 
@@ -101,8 +96,15 @@ export function ProductVisualSidebar() {
     });
   }
 
-  const layouts = FORMAT_LAYOUTS[content.format];
-  const showLayout = layouts.length > 1;
+  // Product Feature formats use a full-bleed background image (same library as
+  // the Chat editor); other formats use a solid/fixed color. No title/subtitle
+  // or layout chrome on any format — just background + screenshot.
+  const imageBg = isImageBgFormat(content.format);
+  // Solid-color swatches: hidden for image-bg formats and for formats whose
+  // background is locked to a fixed hex (canvas ignores `bg` there).
+  const showSolidBg = !imageBg && !FORMAT_FIXED_BG[content.format];
+  const bgList = [...BACKGROUNDS, ...customBackgrounds];
+  const selectedBgId = bgList.find((b) => b.url === content.bgImage)?.id ?? "";
   const current = FORMAT_FLAT.find((f) => f.id === content.format);
 
   return (
@@ -151,49 +153,64 @@ export function ProductVisualSidebar() {
           </Menu.Root>
         </Section>
 
-        {/* LAYOUT — only when the format allows more than one */}
-        {showLayout && (
-          <Section title="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-              {layouts.map((l) => (
+        {/* BACKGROUND — image picker for Product Feature (same library as Chat),
+            solid swatches for other formats, hidden when the bg is fixed. */}
+        {imageBg && (
+          <Section
+            title="Background"
+            action={
+              <button
+                onClick={() => setBgModalOpen(true)}
+                title="Background Library"
+                aria-label="Background Library"
+                className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+              >
+                <Plus size={15} />
+              </button>
+            }
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {bgList.slice(0, 6).map((bg) => (
                 <button
-                  key={l}
-                  onClick={() => update({ layout: l })}
-                  aria-pressed={content.layout === l}
+                  key={bg.id}
+                  onClick={() => update({ bgImage: bg.url })}
+                  title={bg.label}
                   className={[
-                    "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap",
-                    content.layout === l
-                      ? "bg-studio-hover text-studio-text"
-                      : "text-studio-muted hover:text-studio-text",
+                    "relative rounded-lg overflow-hidden aspect-video border-2 transition-colors",
+                    content.bgImage === bg.url
+                      ? "border-studio-accent"
+                      : "border-transparent hover:border-studio-muted",
                   ].join(" ")}
                 >
-                  {LAYOUT_LABELS[l]}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
           </Section>
         )}
 
-        {/* BACKGROUND */}
-        <Section title="Background">
-          <div className="flex gap-1.5 flex-wrap">
-            {BG_OPTIONS.map((bg) => (
-              <button
-                key={bg.id}
-                onClick={() => update({ bg: bg.id })}
-                title={bg.name}
-                className={[
-                  "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
-                  content.bg === bg.id ? "border-studio-accent" : "border-studio-border",
-                ].join(" ")}
-                style={{
-                  background: PRODUCT_VISUAL_BG_HEX[bg.id],
-                  boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined,
-                }}
-              />
-            ))}
-          </div>
-        </Section>
+        {showSolidBg && (
+          <Section title="Background">
+            <div className="flex gap-1.5 flex-wrap">
+              {BG_OPTIONS.map((bg) => (
+                <button
+                  key={bg.id}
+                  onClick={() => update({ bg: bg.id })}
+                  title={bg.name}
+                  className={[
+                    "w-8 h-8 rounded-md border-2 transition-transform hover:scale-110",
+                    content.bg === bg.id ? "border-studio-accent" : "border-studio-border",
+                  ].join(" ")}
+                  style={{
+                    background: PRODUCT_VISUAL_BG_HEX[bg.id],
+                    boxShadow: content.bg === bg.id ? "0 0 0 1px var(--studio-sidebar)" : undefined,
+                  }}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
 
         {/* SCREENSHOT */}
         <Section title="Screenshot">
@@ -295,28 +312,17 @@ export function ProductVisualSidebar() {
           )}
         </Section>
 
-        {/* TITLE & SUBTITLE */}
-        <Section title="Title & subtitle">
-          <div className="mb-2.5">
-            <label className="block text-[10px] text-studio-muted mb-1">Title</label>
-            <input
-              className={inputCls}
-              value={content.title}
-              onChange={(e) => update({ title: e.target.value })}
-              placeholder="Add a headline"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] text-studio-muted mb-1">Subtitle</label>
-            <textarea
-              className={inputCls + " resize-none min-h-12"}
-              value={content.subtitle ?? ""}
-              onChange={(e) => update({ subtitle: e.target.value })}
-              placeholder="Optional supporting line"
-            />
-          </div>
-        </Section>
       </div>
+
+      {bgModalOpen && (
+        <BackgroundPickerModal
+          currentId={selectedBgId}
+          customBackgrounds={customBackgrounds}
+          onSelect={(bg) => update({ bgImage: bg.url })}
+          onUpload={(bg) => { addCustomBackground(bg); update({ bgImage: bg.url }); }}
+          onClose={() => setBgModalOpen(false)}
+        />
+      )}
 
       {cropOpen && content.screenshot?.url && (
         <CropSelector

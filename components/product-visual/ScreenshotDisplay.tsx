@@ -1,19 +1,13 @@
-import type { CSSProperties } from "react";
-import { ImageUp } from "lucide-react";
 import type { ProductVisualScreenshot } from "@/lib/types/product-visual";
-import { PRODUCT_VISUAL_SANS } from "@/lib/types/product-visual";
 
 type Props = {
   screenshot: ProductVisualScreenshot | undefined;
   maxWidth: number;
   maxHeight: number;
-  /** Dark canvas background → lighten the empty-state placeholder. */
-  dark?: boolean;
-  /** Export/thumbnail: suppress the dashed upload placeholder (clean output). */
-  exportMode?: boolean;
 };
 
-const RADIUS = 12;
+const RADIUS = 8;             // screenshot (dashboard) corner radius
+const HIGHLIGHT_RADIUS = 6;   // lime highlight rect — slightly rounded
 const SHADOW = "0 4px 24px rgba(0,0,0,0.08)";
 
 /** Fit an aspect ratio (w/h) into a box with object-fit: contain semantics. */
@@ -37,34 +31,10 @@ function fitContain(aspect: number, maxW: number, maxH: number): { w: number; h:
  * All masking is plain CSS (overflow / positioned divs) — no clip-path or SVG
  * mask — so html-to-image's foreignObject clone reproduces it faithfully.
  */
-export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, dark, exportMode }: Props) {
-  if (!screenshot?.url) {
-    if (exportMode) return null; // clean text-only export, no dashed box
-    const fg = dark ? "rgba(255,255,255,0.55)" : "rgba(28,25,23,0.40)";
-    const border = dark ? "rgba(255,255,255,0.25)" : "rgba(28,25,23,0.20)";
-    const placeholderStyle: CSSProperties = {
-      width: maxWidth,
-      height: maxHeight,
-      maxWidth: "100%",
-      borderRadius: RADIUS,
-      border: `2px dashed ${border}`,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      color: fg,
-      fontFamily: PRODUCT_VISUAL_SANS,
-      fontSize: 13,
-      fontWeight: 500,
-    };
-    return (
-      <div style={placeholderStyle}>
-        <ImageUp size={26} strokeWidth={1.75} />
-        <span>Upload screenshot</span>
-      </div>
-    );
-  }
+export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
+  // No screenshot → render nothing, leaving a clean background-only preview.
+  // (The upload affordance lives in the sidebar.)
+  if (!screenshot?.url) return null;
 
   const { url, crop, displayMode, naturalWidth, naturalHeight } = screenshot;
   const hasCrop =
@@ -138,7 +108,6 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, dark, expor
   // ── Highlight mode: full image, region outside dimmed ─────
   const imgAspect = natW / natH;
   const box = fitContain(imgAspect, maxWidth, maxHeight);
-  const dim = "rgba(0,0,0,0.4)";
   const pct = (v: number) => `${v * 100}%`;
   return (
     <div
@@ -153,16 +122,11 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, dark, expor
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={url} alt="Product screenshot" style={{ width: box.w, height: box.h, display: "block" }} />
-      {/* Dim everything outside the crop rect (4 plain divs) */}
-      {[
-        { left: 0, top: 0, width: "100%", height: pct(c.y) },
-        { left: 0, top: pct(c.y + c.height), width: "100%", height: pct(1 - c.y - c.height) },
-        { left: 0, top: pct(c.y), width: pct(c.x), height: pct(c.height) },
-        { left: pct(c.x + c.width), top: pct(c.y), width: pct(1 - c.x - c.width), height: pct(c.height) },
-      ].map((s, i) => (
-        <div key={i} style={{ position: "absolute", background: dim, ...s }} />
-      ))}
-      {/* Subtle highlight outline */}
+      {/* Spotlight: a rounded rect over the crop region whose oversized
+          box-shadow dims everything outside it. The shadow follows the
+          border-radius, so the highlighted area has real rounded corners.
+          Plain CSS paint (no clip-path / SVG mask) — reproduced faithfully by
+          the html-to-image clone, clipped by the parent's overflow:hidden. */}
       <div
         style={{
           position: "absolute",
@@ -170,7 +134,9 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, dark, expor
           top: pct(c.y),
           width: pct(c.width),
           height: pct(c.height),
+          borderRadius: HIGHLIGHT_RADIUS,
           border: "1px solid rgba(203,255,77,0.8)",
+          boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)",
           boxSizing: "border-box",
         }}
       />
