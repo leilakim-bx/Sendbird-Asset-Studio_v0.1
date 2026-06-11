@@ -209,7 +209,9 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     replaceExportDownloads([]);
     const downloads: ExportedImage[] = [];
     try {
-      downloads.push(await exportOne(fmt));
+      const download = await exportOne(fmt);
+      if (!download) return;
+      downloads.push(download);
       replaceExportDownloads(downloads);
     } catch (err) {
       downloads.forEach((download) => download.revoke());
@@ -246,7 +248,9 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     const downloads: ExportedImage[] = [];
     try {
       for (const candidate of selected) {
-        downloads.push(await exportArticleCandidate(candidate));
+        const download = await exportArticleCandidate(candidate);
+        if (!download) return;
+        downloads.push(download);
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       replaceExportDownloads(downloads);
@@ -271,7 +275,9 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     const downloads: ExportedImage[] = [];
     try {
       for (const candidate of articleImages) {
-        downloads.push(await exportArticleCandidate(candidate));
+        const download = await exportArticleCandidate(candidate);
+        if (!download) return;
+        downloads.push(download);
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       replaceExportDownloads(downloads);
@@ -498,18 +504,24 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
             {saveError && <p className="text-red-400 text-xs">{saveError}</p>}
             {!exportError && exportDownloads.length > 0 && (
               <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-studio-muted">
-                <span>Download ready:</span>
-                {exportDownloads.map((download) => (
-                  <a
-                    key={download.href}
-                    href={download.href}
-                    download={download.filename}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-studio-accent underline underline-offset-2"
-                  >
-                    {download.filename}
-                  </a>
+                <span>{exportDownloads.some((download) => download.method === "download") ? "Download ready:" : "Saved:"}</span>
+                {exportDownloads.map((download, index) => (
+                  download.href ? (
+                    <a
+                      key={download.href}
+                      href={download.href}
+                      download={download.filename}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-studio-accent underline underline-offset-2"
+                    >
+                      {download.filename}
+                    </a>
+                  ) : (
+                    <span key={`${download.filename}-${index}`} className="text-studio-text">
+                      {download.filename}
+                    </span>
+                  )
                 ))}
               </div>
             )}

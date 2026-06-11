@@ -8,8 +8,29 @@ const SHARED_OPTIONS = {
 
 export type ExportedImage = {
   filename: string;
-  href: string;
+  href: string | null;
+  method: "download" | "save-picker";
   revoke: () => void;
+};
+
+type SaveFileWritable = {
+  write: (data: Blob) => Promise<void>;
+  close: () => Promise<void>;
+  abort?: () => Promise<void>;
+};
+
+type SaveFileHandle = {
+  createWritable: () => Promise<SaveFileWritable>;
+};
+
+type SavePickerWindow = Window & {
+  showSaveFilePicker?: (options: {
+    suggestedName: string;
+    types: Array<{
+      description: string;
+      accept: Record<string, string[]>;
+    }>;
+  }) => Promise<SaveFileHandle>;
 };
 
 /**
@@ -71,13 +92,46 @@ async function captureBlob(
   }
 }
 
-export async function exportImage(
-  element: HTMLElement,
-  width: number,
-  height: number | undefined,
-  filename: string
-): Promise<ExportedImage> {
-  const blob = await captureBlob(element, width, height);
+function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "AbortError";
+}
+
+async function requestSaveFileHandle(filename: string): Promise<SaveFileHandle | null | "cancelled"> {
+  const picker = (window as SavePickerWindow).showSaveFilePicker;
+  if (!picker || !window.isSecureContext) return null;
+
+  try {
+    return await picker({
+      suggestedName: filename,
+      types: [
+        {
+          description: "PNG image",
+          accept: { "image/png": [".png"] },
+        },
+      ],
+    });
+  } catch (err) {
+    if (isAbortError(err)) return "cancelled";
+
+    // If a browser exposes the API but blocks it for policy/user-activation
+    // reasons, keep the export usable via the download fallback.
+    console.warn("Save picker unavailable; falling back to browser download.", err);
+    return null;
+  }
+}
+
+async function writeBlob(handle: SaveFileHandle, blob: Blob) {
+  const writable = await handle.createWritable();
+  try {
+    await writable.write(blob);
+    await writable.close();
+  } catch (err) {
+    await writable.abort?.();
+    throw err;
+  }
+}
+
+function triggerDownload(blob: Blob, filename: string): ExportedImage {
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.download = filename;
@@ -94,8 +148,33 @@ export async function exportImage(
   return {
     filename,
     href: objectUrl,
+    method: "download",
     revoke: () => URL.revokeObjectURL(objectUrl),
   };
+}
+
+export async function exportImage(
+  element: HTMLElement,
+  width: number,
+  height: number | undefined,
+  filename: string
+): Promise<ExportedImage | null> {
+  const saveHandle = await requestSaveFileHandle(filename);
+  if (saveHandle === "cancelled") return null;
+
+  const blob = await captureBlob(element, width, height);
+
+  if (saveHandle) {
+    await writeBlob(saveHandle, blob);
+    return {
+      filename,
+      href: null,
+      method: "save-picker",
+      revoke: () => {},
+    };
+  }
+
+  return triggerDownload(blob, filename);
 }
 
 /**

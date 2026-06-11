@@ -19,7 +19,7 @@ export async function exportProductVisual(
   element: HTMLElement,
   format: ProductVisualFormat,
   ts: number,
-): Promise<ExportedImage> {
+): Promise<ExportedImage | null> {
   const size = FORMAT_SIZES[format];
   const height = typeof size.h === "number" ? size.h : undefined;
   return await exportImage(element, size.w, height, productVisualFilename(format, ts));
