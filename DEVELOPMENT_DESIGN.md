@@ -173,6 +173,7 @@ Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 obje
 - `ProductVisualSidebar`는 포맷, 배경, 스크린샷, crop/highlight, concept mode를 편집한다.
 - 포맷별 크기/레이아웃 제약은 `FORMAT_SIZES`, `FORMAT_LAYOUTS`에 둔다.
 - `concept` 모드는 현재 deterministic UI builder로 제품 UI 느낌의 가상 화면을 만든다.
+- 외부 AI chat으로 만든 Concept UI 답변은 서버 API 없이 클라이언트에서 JSON을 추출/검증한다. Studio SceneSpec과 다른 구조라도 archetype 의도가 명확하면 가장 가까운 지원 layout sample로 변환하고, table cell의 `kind`처럼 누락이 잦은 필드는 column 정보로 보정한다. 의도 자체를 알 수 없는 구조만 에러로 처리한다.
 
 ## 11. 환경 변수
 

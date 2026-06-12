@@ -44,6 +44,23 @@ function elementToSvgDataUrl(
   return svgDataUrl(svg);
 }
 
+function measureRenderedBounds(element: HTMLElement): { width: number; height: number } {
+  const base = element.getBoundingClientRect();
+  let width = Math.max(element.offsetWidth, element.scrollWidth, base.width);
+  let height = Math.max(element.offsetHeight, element.scrollHeight, base.height);
+
+  element.querySelectorAll<HTMLElement>("*").forEach((child) => {
+    const rect = child.getBoundingClientRect();
+    width = Math.max(width, rect.right - base.left);
+    height = Math.max(height, rect.bottom - base.top);
+  });
+
+  return {
+    width: Math.ceil(width),
+    height: Math.ceil(height),
+  };
+}
+
 export async function exportConceptSceneElement(
   element: HTMLElement,
   preset: FramingPreset = "floating-panel",
@@ -51,8 +68,7 @@ export async function exportConceptSceneElement(
   if (preset === "floating-panel") {
     const primaryPanel = element.querySelector<HTMLElement>("[data-concept-primary-panel='true']");
     if (!primaryPanel) throw new Error("Could not find the primary Concept UI panel.");
-    const width = primaryPanel.offsetWidth || primaryPanel.getBoundingClientRect().width;
-    const height = primaryPanel.offsetHeight || primaryPanel.getBoundingClientRect().height;
+    const { width, height } = measureRenderedBounds(primaryPanel);
     const url = elementToSvgDataUrl(primaryPanel, {
       width,
       height,

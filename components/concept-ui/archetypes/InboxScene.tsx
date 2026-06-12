@@ -1,9 +1,9 @@
 "use client";
 
-import { Bot, CheckCircle2, ChevronRight, Clock, Menu, MoreHorizontal, Search, Send } from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, Menu, MoreHorizontal, Search, Send } from "lucide-react";
 import type { InboxSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
-import { AvatarInitials, Card, EllipsisText, Pill, Slot } from "../primitives";
+import { AvatarInitials, Card, DelightMark, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
   spec: InboxSceneSpec;
@@ -35,23 +35,9 @@ export function InboxScene({ spec }: Props) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 15,
-              background: t.color.ink,
-              color: t.color.inverse,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Bot size={25} strokeWidth={2.5} />
-          </div>
+          <DelightMark size={46} />
           <div>
             <EllipsisText style={{ fontSize: 28, fontWeight: 800, color: t.color.text }}>{content.title}</EllipsisText>
-            <EllipsisText style={{ marginTop: 4, fontSize: 15, color: t.color.muted }}>{content.productName}</EllipsisText>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
@@ -183,7 +169,18 @@ export function InboxScene({ spec }: Props) {
                     {isCustomer ? <AvatarInitials name={message.name} size={42} /> : null}
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9, color: t.color.muted }}>
-                        {isAi ? <Bot size={18} color={t.color.ink} /> : null}
+                        {isAi ? (
+                          <span
+                            aria-hidden
+                            style={{
+                              width: 11,
+                              height: 11,
+                              borderRadius: 999,
+                              background: t.color.ink,
+                              flex: "0 0 auto",
+                            }}
+                          />
+                        ) : null}
                         <EllipsisText style={{ fontSize: 15, fontWeight: 800, color: t.color.text }}>
                           {message.name}
                         </EllipsisText>

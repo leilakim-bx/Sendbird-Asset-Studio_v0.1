@@ -216,4 +216,12 @@ fontSize: 13 × fs
 ## Product Visual Concept UI
 
 - Hero crop으로 잘라낸 Concept UI 이미지는 외곽 corner radius를 유지한다.
-- Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 radius만 사용한다.
+- Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 compact radius만 사용한다.
+- Floating panel export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
+- Concept UI dashboard는 상단 header와 하단 body에 같은 compact radius를 적용해 모서리가 square로 보이지 않게 한다.
+- Concept UI primary scene header는 로고와 title만 표시하고 productName/subtitle은 숨긴다.
+- Concept UI primary scene header의 좌상단 브랜드 자리는 항상 delight mark를 사용하고 archetype별 로보트/테이블/워크플로우 아이콘으로 대체하지 않는다.
+- Concept UI inbox의 AI agent 메시지 라벨 앞에는 로보트 아이콘을 쓰지 않고 작은 검은 원 표시를 사용한다.
+- Concept UI table은 AI가 넓은 column width를 반환해도 primary panel 안에 맞도록 column 폭을 비례 축소해 오른쪽 컬럼이 잘리지 않게 한다.
+- Concept UI table의 highlighted row는 배경색만 바꾸고 row 자체에 radius를 주지 않는다.
+- Concept UI table typography는 dashboard보다 가볍게 유지한다. Title/primary cell은 700 이하, header/filter/person/date label은 600 중심으로 둔다.

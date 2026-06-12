@@ -1,9 +1,9 @@
 "use client";
 
-import { Bot, CheckCircle2, GitBranch, PlayCircle, Settings2, Zap } from "lucide-react";
+import { Bot, CheckCircle2, GitBranch, PlayCircle, Zap } from "lucide-react";
 import type { BuilderSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
-import { Card, EllipsisText, Pill, Slot } from "../primitives";
+import { Card, DelightMark, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
   spec: BuilderSceneSpec;
@@ -70,26 +70,10 @@ export function BuilderScene({ spec }: Props) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 15,
-              background: t.color.ink,
-              color: t.color.inverse,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Settings2 size={24} strokeWidth={2.5} />
-          </div>
+          <DelightMark size={46} />
           <div>
             <EllipsisText style={{ fontSize: 29, fontWeight: 800, color: t.color.text }}>
               {content.title}
-            </EllipsisText>
-            <EllipsisText style={{ marginTop: 4, fontSize: 15, color: t.color.muted }}>
-              {content.productName}
             </EllipsisText>
           </div>
         </div>

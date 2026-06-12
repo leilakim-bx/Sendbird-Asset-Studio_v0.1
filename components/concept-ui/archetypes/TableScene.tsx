@@ -1,14 +1,21 @@
 "use client";
 
-import { Bot, CheckSquare2, Database, Search, SlidersHorizontal, Square } from "lucide-react";
+import { Bot, CheckSquare2, Search, SlidersHorizontal, Square } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { TableSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
-import { AvatarInitials, Card, EllipsisText, Pill, Slot } from "../primitives";
+import { AvatarInitials, Card, DelightMark, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
   spec: TableSceneSpec;
 };
+
+const PANEL_W = 1370;
+const BODY_PAD_X = 30;
+const TABLE_PAD_X = 24;
+const TABLE_GRID_GAP = 18;
+const BULK_SELECT_W = 48;
+const MIN_COLUMN_W = 90;
 
 function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][number]) {
   if (cell.kind === "person") {
@@ -16,7 +23,7 @@ function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][num
       <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
         <AvatarInitials name={cell.name} size={34} />
         <div style={{ minWidth: 0 }}>
-          <EllipsisText style={{ fontSize: 15, fontWeight: 800, color: t.color.text }}>
+          <EllipsisText style={{ fontSize: 15, fontWeight: 600, color: t.color.text }}>
             {cell.name}
           </EllipsisText>
           {cell.detail ? (
@@ -38,7 +45,7 @@ function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][num
       cell.tone === "good" ? t.color.goodText : cell.tone === "warn" ? t.color.warnText : t.color.muted;
     return (
       <div style={{ minWidth: 0 }}>
-        <EllipsisText style={{ fontSize: 17, fontWeight: 800, color: t.color.text }}>
+        <EllipsisText style={{ fontSize: 17, fontWeight: 700, color: t.color.text }}>
           {cell.value}
         </EllipsisText>
         {cell.delta ? (
@@ -51,10 +58,10 @@ function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][num
   }
 
   if (cell.kind === "date") {
-    return <EllipsisText style={{ fontSize: 14, fontWeight: 700, color: t.color.muted }}>{cell.value}</EllipsisText>;
+    return <EllipsisText style={{ fontSize: 14, fontWeight: 600, color: t.color.muted }}>{cell.value}</EllipsisText>;
   }
 
-  return <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>{cell.value}</EllipsisText>;
+  return <EllipsisText style={{ fontSize: 16, fontWeight: 700, color: t.color.text }}>{cell.value}</EllipsisText>;
 }
 
 export function TableScene({ spec }: Props) {
@@ -62,15 +69,22 @@ export function TableScene({ spec }: Props) {
   const callout = spec.modifiers.aiCallout;
   const cursor = spec.modifiers.cursor;
   const highlightedSlotId = spec.modifiers.highlightedSlotId;
-  const gridColumns = `${content.toolbar.bulkSelect ? "48px " : ""}${content.columns
-    .map((column) => `${column.width ?? 160}px`)
+  const gridTrackCount = content.columns.length + (content.toolbar.bulkSelect ? 1 : 0);
+  const gapTotal = Math.max(0, gridTrackCount - 1) * TABLE_GRID_GAP;
+  const availableColumnWidth = PANEL_W - BODY_PAD_X * 2 - TABLE_PAD_X * 2 - gapTotal - (content.toolbar.bulkSelect ? BULK_SELECT_W : 0);
+  const requestedWidths = content.columns.map((column) => column.width ?? 160);
+  const requestedTotal = requestedWidths.reduce((sum, width) => sum + width, 0);
+  const widthScale = requestedTotal > availableColumnWidth ? availableColumnWidth / requestedTotal : 1;
+  const resolvedWidths = requestedWidths.map((width) => Math.max(MIN_COLUMN_W, Math.floor(width * widthScale)));
+  const gridColumns = `${content.toolbar.bulkSelect ? `${BULK_SELECT_W}px ` : ""}${resolvedWidths
+    .map((width) => `${width}px`)
     .join(" ")}`;
 
   return (
     <Card
       primaryPanel
       style={{
-        width: 1370,
+        width: PANEL_W,
         height: 790,
         overflow: "hidden",
         display: "grid",
@@ -87,26 +101,10 @@ export function TableScene({ spec }: Props) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 15,
-              background: t.color.ink,
-              color: t.color.inverse,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Database size={24} strokeWidth={2.4} />
-          </div>
+          <DelightMark size={46} />
           <div>
-            <EllipsisText style={{ fontSize: 29, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 29, fontWeight: 700, color: t.color.text }}>
               {content.title}
-            </EllipsisText>
-            <EllipsisText style={{ marginTop: 4, fontSize: 15, color: t.color.muted }}>
-              {content.productName}
             </EllipsisText>
           </div>
         </div>
@@ -141,7 +139,7 @@ export function TableScene({ spec }: Props) {
           {content.toolbar.searchPlaceholder}
         </div>
         {content.toolbar.filters.map((filter, index) => (
-          <Pill key={`${index}-${filter}`} tone="neutral" style={{ minHeight: 34, fontSize: 14 }}>
+          <Pill key={`${index}-${filter}`} tone="neutral" style={{ minHeight: 34, fontSize: 14, fontWeight: 600 }}>
             {filter}
           </Pill>
         ))}
@@ -165,19 +163,19 @@ export function TableScene({ spec }: Props) {
               display: "grid",
               gridTemplateColumns: gridColumns,
               alignItems: "center",
-              gap: 18,
+              gap: TABLE_GRID_GAP,
               minHeight: 52,
-              padding: "0 24px",
+              padding: `0 ${TABLE_PAD_X}px`,
               borderBottom: `1px solid ${t.color.border}`,
               color: t.color.faint,
               fontSize: 12,
-              fontWeight: 800,
+              fontWeight: 600,
               textTransform: "uppercase",
             }}
           >
             {content.toolbar.bulkSelect ? <CheckSquare2 size={17} /> : null}
             {content.columns.map((column, index) => (
-              <EllipsisText key={`${index}-${column.key}`} style={{ color: t.color.faint }}>{column.label}</EllipsisText>
+              <EllipsisText key={`${index}-${column.key}`} style={{ color: t.color.faint, fontWeight: 600 }}>{column.label}</EllipsisText>
             ))}
           </div>
 
@@ -195,9 +193,10 @@ export function TableScene({ spec }: Props) {
                   display: "grid",
                   gridTemplateColumns: gridColumns,
                   alignItems: "center",
-                  gap: 18,
+                  gap: TABLE_GRID_GAP,
                   minHeight: 76,
-                  padding: "0 24px",
+                  padding: `0 ${TABLE_PAD_X}px`,
+                  borderRadius: 0,
                   borderTop: index === 0 ? undefined : `1px solid ${t.color.border}`,
                   background: highlighted ? t.color.aiSoft : t.color.app,
                 }}

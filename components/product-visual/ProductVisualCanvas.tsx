@@ -95,7 +95,7 @@ function ConceptSceneDisplay({
         width,
         height,
         overflow: "hidden",
-        borderRadius: brand.radius[18],
+        borderRadius: brand.radius[10],
         boxShadow: brand.elevation.productScene,
       }}
     >

@@ -5,7 +5,7 @@ import type { DashboardSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
 import { BarChartCard } from "../charts/BarChartCard";
 import { LineChartCard } from "../charts/LineChartCard";
-import { Card, EllipsisText, Pill, Slot } from "../primitives";
+import { Card, DelightMark, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
   spec: DashboardSceneSpec;
@@ -15,29 +15,6 @@ function kpiTone(tone: DashboardSceneSpec["content"]["kpis"][number]["tone"]): "
   if (tone === "good") return "good";
   if (tone === "warn") return "warn";
   return "neutral";
-}
-
-function DelightMark() {
-  return (
-    <svg
-      width="45"
-      height="45"
-      viewBox="0 0 32 32"
-      aria-label="delight.ai"
-      role="img"
-      style={{ display: "block", width: 45, height: 45, flexShrink: 0 }}
-    >
-      <rect width="32" height="32" rx="16" fill={t.color.text} />
-      <path
-        d="M17.2861 14.6869H23.5V16.8328H18.8089L22.4552 20.4791L20.9343 22L17.2861 18.3518V23.5H15.1403V18.3777L11.5177 22.0002L9.99687 20.4794L9.99745 20.4788L9.99687 20.4782L13.6423 16.8328H8.5V14.6869H13.6213L9.99687 11.0625L11.5177 9.54163L15.1403 13.1642V8.5H17.2861V14.6869Z"
-        fill={t.color.inverse}
-      />
-      <path
-        d="M20.8144 9.7085C21.6198 9.70851 22.2728 10.3614 22.2728 11.1668C22.2728 11.9723 21.6198 12.6252 20.8144 12.6252C20.009 12.6252 19.3561 11.9723 19.3561 11.1668C19.3561 10.3614 20.009 9.7085 20.8144 9.7085Z"
-        fill={t.color.inverse}
-      />
-    </svg>
-  );
 }
 
 export function DashboardScene({ spec }: Props) {
@@ -51,9 +28,9 @@ export function DashboardScene({ spec }: Props) {
       style={{
         width: "100%",
         height: "100%",
-        overflow: "visible",
+        overflow: "hidden",
         borderWidth: t.borderWidth.none,
-        borderRadius: t.radius.none,
+        borderRadius: t.radius.sm,
         boxShadow: t.shadow.none,
         display: "grid",
         gridTemplateRows: "92px 82px 1fr",
@@ -66,13 +43,14 @@ export function DashboardScene({ spec }: Props) {
           justifyContent: "space-between",
           padding: "0 34px",
           borderBottom: `1px solid ${t.color.border}`,
+          borderTopLeftRadius: t.radius.sm,
+          borderTopRightRadius: t.radius.sm,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <DelightMark />
+          <DelightMark size={45} />
           <div>
             <EllipsisText style={{ fontSize: 30, fontWeight: 800, color: t.color.text }}>{content.title}</EllipsisText>
-            <EllipsisText style={{ marginTop: 4, fontSize: 15, color: t.color.muted }}>{content.productName}</EllipsisText>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -147,7 +125,15 @@ export function DashboardScene({ spec }: Props) {
         </div>
       </div>
 
-      <div style={{ padding: 30, background: t.color.surface, minHeight: 0 }}>
+      <div
+        style={{
+          padding: 30,
+          background: t.color.surface,
+          minHeight: 0,
+          borderBottomLeftRadius: t.radius.sm,
+          borderBottomRightRadius: t.radius.sm,
+        }}
+      >
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 18 }}>
           {content.kpis.map((kpi) => (
             <Slot

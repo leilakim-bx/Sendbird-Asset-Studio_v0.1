@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink, Sparkles } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { ZodError } from "zod";
 import { useEditorStore } from "@/lib/store";
@@ -186,6 +186,7 @@ export function ProductVisualSidebar() {
   const [aiChatReplyDraft, setAiChatReplyDraft] = useState("");
   const [aiChatError, setAiChatError] = useState<string | null>(null);
   const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
+  const [copyFeedbackTick, setCopyFeedbackTick] = useState(0);
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
   const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -205,6 +206,12 @@ export function ProductVisualSidebar() {
     }, 80);
     return () => window.clearTimeout(timer);
   }, [aiChatError, aiChatPromptDraft]);
+
+  useEffect(() => {
+    if (!copyFeedbackTick) return;
+    const timer = window.setTimeout(() => setCopyFeedbackTick(0), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyFeedbackTick]);
 
   useEffect(() => {
     if (!conceptGenerating || !conceptScene) return;
@@ -282,6 +289,7 @@ export function ProductVisualSidebar() {
     setAiChatPromptDraft("");
     setAiChatError(null);
     setAiChatNotice(null);
+    setCopyFeedbackTick(0);
   }
 
   function startConceptSpec(spec: SceneSpec, notice?: string) {
@@ -315,7 +323,8 @@ export function ProductVisualSidebar() {
       }, 120);
     } else {
       setAiChatPromptCopied(true);
-      setSpecNotice("Prompt copied. Paste it into Claude or Gemini.");
+      setSpecNotice(null);
+      setCopyFeedbackTick((tick) => tick + 1);
     }
   }
 
@@ -396,6 +405,8 @@ export function ProductVisualSidebar() {
   const effectiveConceptPrompt = conceptPrompt || content.concept?.prompt || content.title || "";
   const analyzedChoice = ruleBasedSpecProvider.analyze({ description: effectiveConceptPrompt });
   const activeConceptSpec = lastConceptSpec ?? content.conceptScene ?? null;
+  const showManualPrompt = aiChatError?.startsWith("Copy is blocked") && !!aiChatPromptDraft;
+  const copyFeedbackVisible = copyFeedbackTick > 0;
   const displayModes = cropOnly ? DISPLAY_MODES.filter((m) => m.id === "crop") : DISPLAY_MODES;
   // Solid-color swatches: hidden for image-bg formats and for formats whose
   // background is locked to a fixed hex (canvas ignores `bg` there).
@@ -695,8 +706,8 @@ export function ProductVisualSidebar() {
                 disabled={!effectiveConceptPrompt.trim()}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2.5 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
               >
-                <Copy size={14} />
-                Copy prompt for Claude / Gemini
+                {copyFeedbackVisible ? <Check size={14} /> : <Copy size={14} />}
+                {copyFeedbackVisible ? "Copied!" : "Copy prompt for Claude / Gemini"}
               </button>
             </div>
 
@@ -709,7 +720,7 @@ export function ProductVisualSidebar() {
             {aiChatError ? (
               <div className="mt-2 rounded-lg border border-red-400/30 bg-red-400/10 p-2">
                 <p className="text-[11px] leading-snug text-red-300">{aiChatError}</p>
-                {aiChatPromptDraft ? (
+                {showManualPrompt ? (
                   <textarea
                     ref={manualPromptRef}
                     value={aiChatPromptDraft}
@@ -782,7 +793,7 @@ export function ProductVisualSidebar() {
                   disabled={!aiChatReplyDraft.trim() || conceptGenerating}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-40"
                 >
-                  {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   Render AI reply
                 </button>
               </div>
@@ -943,6 +954,7 @@ export function ProductVisualSidebar() {
           onCancel={() => setCropOpen(false)}
         />
       )}
+
     </div>
   );
 }
