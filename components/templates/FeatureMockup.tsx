@@ -618,9 +618,12 @@ const PhoneFrame = memo(function PhoneFrame({
   const onOverflowChangeRef  = useRef(onOverflowChange);
   const onCapacityChangeRef  = useRef(onCapacityChange);
   const canvasHeightRef      = useRef(canvasHeight);
-  onOverflowChangeRef.current = onOverflowChange;
-  onCapacityChangeRef.current = onCapacityChange;
-  canvasHeightRef.current     = canvasHeight;
+
+  useEffect(() => {
+    onOverflowChangeRef.current = onOverflowChange;
+    onCapacityChangeRef.current = onCapacityChange;
+    canvasHeightRef.current = canvasHeight;
+  }, [onOverflowChange, onCapacityChange, canvasHeight]);
 
   useEffect(() => {
     const el = frameRef.current;
@@ -643,7 +646,6 @@ const PhoneFrame = memo(function PhoneFrame({
     const ro = new ResizeObserver(check);
     ro.observe(el);
     return () => ro.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // mount-only: DOM size changes handled by ResizeObserver
 
   return (
@@ -704,7 +706,7 @@ const PhoneFrame = memo(function PhoneFrame({
       {/* Message list */}
       {/* padding-bottom 12px 고정: scale에 무관하게 항상 12px 여백 보장 */}
       <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale), padding: `${Math.round(14 * scale)}px 0 12px` }}>
-        {messages.map((msg, idx) => {
+        {messages.map((msg) => {
           // Guard: localStorage에 저장된 구버전 메시지 등 block 없는 항목 방어
           if (!msg?.block) return null;
           const type = msg.block.type;

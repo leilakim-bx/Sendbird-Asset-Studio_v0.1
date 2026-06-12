@@ -5,7 +5,10 @@ import { AssetLibrary } from "@/components/assets/AssetLibrary";
 
 export default function RecentAssetsPage() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(id);
+  }, []);
 
   return (
     <div className="p-8 flex flex-col h-full min-h-0">

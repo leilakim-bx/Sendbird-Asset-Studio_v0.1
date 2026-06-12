@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, memo } from "react";
+import { createElement, useRef, useState, useEffect, useCallback, memo } from "react";
 import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, Plus, X, MousePointerClick } from "lucide-react";
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
@@ -10,7 +10,6 @@ import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
 import { ChecklistStatusIcon } from "@/components/templates/checklist-status-icon";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Menu } from "@base-ui/react/menu";
 import { ScenarioList } from "./ScenarioList";
 import { ScenarioLibraryModal } from "./ScenarioLibraryModal";
@@ -53,14 +52,15 @@ const SectionLabel = ({ children, required }: { children: React.ReactNode; requi
 
 // Per-row icon dropdown for itinerary rows (curated set from itinerary-icons).
 function ItineraryIconPicker({ value, onChange }: { value: ItineraryIcon; onChange: (v: ItineraryIcon) => void }) {
-  const Current = itineraryIcon(value);
+  const current = ITINERARY_ICONS.find((option) => option.key === value);
+  const icon = current?.Icon ?? itineraryIcon(value);
   return (
     <Menu.Root>
       <Menu.Trigger
         title="Choose icon"
         className="shrink-0 w-10 h-7 flex items-center justify-center gap-0.5 rounded-md border border-studio-border bg-studio-sidebar text-studio-text hover:bg-studio-hover transition-colors"
       >
-        <Current size={14} />
+        {createElement(icon, { size: 14 })}
         <ChevronDown size={10} className="text-studio-muted" />
       </Menu.Trigger>
       <Menu.Portal>
@@ -268,6 +268,99 @@ function IconSegmentToggle<T extends string>({
   );
 }
 
+function MessageSenderToggle({
+  role,
+  onChange,
+}: {
+  role: "user" | "bot";
+  onChange: (role: "user" | "bot") => void;
+}) {
+  return (
+    <IconSegmentToggle
+      options={[
+        { value: "user", Icon: UserRound, label: "User" },
+        { value: "bot", Icon: Bot, label: "delight.ai" },
+      ] as const}
+      value={role}
+      onChange={onChange}
+    />
+  );
+}
+
+function MessageCardHeader({
+  title,
+  extra,
+  sender,
+  onRemove,
+}: {
+  title: string;
+  extra?: React.ReactNode;
+  sender?: React.ReactNode;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-studio-text flex-1">{title}</span>
+        {extra}
+        <button
+          onClick={onRemove}
+          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+      {sender}
+    </div>
+  );
+}
+
+function ToggleGroup<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string; tooltip?: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
+      {options.map((opt, i) => {
+        const isFirst = i === 0;
+        const isLast = i === options.length - 1;
+        return (
+          <div key={opt.value} className="relative flex-1 group/tip">
+            <button
+              onClick={() => onChange(opt.value)}
+              className={[
+                "w-full text-xs py-1.5 rounded-md transition-colors",
+                value === opt.value
+                  ? "bg-studio-sidebar text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {opt.label}
+            </button>
+            {opt.tooltip && (
+              <span
+                className={[
+                  "pointer-events-none absolute bottom-full mb-1.5 z-20 w-44 px-2 py-1 rounded-md",
+                  "bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug text-center",
+                  "opacity-0 group-hover/tip:opacity-100 transition-opacity",
+                  isFirst ? "left-0" : isLast ? "right-0" : "left-1/2 -translate-x-1/2",
+                ].join(" ")}
+              >
+                {opt.tooltip}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Message item ───────────────────────────────────────────
 // Defined at MODULE LEVEL — required for React.memo to work correctly.
 // If defined inside FormPanel, the function reference changes every parent
@@ -277,7 +370,7 @@ type MessageItemProps = {
   msg: ChatMessage;
   index: number;
   isDragOver: boolean;
-  dragIndexRef: React.MutableRefObject<number | null>;
+  dragFrom: number | null;
   onDragStart: (i: number) => void;
   onDragOverItem: (e: React.DragEvent, i: number) => void;
   onDrop: (i: number) => void;
@@ -290,7 +383,7 @@ const MessageItem = memo(function MessageItem({
   msg,
   index,
   isDragOver,
-  dragIndexRef,
+  dragFrom,
   onDragStart,
   onDragOverItem,
   onDrop,
@@ -336,7 +429,6 @@ const MessageItem = memo(function MessageItem({
 
   // ── Shared drag / style ────────────────────────────────
   // 드래그 중 삽입 위치를 블록 사이 라임 라인으로 표시 (드래그 방향에 맞춰 위/아래)
-  const dragFrom = dragIndexRef.current;
   const showLineAbove = isDragOver && dragFrom !== null && dragFrom > index;
   const showLineBelow = isDragOver && dragFrom !== null && dragFrom < index;
   const wrapCls = [
@@ -354,35 +446,6 @@ const MessageItem = memo(function MessageItem({
     onDragEnd,
   };
 
-  // Text 카드 발신자 토글 — Voice/Status와 동일한 아이콘 세그먼트 토글 (👤 User / 🤖 delight.ai)
-  const SenderToggle = () => (
-    <IconSegmentToggle
-      options={[
-        { value: "user", Icon: UserRound, label: "User" },
-        { value: "bot",  Icon: Bot,       label: "delight.ai" },
-      ] as const}
-      value={msg.role === "user" ? "user" : "bot"}
-      onChange={(role) => onUpdate(msg.id, { role })}
-    />
-  );
-
-  // 카드 헤더: 1줄 = 아이콘 + 타입 타이틀 + (우측 extra) + ✕, (선택) 2줄 = 발신자
-  const CardHeader = ({ title, extra, sender }: { title: string; extra?: React.ReactNode; sender?: React.ReactNode }) => (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-studio-text flex-1">{title}</span>
-        {extra}
-        <button
-          onClick={() => onRemove(msg.id)}
-          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
-        >
-          ✕
-        </button>
-      </div>
-      {sender}
-    </div>
-  );
-
   // ── Text message ───────────────────────────────────────
   if (msg.block.type === "text") {
     const hasActivityLog = msg.role === "bot" && !!msg.block.verifications?.length;
@@ -396,9 +459,15 @@ const MessageItem = memo(function MessageItem({
       : "Text";
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader
+        <MessageCardHeader
           title={cardTitle}
-          extra={lockSender ? undefined : <SenderToggle />}
+          extra={lockSender ? undefined : (
+            <MessageSenderToggle
+              role={msg.role === "user" ? "user" : "bot"}
+              onChange={(role) => onUpdate(msg.id, { role })}
+            />
+          )}
+          onRemove={() => onRemove(msg.id)}
         />
         <textarea
           value={localText}
@@ -524,7 +593,7 @@ const MessageItem = memo(function MessageItem({
     const actionsBlock = msg.block as ActionsBlock;
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader title="Action Buttons" />
+        <MessageCardHeader title="Action Buttons" onRemove={() => onRemove(msg.id)} />
         {actionsBlock.buttons.map((btn, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <Input
@@ -569,7 +638,7 @@ const MessageItem = memo(function MessageItem({
     return (
       <div {...dragProps} className={wrapCls}>
         {/* Block header */}
-        <CardHeader title="Product Cards" />
+        <MessageCardHeader title="Product Cards" onRemove={() => onRemove(msg.id)} />
 
         {/* Per-card rows */}
         <div className="flex flex-col gap-2 mt-2">
@@ -631,7 +700,7 @@ const MessageItem = memo(function MessageItem({
     };
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader title="Checklist" />
+        <MessageCardHeader title="Checklist" onRemove={() => onRemove(msg.id)} />
         <div className="flex flex-col gap-1.5">
           {checklistBlock.items.map((item, i) => (
             <div key={item.id} className="flex items-center gap-1.5">
@@ -741,7 +810,7 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader title="Itinerary" />
+        <MessageCardHeader title="Itinerary" onRemove={() => onRemove(msg.id)} />
 
         <div className="flex flex-col gap-2.5">
           {itin.groups.map((g, gi) => (
@@ -843,7 +912,7 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader
+        <MessageCardHeader
           title="Status"
           extra={
             <IconSegmentToggle
@@ -855,6 +924,7 @@ const MessageItem = memo(function MessageItem({
               onChange={(variant) => onUpdate(msg.id, { block: { ...statusBlock, variant } })}
             />
           }
+          onRemove={() => onRemove(msg.id)}
         />
         {/* Label input */}
         <Input
@@ -878,7 +948,7 @@ const MessageItem = memo(function MessageItem({
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <CardHeader
+        <MessageCardHeader
           title="Voice"
           extra={
             <IconSegmentToggle
@@ -887,6 +957,7 @@ const MessageItem = memo(function MessageItem({
               onChange={(style) => patch({ style })}
             />
           }
+          onRemove={() => onRemove(msg.id)}
         />
 
         {/* Transcript */}
@@ -1041,6 +1112,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   // ── Drag-to-reorder ────────────────────────────────────
   const dragIndex = useRef<number | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   // Keep a stable ref to messages so handleDrop doesn't need it as a dep.
@@ -1050,6 +1122,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   const handleDragStart = useCallback((i: number) => {
     dragIndex.current = i;
+    setDragFrom(i);
   }, []);
 
   const handleDragOverItem = useCallback((e: React.DragEvent, i: number) => {
@@ -1059,67 +1132,23 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   const handleDrop = useCallback((i: number) => {
     const from = dragIndex.current;
-    if (from === null || from === i) { setDragOver(null); return; }
+    if (from === null || from === i) { setDragFrom(null); setDragOver(null); return; }
     const next = [...messagesRef.current];
     const [moved] = next.splice(from, 1);
     next.splice(i, 0, moved);
     setMessages(next);
     dragIndex.current = null;
+    setDragFrom(null);
     setDragOver(null);
   }, [setMessages]);
 
   const handleDragEnd = useCallback(() => {
     dragIndex.current = null;
+    setDragFrom(null);
     setDragOver(null);
   }, []);
 
   // ── Layout & Size ──────────────────────────────────────
-
-  function ToggleGroup<T extends string>({
-    value,
-    options,
-    onChange,
-  }: {
-    value: T;
-    options: { value: T; label: string; tooltip?: string }[];
-    onChange: (v: T) => void;
-  }) {
-    return (
-      <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-        {options.map((opt, i) => {
-          const isFirst = i === 0;
-          const isLast  = i === options.length - 1;
-          return (
-            <div key={opt.value} className="relative flex-1 group/tip">
-              <button
-                onClick={() => onChange(opt.value)}
-                className={[
-                  "w-full text-xs py-1.5 rounded-md transition-colors",
-                  value === opt.value
-                    ? "bg-studio-sidebar text-studio-text"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                {opt.label}
-              </button>
-              {opt.tooltip && (
-                <span
-                  className={[
-                    "pointer-events-none absolute bottom-full mb-1.5 z-20 w-44 px-2 py-1 rounded-md",
-                    "bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug text-center",
-                    "opacity-0 group-hover/tip:opacity-100 transition-opacity",
-                    isFirst ? "left-0" : isLast ? "right-0" : "left-1/2 -translate-x-1/2",
-                  ].join(" ")}
-                >
-                  {opt.tooltip}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
 
   // ── Panel resize ───────────────────────────────────────
 
@@ -1294,7 +1323,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               msg={msg}
               index={i}
               isDragOver={dragOver === i}
-              dragIndexRef={dragIndex}
+              dragFrom={dragFrom}
               onDragStart={handleDragStart}
               onDragOverItem={handleDragOverItem}
               onDrop={handleDrop}

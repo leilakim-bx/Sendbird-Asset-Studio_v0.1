@@ -13,7 +13,7 @@ import { DEFAULT_SCENARIO } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
-import { exportImage, exportSvgToClipboard, captureThumbnail, type ExportedImage } from "@/lib/export";
+import { exportImage, captureThumbnail, type ExportedImage } from "@/lib/export";
 import type { SavedAsset } from "@/lib/store";
 import type { ChatTemplate } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
@@ -138,8 +138,6 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   const exportDownloadsRef = useRef<ExportedImage[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOverflowing, setIsOverflowing] = useState(false);
   // Live height of the off-screen mobile export canvas — this IS the exported
   // PNG height (mobile export passes no height, so html-to-image captures the
@@ -209,12 +207,6 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   const desktopSize = EXPORT_SIZES.desktop;
   const mobileSize  = EXPORT_SIZES.mobile;
 
-  function showToast(msg: string) {
-    setToastMsg(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastMsg(null), 3000);
-  }
-
   function exportFilename(size: "desktop" | "mobile", ext: string) {
     const scenarioSlug = activeScenarioId
       ?? appName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -260,27 +252,6 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
         : (err as { message?: string })?.message ?? String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  async function handleCopyFigma() {
-    const isDesktop = exportSize === "desktop";
-    const ref = isDesktop ? desktopRef.current : mobileRef.current;
-    if (!ref) return;
-    setExporting(true);
-    setExportError(null);
-    try {
-      const { width, height } = isDesktop ? desktopSize : mobileSize;
-      await exportSvgToClipboard(ref, width, isDesktop ? height : undefined);
-      showToast("SVG copied. Paste with Cmd+V in Figma.");
-    } catch (err) {
-      const msg = err instanceof Error
-        ? err.message
-        : (err as { message?: string })?.message ?? String(err);
-      console.error("Copy for Figma failed:", err);
-      setExportError(`Copy failed — ${msg || "unknown error"}`);
     } finally {
       setExporting(false);
     }
@@ -527,13 +498,6 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
             </div>
           )}
         </div>
-
-        {/* Toast */}
-        {toastMsg && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl bg-studio-sidebar border border-studio-border shadow-xl text-sm text-studio-text pointer-events-none">
-            {toastMsg}
-          </div>
-        )}
 
         {/* Hidden full-size export targets — positioned off-screen, NOT sr-only */}
         <div

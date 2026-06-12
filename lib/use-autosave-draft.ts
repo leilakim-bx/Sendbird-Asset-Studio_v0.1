@@ -24,12 +24,16 @@ export function useAutosaveDraft<T>(
   delay = 500,
 ) {
   const latest = useRef(value);
-  latest.current = value;
-
   const saveRef = useRef(save);
-  saveRef.current = save;
-
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    latest.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    saveRef.current = save;
+  }, [save]);
 
   // Schedule a debounced save whenever the value changes (after ready).
   useEffect(() => {
