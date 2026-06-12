@@ -464,8 +464,20 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
 
 // ── ItineraryCard — grouped schedule ──────────────────────
 
-const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobile = false }: { msg: ChatMessage; scale: number; br?: number; isMobile?: boolean }) {
-  const { groups, cta } = msg.block as ItineraryBlock;
+const ItineraryCard = memo(function ItineraryCard({
+  msg,
+  scale,
+  appName,
+  br = 18,
+  isMobile = false,
+}: {
+  msg: ChatMessage;
+  scale: number;
+  appName: string;
+  br?: number;
+  isMobile?: boolean;
+}) {
+  const { intro, groups, cta } = msg.block as ItineraryBlock;
   const fs = Math.min(1, scale);
   const iconSize = Math.round(24 * scale);
 
@@ -478,14 +490,43 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
         background: CHAT.bubble,
         boxShadow: ELEVATION[2],
       }}>
+        {/* Bot dot + name */}
+        <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(8 * scale) }}>
+          <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: RADIUS.circle, background: CHAT.botIndicator, flexShrink: 0 }} />
+          <span style={{ fontSize: TYPE[12] * fs, color: CHAT.bodyMuted, lineHeight: LINE.tight }}>
+            {appName}
+          </span>
+        </div>
+
+        {intro && intro.trim() && (
+          <p style={{
+            margin: `0 0 ${cssPx(Math.round(14 * scale))}`,
+            fontSize: (isMobile ? TYPE[13] : TYPE[15]) * fs,
+            lineHeight: LINE.copy,
+            color: CHAT.body,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+          }}>
+            {intro}
+          </p>
+        )}
+
         {groups.map((g, gi) => {
           const last = gi === groups.length - 1;
+          const groupLabel = g.label?.trim() ?? "";
+          const hasGroupLabel = groupLabel.length > 0;
           return (
             <div key={g.id} style={{ marginBottom: last ? Math.round(10 * scale) : Math.round(12 * scale) }}>
               {/* Group header */}
-              <div style={{ fontSize: TYPE[13] * fs, fontWeight: FONT.weight.bold, color: CHAT.body, marginBottom: Math.round(7 * scale) }}>
-                {g.label}
-              </div>
+              {hasGroupLabel && (
+                <div style={{ fontSize: TYPE[13] * fs, fontWeight: FONT.weight.bold, color: CHAT.body, marginBottom: Math.round(7 * scale) }}>
+                  {groupLabel}
+                </div>
+              )}
               {/* Rows */}
               <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale) }}>
                 {g.items.map((it) => {
@@ -497,7 +538,7 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
                       padding: `${cssPx(Math.round(11 * scale))} ${cssPx(Math.round(15 * scale))}`,
                     }}>
                       <Icon size={iconSize} strokeWidth={1.6} color={CHAT.iconMuted} style={{ flexShrink: 0 }} />
-                      <div style={{ minWidth: 0 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{
                           fontSize: (isMobile ? TYPE[13] : TYPE[15]) * fs, fontWeight: FONT.weight.bold, color: CHAT.body, lineHeight: LINE.normal,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -509,6 +550,24 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
                           }}>{it.sub}</div>
                         )}
                       </div>
+                      {it.badge && it.badge.trim() && (
+                        <div style={{
+                          flexShrink: 0,
+                          maxWidth: Math.round((isMobile ? 80 : 108) * scale),
+                          borderRadius: Math.round(7 * scale),
+                          padding: `${cssPx(Math.round(5 * scale))} ${cssPx(Math.round(9 * scale))}`,
+                          background: it.badgeTone === "accent" ? BRAND.accent : CHAT.actionBg,
+                          color: CHAT.body,
+                          fontSize: (isMobile ? TYPE[10.5] : TYPE[12]) * fs,
+                          fontWeight: FONT.weight.bold,
+                          lineHeight: LINE.tight,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}>
+                          {it.badge}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -736,7 +795,7 @@ const PhoneFrame = memo(function PhoneFrame({
           if (type === "products")  return <ProductCards   key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "checklist") return <ChecklistItems key={msg.id} msg={msg} scale={scale} br={bubbleR} />;
           if (type === "status")    return <StatusPill     key={msg.id} msg={msg} scale={scale} />;
-          if (type === "itinerary") return <ItineraryCard  key={msg.id} msg={msg} scale={scale} br={bubbleR} isMobile={isMobileFrame} />;
+          if (type === "itinerary") return <ItineraryCard  key={msg.id} msg={msg} scale={scale} appName={appName} br={bubbleR} isMobile={isMobileFrame} />;
           return null;
         })}
       </div>

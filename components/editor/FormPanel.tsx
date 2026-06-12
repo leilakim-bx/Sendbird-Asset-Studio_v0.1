@@ -804,13 +804,36 @@ const MessageItem = memo(function MessageItem({
   // ── Itinerary ──────────────────────────────────────────
   if (msg.block.type === "itinerary") {
     const itin = msg.block as ItineraryBlock;
-    const commit = (groups: ItineraryGroup[], cta: string | undefined = itin.cta) =>
-      onUpdate(msg.id, { block: { type: "itinerary", groups, ...(cta && cta.trim() ? { cta } : {}) } });
+    const commit = (
+      groups: ItineraryGroup[],
+      cta: string | undefined = itin.cta,
+      intro: string | undefined = itin.intro,
+    ) =>
+      onUpdate(msg.id, {
+        block: {
+          type: "itinerary",
+          groups,
+          ...(intro && intro.trim() ? { intro } : {}),
+          ...(cta && cta.trim() ? { cta } : {}),
+        },
+      });
     const setGroups = (fn: (gs: ItineraryGroup[]) => ItineraryGroup[]) => commit(fn(itin.groups));
 
     return (
       <div {...dragProps} className={wrapCls}>
         <MessageCardHeader title="Itinerary" onRemove={() => onRemove(msg.id)} />
+
+        <div className="mb-2.5">
+          <SectionLabel>Intro text (optional)</SectionLabel>
+          <textarea
+            value={itin.intro ?? ""}
+            onChange={(e) => commit(itin.groups, itin.cta, e.target.value)}
+            placeholder="e.g. I found 3 alternatives that protect your connection."
+            maxLength={180}
+            rows={3}
+            className="w-full resize-none rounded-md border border-studio-border bg-studio-sidebar px-2.5 py-2 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent"
+          />
+        </div>
 
         <div className="flex flex-col gap-2.5">
           {itin.groups.map((g, gi) => (
@@ -818,9 +841,9 @@ const MessageItem = memo(function MessageItem({
               {/* Group label + remove group */}
               <div className="flex items-center gap-1.5">
                 <Input
-                  value={g.label}
-                  onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi ? { ...x, label: e.target.value } : x))}
-                  placeholder="Day / section (e.g. MON)"
+                  value={g.label ?? ""}
+                  onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi ? { ...x, label: e.target.value || undefined } : x))}
+                  placeholder="Date / section (optional)"
                   className="flex-1 h-7 text-xs md:text-xs font-semibold bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:font-normal"
                 />
                 <button
@@ -856,6 +879,25 @@ const MessageItem = memo(function MessageItem({
                       placeholder="Detail (optional)"
                       className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
                     />
+                    <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                      <Input
+                        value={it.badge ?? ""}
+                        onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                          ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, badge: e.target.value || undefined } : y) } : x))}
+                        placeholder="Badge (optional)"
+                        maxLength={18}
+                        className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                      />
+                      <IconSegmentToggle
+                        options={[
+                          { value: "neutral", Icon: Circle, label: "Neutral" },
+                          { value: "accent", Icon: Sparkles, label: "Accent" },
+                        ] as const}
+                        value={it.badgeTone ?? "neutral"}
+                        onChange={(badgeTone) => setGroups((gs) => gs.map((x, i) => i === gi
+                          ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, badgeTone } : y) } : x))}
+                      />
+                    </div>
                   </div>
                   <button
                     onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
@@ -872,7 +914,7 @@ const MessageItem = memo(function MessageItem({
               {/* Add row */}
               <button
                 onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
-                  ? { ...x, items: [...x.items, { id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined }] } : x))}
+                  ? { ...x, items: [...x.items, { id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined, badge: undefined }] } : x))}
                 disabled={g.items.length >= 5}
                 className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
@@ -896,7 +938,7 @@ const MessageItem = memo(function MessageItem({
           <SectionLabel>Footer button (optional)</SectionLabel>
           <Input
             value={itin.cta ?? ""}
-            onChange={(e) => commit(itin.groups, e.target.value)}
+            onChange={(e) => commit(itin.groups, e.target.value, itin.intro)}
             placeholder="e.g. Start booking"
             maxLength={24}
             className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"

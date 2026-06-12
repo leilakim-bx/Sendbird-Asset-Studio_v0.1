@@ -40,9 +40,27 @@ describe("validateScenario", () => {
         label: "Ready to purchase",
         variant: "success",
       },
+      {
+        type: "itinerary",
+        intro: "I found 3 alternatives that protect your connection.",
+        groups: [
+          {
+            label: "ALTERNATIVES",
+            items: [
+              { icon: "flight", title: "DY77 → DY79", sub: "departs 08:15", badge: "Best match", badgeTone: "accent" },
+              { icon: "flight", title: "DY77 → UA202", sub: "departs 10:40", badge: "+2h 10m" },
+            ],
+          },
+          {
+            items: [
+              { icon: "flight", title: "DY77 → AA118", sub: "departs 14:00", badge: "+4h 30m" },
+            ],
+          },
+        ],
+      },
     ]);
 
-    expect(messages).toHaveLength(5);
+    expect(messages).toHaveLength(6);
     expect(messages[0]).toMatchObject({
       role: "user",
       sender: "Taylor",
@@ -79,6 +97,25 @@ describe("validateScenario", () => {
         { label: "Reserve item", status: "pending" },
       ],
     });
+    expect(messages[5].block).toMatchObject({
+      type: "itinerary",
+      intro: "I found 3 alternatives that protect your connection.",
+      groups: [
+        {
+          label: "ALTERNATIVES",
+          items: [
+            { icon: "flight", title: "DY77 → DY79", sub: "departs 08:15", badge: "Best match", badgeTone: "accent" },
+            { icon: "flight", title: "DY77 → UA202", sub: "departs 10:40", badge: "+2h 10m" },
+          ],
+        },
+        {
+          items: [
+            { icon: "flight", title: "DY77 → AA118", sub: "departs 14:00", badge: "+4h 30m" },
+          ],
+        },
+      ],
+    });
+    expect((messages[5].block as { groups: Array<Record<string, unknown>> }).groups[1]).not.toHaveProperty("label");
   });
 
   it("drops malformed messages and caps non-voice scenarios", () => {

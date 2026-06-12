@@ -140,20 +140,20 @@ const GUIDE_SECTIONS: GuideSection[] = [
         desc: "Choose Product Feature, Product Release, or Blog from Format. Release thumbnail is fixed at 667×316; insert, blog, and mobile formats use flexible height.",
       },
       {
-        title: "Upload the real product screenshot",
-        desc: "Drag in a PNG, JPG, or WebP screenshot. Product Visual is best when you start from the actual dashboard or feature UI.",
+        title: "Choose Screenshot or Concept UI",
+        desc: "Screenshot starts from a real product capture. Concept UI creates a clean mock UI from a feature description when no finished screenshot exists yet.",
       },
       {
-        title: "Select the important area",
-        desc: "Use Select area to crop into the key feature or highlight it while dimming the rest of the screenshot.",
+        title: "If using Screenshot, upload and crop",
+        desc: "Upload a PNG, JPG, or WebP, then use Select key area to choose the feature area. Crop is best for thumbnails; Highlight is only for formats that support it.",
       },
       {
-        title: "Polish the frame",
-        desc: "Choose a background, layout, title, and subtitle. Keep copy short so the screenshot remains the main focus.",
+        title: "If using Concept UI, generate the scene",
+        desc: "Describe the feature, copy the prompt into Claude or Gemini, paste the AI reply back, then choose Hero crop for manual cropping or Floating panel for the main panel.",
       },
       {
         title: "Save or export",
-        desc: "Save stores the editable composition locally in this browser, including the uploaded screenshot. Export PNG downloads the finished visual at the correct format size.",
+        desc: "Check the preview, then Save the editable setup locally or Export PNG at the selected format size.",
       },
     ],
   },

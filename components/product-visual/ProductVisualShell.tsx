@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home } from "lucide-react";
+import { BookOpen, Home } from "lucide-react";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
+import { GuideModal } from "@/components/layout/Sidebar";
 import { captureThumbnail, type ExportedImage } from "@/lib/export";
 import { exportProductVisual, productVisualFilename } from "@/lib/product-visual/export";
 import { ProductVisualCanvas } from "./ProductVisualCanvas";
@@ -91,6 +92,7 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
   const [exportNote, setExportNote] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportDownloads, setExportDownloads] = useState<ExportedImage[]>([]);
+  const [guideOpen, setGuideOpen] = useState(false);
   const exportDownloadsRef = useRef<ExportedImage[]>([]);
 
   useEffect(() => {
@@ -180,6 +182,15 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
         </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
+        <div className="ml-auto">
+          <button
+            onClick={() => setGuideOpen(true)}
+            title="Open guide"
+            className="p-1.5 rounded-md text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+          >
+            <BookOpen size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Editor body */}
@@ -266,6 +277,9 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
           onLeave={() => router.push("/")}
           onCancel={() => setLeaveOpen(false)}
         />
+      )}
+      {guideOpen && (
+        <GuideModal onClose={() => setGuideOpen(false)} initialSection="product-visual" />
       )}
     </div>
   );

@@ -99,6 +99,7 @@ export function Card({
         border: `1px solid ${t.color.border}`,
         borderRadius: t.radius.lg,
         boxShadow: t.shadow.card,
+        fontFamily: t.font.sans,
         ...style,
       }}
     >
@@ -226,7 +227,7 @@ function AiPopover({ callout, popover }: { callout: AiCallout; popover: "right" 
         zIndex: 20,
         width: 330,
         borderRadius: 20,
-        border: `2px solid ${t.color.ai}`,
+        border: `1px solid ${t.color.borderStrong}`,
         background: t.color.app,
         boxShadow: t.shadow.float,
         padding: 18,

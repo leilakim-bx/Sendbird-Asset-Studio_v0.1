@@ -197,13 +197,14 @@ export const SCENARIOS: Scenario[] = [
         sender: "bot",
         block: {
           type: "itinerary",
+          intro: "I found a simple plan that keeps the trip relaxed and easy to book.",
           cta: "Start booking",
           groups: [
             {
               id: "s6-g1",
               label: "MON",
               items: [
-                { id: "s6-g1-i1", icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso" },
+                { id: "s6-g1-i1", icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso", badge: "Best match", badgeTone: "accent" },
                 { id: "s6-g1-i2", icon: "dining",  title: "Dinner",          sub: "Bora Bora Beach Club Restaurant" },
               ],
             },

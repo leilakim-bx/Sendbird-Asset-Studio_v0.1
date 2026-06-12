@@ -31,12 +31,17 @@ export const conceptSceneTokens = {
     sans: brand.font.sans,
   },
   radius: {
+    none: brand.spacing[0],
     sm: brand.radius[10],
     md: brand.radius[16],
     lg: brand.radius[24],
     xl: brand.radius[32],
   },
+  borderWidth: {
+    none: brand.spacing[0],
+  },
   shadow: {
+    none: "none",
     card: brand.elevation.conceptCard,
     float: brand.elevation.conceptFloat,
     active: brand.elevation.conceptActive,

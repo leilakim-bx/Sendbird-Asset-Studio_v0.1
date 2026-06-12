@@ -156,6 +156,7 @@ Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 obje
 - `EditorShell`이 상태 복원, autosave, 저장, export를 관리한다.
 - `FormPanel`이 메시지/배경/레이아웃 편집을 담당한다.
 - `FeatureMockup`이 실제 export 캔버스를 렌더링한다.
+- `itinerary` 블록은 bot sender header를 유지하고, 선택적 `intro`, 선택적 group `label`, row-level `badge`/`badgeTone`을 지원해 일정뿐 아니라 항공편 대안, 예약 옵션 카드로도 재사용한다.
 - 모바일 export는 콘텐츠 높이에 따라 가변 캡처한다.
 - 캔버스 overflow 시 단일 메시지 append는 rollback하고, 시나리오 교체 등은 경고만 표시한다.
 

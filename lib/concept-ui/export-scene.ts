@@ -3,11 +3,10 @@
 import {
   CONCEPT_UI_CANVAS_HEIGHT,
   CONCEPT_UI_CANVAS_WIDTH,
-  conceptSceneTokens,
 } from "@/lib/concept-ui/scene-tokens";
 import type { ProductVisualScreenshot } from "@/lib/types/product-visual";
 
-export type FramingPreset = "full-screen" | "hero-crop" | "floating-panel";
+export type FramingPreset = "hero-crop" | "floating-panel";
 
 export type ExportedConceptScene = {
   url: string;
@@ -45,25 +44,9 @@ function elementToSvgDataUrl(
   return svgDataUrl(svg);
 }
 
-function heroCropSvgDataUrl(element: HTMLElement): string {
-  const serialized = serializeHtmlElement(element, CONCEPT_UI_CANVAS_WIDTH, CONCEPT_UI_CANVAS_HEIGHT);
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${CONCEPT_UI_CANVAS_WIDTH}" height="${CONCEPT_UI_CANVAS_HEIGHT}" viewBox="0 0 ${CONCEPT_UI_CANVAS_WIDTH} ${CONCEPT_UI_CANVAS_HEIGHT}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml" style="width:${CONCEPT_UI_CANVAS_WIDTH}px;height:${CONCEPT_UI_CANVAS_HEIGHT}px;overflow:hidden;background:${conceptSceneTokens.color.page};">
-          <div style="width:${CONCEPT_UI_CANVAS_WIDTH}px;height:${CONCEPT_UI_CANVAS_HEIGHT}px;transform:scale(2);transform-origin:top left;">
-            ${serialized}
-          </div>
-        </div>
-      </foreignObject>
-    </svg>
-  `;
-  return svgDataUrl(svg);
-}
-
 export async function exportConceptSceneElement(
   element: HTMLElement,
-  preset: FramingPreset = "full-screen",
+  preset: FramingPreset = "floating-panel",
 ): Promise<ExportedConceptScene> {
   if (preset === "floating-panel") {
     const primaryPanel = element.querySelector<HTMLElement>("[data-concept-primary-panel='true']");
@@ -81,18 +64,15 @@ export async function exportConceptSceneElement(
     };
   }
 
-  const url = preset === "hero-crop"
-    ? heroCropSvgDataUrl(element)
-    : elementToSvgDataUrl(element, {
-      width: CONCEPT_UI_CANVAS_WIDTH,
-      height: CONCEPT_UI_CANVAS_HEIGHT,
-    });
-  const full = {
+  const url = elementToSvgDataUrl(element, {
+    width: CONCEPT_UI_CANVAS_WIDTH,
+    height: CONCEPT_UI_CANVAS_HEIGHT,
+  });
+  return {
     url,
     naturalWidth: CONCEPT_UI_CANVAS_WIDTH,
     naturalHeight: CONCEPT_UI_CANVAS_HEIGHT,
   };
-  return full;
 }
 
 export function conceptSceneToProductScreenshot(scene: ExportedConceptScene): ProductVisualScreenshot {

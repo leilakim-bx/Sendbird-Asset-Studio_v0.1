@@ -31,9 +31,9 @@ function localPresetMessages(prompt: string): unknown[] {
   if (hasItinerary) {
     return [
       { type: "text", role: "user", sender: "Eloy", text: short || "What is there to do in Bora Bora?" },
-      { type: "itinerary", cta: "Start booking", groups: [
+      { type: "itinerary", intro: "I found a simple plan that keeps the trip relaxed and easy to book.", cta: "Start booking", groups: [
         { label: "MON", items: [
-          { icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso" },
+          { icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso", badge: "Best match", badgeTone: "accent" },
           { icon: "dining",  title: "Dinner",          sub: "Bora Bora Beach Club Restaurant" },
         ]},
         { label: "TUE", items: [

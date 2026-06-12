@@ -50,7 +50,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 목적 | AI agent 대화 흐름을 제품 데모 이미지로 제작 |
 | 포맷 | Desktop 866x660, Mobile 343x가변 |
 | 레이아웃 | Center, Split |
-| 블록 | text, actions, products, checklist, status, voice, itinerary |
+| 블록 | text, actions, products, checklist, status, voice, itinerary(bot header, 상단 설명문, optional 날짜 라벨, row badge 지원) |
 | 편집 | 앱 이름, 유저 이름/아바타, 메시지, 배경, 레이아웃, export size |
 | 생성 | 프롬프트를 로컬 시나리오 프리셋으로 매칭 |
 

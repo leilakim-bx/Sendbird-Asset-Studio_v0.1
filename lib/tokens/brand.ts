@@ -259,6 +259,7 @@ export const brand = {
     },
   },
   elevation: {
+    none: "none",
     1: "0 1px 0 rgba(0,0,0,0.03)",
     2: "0 2px 8px rgba(0,0,0,0.06)",
     3: "0 8px 32px rgba(0,0,0,0.08)",
@@ -272,8 +273,8 @@ export const brand = {
     productLegacyPanel: "0 14px 34px rgba(0,0,0,0.06)",
     conceptCard: "0 18px 42px rgba(28,25,23,0.08)",
     conceptFloat: "0 28px 70px rgba(28,25,23,0.16)",
-    conceptActive: "0 0 0 4px #F2FF66, 0 0 0 10px rgba(242,255,102,0.28)",
-    conceptActiveSmall: "0 0 0 3px #F2FF66, 0 18px 36px rgba(28,25,23,0.12)",
+    conceptActive: "0 18px 36px rgba(28,25,23,0.12)",
+    conceptActiveSmall: "0 18px 36px rgba(28,25,23,0.12)",
     conceptDrop: "drop-shadow(0 10px 16px rgba(28,25,23,0.22))",
     conceptModal: "0 34px 90px rgba(28,25,23,0.22)",
   },

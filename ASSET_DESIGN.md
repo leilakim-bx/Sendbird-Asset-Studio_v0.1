@@ -190,3 +190,30 @@ fontSize: 13 × fs
 | 버튼 텍스트 | `#374151` |
 | Checklist pending 원 | `#D1D5DB` |
 | Bot indicator dot | `#111111` |
+
+---
+
+## Itinerary Card
+
+일정/여행 플랜뿐 아니라 항공편 대안, 예약 옵션 리스트에도 사용한다.
+
+- 선택적 `intro`: 카드 상단에 bot 설명문을 표시하며 최대 3줄로 클램프한다.
+- Bot 카드 상단에는 항상 indicator dot과 app name을 표시한다.
+- Group `label`은 선택 사항이며, 비어 있으면 날짜/섹션 헤더 영역을 렌더하지 않는다.
+- Row: icon, title, sub text, optional badge.
+- `badgeTone: "accent"`는 brand accent 토큰 강조 배지, 기본/`neutral`은 chat action background 토큰 배지.
+- Badge는 한 줄 ellipsis 처리해 row 높이를 흔들지 않는다.
+
+---
+
+## Concept UI Callout
+
+- AI callout은 라임색 glow/ring을 쓰지 않는다.
+- 타겟 슬롯 강조와 popover는 중립 border/shadow 토큰만 사용한다.
+
+---
+
+## Product Visual Concept UI
+
+- Hero crop으로 잘라낸 Concept UI 이미지는 외곽 corner radius를 유지한다.
+- Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 radius만 사용한다.

@@ -5,6 +5,8 @@ type Props = {
   screenshot: ProductVisualScreenshot | undefined;
   maxWidth: number;
   maxHeight: number;
+  polished?: boolean;
+  roundedCrop?: boolean;
 };
 
 const RADIUS = brand.radius[8];
@@ -32,12 +34,14 @@ function fitContain(aspect: number, maxW: number, maxH: number): { w: number; h:
  * All masking is plain CSS (overflow / positioned divs) — no clip-path or SVG
  * mask — so html-to-image's foreignObject clone reproduces it faithfully.
  */
-export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
+export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, polished = true, roundedCrop = false }: Props) {
   // No screenshot → render nothing, leaving a clean background-only preview.
   // (The upload affordance lives in the sidebar.)
   if (!screenshot?.url) return null;
 
   const { url, crop, displayMode, naturalWidth, naturalHeight } = screenshot;
+  const frameRadius = polished || roundedCrop ? RADIUS : brand.spacing[0];
+  const frameShadow = polished ? SHADOW : brand.elevation.none;
   const hasCrop =
     !!crop &&
     crop.width > 0 &&
@@ -58,8 +62,8 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
           width: "auto",
           height: "auto",
           objectFit: "contain",
-          borderRadius: RADIUS,
-          boxShadow: SHADOW,
+          borderRadius: frameRadius,
+          boxShadow: frameShadow,
           display: "block",
         }}
       />
@@ -84,8 +88,8 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
           width: box.w,
           height: box.h,
           overflow: "hidden",
-          borderRadius: RADIUS,
-          boxShadow: SHADOW,
+          borderRadius: frameRadius,
+          boxShadow: frameShadow,
         }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -117,8 +121,8 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
         width: box.w,
         height: box.h,
         overflow: "hidden",
-        borderRadius: RADIUS,
-        boxShadow: SHADOW,
+        borderRadius: frameRadius,
+        boxShadow: frameShadow,
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

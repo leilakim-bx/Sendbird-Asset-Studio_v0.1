@@ -215,6 +215,8 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
               screenshot={conceptRenderedScreenshot}
               maxWidth={innerW}
               maxHeight={contentH}
+              polished={false}
+              roundedCrop={hasValidCrop}
             />
           ) : displayedConceptScene ? (
             <ConceptSceneDisplay

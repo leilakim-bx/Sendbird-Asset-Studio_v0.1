@@ -73,17 +73,23 @@ export type ItineraryItem = {
   title: string;
   /** Optional second line, e.g. place / time */
   sub?: string;
+  /** Optional right-side row badge, e.g. "Best match" or "+2h 10m" */
+  badge?: string;
+  /** Visual emphasis for `badge`; accent uses the brand lime fill. */
+  badgeTone?: "accent" | "neutral";
 };
 export type ItineraryGroup = {
   id: string;
-  /** Free-text section header, e.g. "MON", "Day 1", "Morning" */
-  label: string;
+  /** Optional free-text section header, e.g. "MON", "Day 1", "Morning" */
+  label?: string;
   items: ItineraryItem[];
 };
 /** A grouped schedule card (day-grouped rows + optional footer CTA). Distinct
  *  from checklist (task progress): this is an agenda/itinerary. Bot only. */
 export type ItineraryBlock = {
   type: "itinerary";
+  /** Optional paragraph shown above the grouped rows inside the same card. */
+  intro?: string;
   groups: ItineraryGroup[];
   /** Optional footer button label (rendered black, inside the card). */
   cta?: string;

@@ -79,13 +79,16 @@ const itineraryItem = z.object({
   icon: z.enum(["lodging", "dining", "activity", "sightseeing", "flight", "transport", "place", "time"]),
   title: z.string().min(1),
   sub: z.string().optional(),
+  badge: z.string().optional(),
+  badgeTone: z.enum(["accent", "neutral"]).optional(),
 });
 const itineraryGroup = z.object({
-  label: z.string().min(1),
+  label: z.string().optional(),
   items: z.array(itineraryItem).min(1).max(5),
 });
 const itineraryMsg = z.object({
   type: z.literal("itinerary"),
+  intro: z.string().optional(),
   groups: z.array(itineraryGroup).min(1).max(4),
   cta: z.string().optional(),
 });
@@ -173,14 +176,17 @@ function toMessage(p: ScenarioMsg, id: string): ChatMessage {
           type: "itinerary",
           groups: p.groups.map((g, gi) => ({
             id: `${id}-g${gi}`,
-            label: g.label,
+            ...(g.label?.trim() ? { label: g.label } : {}),
             items: g.items.map((it, j) => ({
               id: `${id}-g${gi}-i${j}`,
               icon: it.icon,
               title: it.title,
               ...(it.sub ? { sub: it.sub } : {}),
+              ...(it.badge ? { badge: it.badge } : {}),
+              ...(it.badgeTone ? { badgeTone: it.badgeTone } : {}),
             })),
           })),
+          ...(p.intro ? { intro: p.intro } : {}),
           ...(p.cta ? { cta: p.cta } : {}),
         },
       };

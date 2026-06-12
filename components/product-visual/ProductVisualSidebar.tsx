@@ -39,12 +39,11 @@ const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
 const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
 const SOURCE_OPTIONS = [
-  { id: "concept", label: "Concept UI" },
   { id: "screenshot", label: "Screenshot" },
+  { id: "concept", label: "Concept UI" },
 ] as const;
 const FRAMING_PRESETS: { id: FramingPreset; label: string; description: string }[] = [
-  { id: "full-screen", label: "Full screen", description: "Entire 1600x1000 scene" },
-  { id: "hero-crop", label: "Hero crop", description: "Zoomed top-left crop" },
+  { id: "hero-crop", label: "Hero crop", description: "Manually crop the generated scene" },
   { id: "floating-panel", label: "Floating panel", description: "Panel only, transparent" },
 ];
 
@@ -177,7 +176,7 @@ export function ProductVisualSidebar() {
   const [conceptGenerating, setConceptGenerating] = useState(false);
   const [conceptError, setConceptError] = useState<string | null>(null);
   const [conceptCaptureId, setConceptCaptureId] = useState(0);
-  const [framingPreset, setFramingPreset] = useState<FramingPreset>("full-screen");
+  const [framingPreset, setFramingPreset] = useState<FramingPreset>("floating-panel");
   const [lastConceptSpec, setLastConceptSpec] = useState<SceneSpec | null>(null);
   const [specJsonDraft, setSpecJsonDraft] = useState("");
   const [specPasteError, setSpecPasteError] = useState<string | null>(null);
@@ -214,7 +213,10 @@ export function ProductVisualSidebar() {
 
     async function captureConceptScene() {
       try {
-        console.info("[concept-ui] capture start", { preset: framingPreset, archetype: scene.archetype });
+        console.info("[concept-ui] capture start", {
+          preset: framingPreset,
+          archetype: scene.archetype,
+        });
         if ("fonts" in document) {
           await Promise.race([
             document.fonts.ready,
@@ -240,6 +242,7 @@ export function ProductVisualSidebar() {
           conceptScene: scene,
           screenshot: conceptSceneToProductScreenshot(exported),
         });
+        if (framingPreset === "hero-crop") setCropOpen(true);
         setConceptScene(null);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -400,6 +403,20 @@ export function ProductVisualSidebar() {
   const bgList = [...BACKGROUNDS, ...customBackgrounds];
   const selectedBgId = bgList.find((b) => b.url === content.bgImage)?.id ?? "";
   const current = FORMAT_FLAT.find((f) => f.id === content.format);
+
+  function recaptureConceptSpec(spec: SceneSpec | null = activeConceptSpec) {
+    const nextSpec = spec ?? activeConceptSpec;
+    if (sourceMode !== "concept" || !nextSpec) return;
+    setConceptError(null);
+    setConceptScene(nextSpec);
+    setConceptGenerating(true);
+    setConceptCaptureId((id) => id + 1);
+  }
+
+  function handleFramingPresetChange(preset: FramingPreset) {
+    setFramingPreset(preset);
+    recaptureConceptSpec();
+  }
 
   function handleResizeStart(e: React.MouseEvent) {
     e.preventDefault();
@@ -776,14 +793,14 @@ export function ProductVisualSidebar() {
                 title="Choose the frame"
                 description="This controls what part of the mock becomes the image."
               />
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {FRAMING_PRESETS.map((preset) => {
                   const active = framingPreset === preset.id;
                   return (
                     <button
                       key={preset.id}
                       type="button"
-                      onClick={() => setFramingPreset(preset.id)}
+                      onClick={() => handleFramingPresetChange(preset.id)}
                       title={preset.description}
                       className={[
                         "rounded-lg border p-1.5 text-left transition-colors",
@@ -796,9 +813,7 @@ export function ProductVisualSidebar() {
                         <span
                           className={[
                             "block bg-current/70",
-                            preset.id === "full-screen"
-                              ? "h-full w-full rounded-sm"
-                              : preset.id === "hero-crop"
+                            preset.id === "hero-crop"
                                 ? "h-full w-2/3 rounded-sm"
                                 : "mx-auto mt-1 h-5 w-8 rounded-sm shadow-sm",
                           ].join(" ")}
@@ -909,7 +924,7 @@ export function ProductVisualSidebar() {
         />
       )}
 
-      {sourceMode === "screenshot" && cropOpen && content.screenshot?.url && (
+      {cropOpen && content.screenshot?.url && (
         <CropSelector
           imageUrl={content.screenshot.url}
           crop={content.screenshot.crop}
@@ -919,7 +934,7 @@ export function ProductVisualSidebar() {
                 screenshot: {
                   ...content.screenshot,
                   crop,
-                  displayMode: cropOnly ? "crop" : content.screenshot.displayMode,
+                  displayMode: sourceMode === "concept" || cropOnly ? "crop" : content.screenshot.displayMode,
                 },
               });
             }
