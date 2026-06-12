@@ -131,7 +131,14 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const minH = FORMAT_MIN_HEIGHT[format];
 
   const imageBg = isImageBgFormat(format);
-  const displayedScreenshot = sourceMode === "screenshot" ? screenshotForFormat(content) : undefined;
+  const conceptRenderedScreenshot =
+    sourceMode === "concept" && content.conceptScene && content.screenshot
+      ? screenshotForFormat(content)
+      : undefined;
+  const displayedScreenshot =
+    sourceMode === "screenshot"
+      ? screenshotForFormat(content)
+      : conceptRenderedScreenshot;
   const displayedConcept =
     sourceMode === "concept" && !content.conceptScene
       ? (content.concept ?? buildProductVisualConcept(content.title))
@@ -156,7 +163,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const padX = fillMode ? 12 : paddingFor(format);
   const padY = fillMode ? 12 : verticalPaddingFor(format, padX);
   const innerW = W - padX * 2;
-  const screenshotH = sourceMode === "screenshot" ? screenshotDisplayHeight(content, innerW) : null;
+  const screenshotH = displayedScreenshot ? screenshotDisplayHeight(content, innerW) : null;
   const imageDrivenH =
     (format === "feature-mobile" || format === "blog") && screenshotH
       ? screenshotH + padY * 2
@@ -203,7 +210,13 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         }}
       >
         {sourceMode === "concept" ? (
-          displayedConceptScene ? (
+          conceptRenderedScreenshot ? (
+            <ScreenshotDisplay
+              screenshot={conceptRenderedScreenshot}
+              maxWidth={innerW}
+              maxHeight={contentH}
+            />
+          ) : displayedConceptScene ? (
             <ConceptSceneDisplay
               spec={displayedConceptScene}
               maxWidth={innerW}

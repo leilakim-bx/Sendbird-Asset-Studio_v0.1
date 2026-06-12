@@ -1,27 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Download, Copy, ExternalLink } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { ZodError } from "zod";
 import { useEditorStore } from "@/lib/store";
 import {
-  FORMAT_SIZES,
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
   isImageBgFormat,
-  type ProductVisualContent,
   type ProductVisualFormat,
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
-import { exportImage } from "@/lib/export";
-import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
-import { ProductVisualCanvas } from "./ProductVisualCanvas";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   conceptSceneToProductScreenshot,
@@ -29,8 +24,7 @@ import {
   type FramingPreset,
 } from "@/lib/concept-ui/export-scene";
 import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
-import { parseSceneSpec, type ConceptUiArchetype, type SceneSpec } from "@/lib/concept-ui/scene-spec";
-import { conceptUiArchetypes } from "@/lib/concept-ui/slots";
+import { parseSceneSpec, type SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
 import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
 
@@ -43,8 +37,6 @@ const DEFAULT_PANEL_W = 320;
 const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
-const CONCEPT_UI_HELPER =
-  "Describe a feature. Studio will render a matching product UI mock.";
 const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
 const SOURCE_OPTIONS = [
   { id: "concept", label: "Concept UI" },
@@ -67,24 +59,6 @@ function formatSpecError(error: unknown): string {
   if (error instanceof SyntaxError) return "Invalid JSON syntax.";
   if (error instanceof Error) return error.message;
   return String(error);
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return slug || "concept-ui";
-}
-
-function conceptSpecWithCallout(spec: SceneSpec, enabled: boolean): SceneSpec {
-  const next = structuredClone(spec) as SceneSpec;
-  if (!enabled) delete next.modifiers.aiCallout;
-  return parseSceneSpec(next);
 }
 
 async function copyTextToClipboard(text: string): Promise<"clipboard" | "legacy" | "manual"> {
@@ -124,6 +98,28 @@ function IconTooltip({ label }: { label: string }) {
     <span className="pointer-events-none absolute bottom-full right-0 z-30 mb-1.5 rounded-md border border-studio-border bg-studio-bg px-2 py-1 text-[10px] font-medium text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover/action:opacity-100 group-focus-within/action:opacity-100">
       {label}
     </span>
+  );
+}
+
+function StepLabel({
+  number,
+  title,
+  description,
+}: {
+  number: number;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
+        {number}
+      </span>
+      <span>
+        <span className="block text-xs font-semibold text-studio-text">{title}</span>
+        {description ? <span className="mt-0.5 block text-[11px] leading-snug text-studio-muted">{description}</span> : null}
+      </span>
+    </div>
   );
 }
 
@@ -183,7 +179,6 @@ export function ProductVisualSidebar() {
   const [conceptCaptureId, setConceptCaptureId] = useState(0);
   const [framingPreset, setFramingPreset] = useState<FramingPreset>("full-screen");
   const [lastConceptSpec, setLastConceptSpec] = useState<SceneSpec | null>(null);
-  const [choiceSpecs, setChoiceSpecs] = useState<Partial<Record<ConceptUiArchetype, SceneSpec>> | null>(null);
   const [specJsonDraft, setSpecJsonDraft] = useState("");
   const [specPasteError, setSpecPasteError] = useState<string | null>(null);
   const [specNotice, setSpecNotice] = useState<string | null>(null);
@@ -192,19 +187,7 @@ export function ProductVisualSidebar() {
   const [aiChatReplyDraft, setAiChatReplyDraft] = useState("");
   const [aiChatError, setAiChatError] = useState<string | null>(null);
   const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
-  const [variantPresets, setVariantPresets] = useState<Record<FramingPreset, boolean>>({
-    "full-screen": true,
-    "hero-crop": true,
-    "floating-panel": true,
-  });
-  const [variantCalloutEnabled, setVariantCalloutEnabled] = useState(true);
-  const [variantExporting, setVariantExporting] = useState(false);
-  const [variantStatus, setVariantStatus] = useState<string | null>(null);
-  const [variantExportSpec, setVariantExportSpec] = useState<SceneSpec | null>(null);
-  const [variantProductContent, setVariantProductContent] = useState<ProductVisualContent | null>(null);
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
-  const variantSceneRef = useRef<HTMLDivElement>(null);
-  const variantProductRef = useRef<HTMLDivElement>(null);
   const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -253,7 +236,7 @@ export function ProductVisualSidebar() {
         if (!latest) return;
         setProductVisualContent({
           ...latest,
-          sourceMode: "screenshot",
+          sourceMode: "concept",
           conceptScene: scene,
           screenshot: conceptSceneToProductScreenshot(exported),
         });
@@ -291,7 +274,6 @@ export function ProductVisualSidebar() {
 
   function updateConceptPrompt(prompt: string) {
     setConceptPrompt(prompt);
-    setChoiceSpecs(null);
     setSpecNotice(null);
     setAiChatPromptCopied(false);
     setAiChatPromptDraft("");
@@ -300,7 +282,6 @@ export function ProductVisualSidebar() {
   }
 
   function startConceptSpec(spec: SceneSpec, notice?: string) {
-    setChoiceSpecs(null);
     setLastConceptSpec(spec);
     setSpecJsonDraft(prettySpec(spec));
     setSpecNotice(notice ?? null);
@@ -308,43 +289,6 @@ export function ProductVisualSidebar() {
     setConceptScene(spec);
     setConceptGenerating(true);
     setConceptCaptureId((id) => id + 1);
-  }
-
-  async function regenerateConcept() {
-    const prompt = effectiveConceptPrompt.trim() || "AI support workspace with customer context";
-    setConceptError(null);
-    setSpecPasteError(null);
-    setChoiceSpecs(null);
-    const choice = ruleBasedSpecProvider.analyze({ description: prompt });
-    if (choice.kind === "needs-choice") {
-      const entries = await Promise.all(
-        choice.options.map(async (archetype) => {
-          const result = await ruleBasedSpecProvider.generate({
-            description: prompt,
-            uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
-            forcedArchetype: archetype,
-          });
-          return [archetype, result.spec] as const;
-        }),
-      );
-      setChoiceSpecs(Object.fromEntries(entries) as Partial<Record<ConceptUiArchetype, SceneSpec>>);
-      setSpecNotice("Choose a layout to continue.");
-      console.info("[concept-ui] rule mapping needs choice", { description: prompt, options: choice.options, confidence: 0 });
-      return;
-    }
-
-    const result = await ruleBasedSpecProvider.generate({
-      description: prompt,
-      uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
-      forcedArchetype: choice.archetype,
-    });
-    console.info("[concept-ui] rule mapping generated", {
-      description: prompt,
-      archetype: choice.archetype,
-      confidence: choice.confidence,
-      provider: result.provider,
-    });
-    startConceptSpec(result.spec, result.notice);
   }
 
   async function copyPromptForAiChat() {
@@ -387,64 +331,6 @@ export function ProductVisualSidebar() {
     setAiChatError(null);
     setAiChatNotice(result.notice ?? "AI reply imported.");
     startConceptSpec(result.spec, result.notice ?? "AI reply imported.");
-  }
-
-  function toggleVariantPreset(preset: FramingPreset) {
-    setVariantPresets((current) => ({ ...current, [preset]: !current[preset] }));
-  }
-
-  async function batchExportVariants() {
-    if (!activeConceptSpec || variantExporting) return;
-    const selectedPresets = FRAMING_PRESETS.filter((preset) => variantPresets[preset.id]);
-    if (selectedPresets.length === 0) {
-      setVariantStatus("Select at least one preset.");
-      return;
-    }
-    setVariantExporting(true);
-    setVariantStatus("Preparing variants...");
-    const spec = conceptSpecWithCallout(activeConceptSpec, variantCalloutEnabled);
-    setVariantExportSpec(spec);
-    await wait(80);
-
-    try {
-      for (const preset of selectedPresets) {
-        const sceneEl = variantSceneRef.current;
-        if (!sceneEl) throw new Error("Variant scene is not ready.");
-        setVariantStatus(`Exporting ${preset.label}...`);
-        const exported = await exportConceptSceneElement(sceneEl, preset.id);
-        const latest = useEditorStore.getState().productVisualContent;
-        if (!latest) throw new Error("Product visual content is not ready.");
-        const nextContent: ProductVisualContent = {
-          ...latest,
-          sourceMode: "screenshot",
-          conceptScene: spec,
-          screenshot: conceptSceneToProductScreenshot(exported),
-        };
-        setVariantProductContent(nextContent);
-        await wait(90);
-        const productEl = variantProductRef.current;
-        if (!productEl) throw new Error("Variant product canvas is not ready.");
-        const size = FORMAT_SIZES[nextContent.format];
-        const height = typeof size.h === "number" ? size.h : undefined;
-        const filename = `${slugify(spec.content.title)}-${spec.archetype}-${preset.id}.png`;
-        await exportImage(productEl, size.w, height, filename);
-        await wait(140);
-      }
-      setVariantStatus(`Exported ${selectedPresets.length} variants.`);
-    } catch (err) {
-      setVariantStatus(err instanceof Error ? err.message : String(err));
-    } finally {
-      setVariantProductContent(null);
-      setVariantExportSpec(null);
-      setVariantExporting(false);
-    }
-  }
-
-  function chooseAmbiguousSpec(archetype: ConceptUiArchetype) {
-    const spec = choiceSpecs?.[archetype];
-    if (!spec) return;
-    console.info("[concept-ui] layout picked", { archetype, description: effectiveConceptPrompt });
-    startConceptSpec(spec, "Generated from a base template. Edit text as needed.");
   }
 
   async function copySpecJson() {
@@ -765,76 +651,38 @@ export function ProductVisualSidebar() {
 
         {sourceMode === "concept" && (
           <Section title="Concept UI">
-            <div className="relative">
+            <div className="space-y-3">
+              <StepLabel
+                number={1}
+                title="Describe the feature"
+                description="This becomes the brief for the product UI mock."
+              />
               <textarea
                 value={effectiveConceptPrompt}
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}
-                className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 pb-14 pr-14 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+                className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
               />
-              <div className="absolute bottom-4 right-3">
-                <AiMagicButton
-                  label="Generate base template"
-                  loading={conceptGenerating}
-                  disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
-                  onClick={regenerateConcept}
-                />
-              </div>
             </div>
-            <p className="mt-1.5 text-[11px] leading-snug text-studio-muted">{CONCEPT_UI_HELPER}</p>
-            <div className="mt-3 flex gap-2">
+
+            <div className="mt-4 space-y-3">
+              <StepLabel
+                number={2}
+                title="Create the UI"
+                description="Copy the prompt, run it in Claude or Gemini, then paste the reply back here."
+              />
               <button
                 type="button"
                 onClick={copyPromptForAiChat}
                 disabled={!effectiveConceptPrompt.trim()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2.5 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
               >
                 <Copy size={14} />
-                Copy prompt for AI chat
-              </button>
-              <button
-                type="button"
-                onClick={regenerateConcept}
-                disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
-                className="rounded-lg border border-studio-border px-3 py-2 text-[11px] font-semibold text-studio-muted transition-colors hover:text-studio-text disabled:opacity-40"
-              >
-                Base
+                Copy prompt for Claude / Gemini
               </button>
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-1.5">
-              {FRAMING_PRESETS.map((preset) => {
-                const active = framingPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => setFramingPreset(preset.id)}
-                    title={preset.description}
-                    className={[
-                      "rounded-lg border p-1.5 text-left transition-colors",
-                      active
-                        ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
-                        : "border-studio-border text-studio-muted hover:text-studio-text hover:bg-white/[0.04]",
-                    ].join(" ")}
-                  >
-                    <span className="block h-9 rounded-md border border-current/20 bg-studio-input p-1">
-                      <span
-                        className={[
-                          "block bg-current/70",
-                          preset.id === "full-screen"
-                            ? "h-full w-full rounded-sm"
-                            : preset.id === "hero-crop"
-                              ? "h-full w-2/3 rounded-sm"
-                              : "mx-auto mt-1 h-5 w-8 rounded-sm shadow-sm",
-                        ].join(" ")}
-                      />
-                    </span>
-                    <span className="mt-1 block truncate text-[10px] font-semibold">{preset.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+
             {conceptError ? (
               <p className="mt-2 text-[11px] leading-snug text-red-400">{conceptError}</p>
             ) : null}
@@ -866,36 +714,13 @@ export function ProductVisualSidebar() {
             {aiChatNotice ? (
               <p className="mt-2 text-[11px] leading-snug text-studio-muted">{aiChatNotice}</p>
             ) : null}
-            {analyzedChoice.kind === "resolved" && !choiceSpecs ? (
-              <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-studio-muted">
-                <span className="truncate">Rule match</span>
-                <span className="shrink-0 rounded-full border border-studio-border px-2 py-0.5 uppercase tracking-wide">
-                  {analyzedChoice.archetype} / {Math.round(analyzedChoice.confidence * 100)}%
-                </span>
-              </div>
-            ) : null}
             {(aiChatPromptCopied || aiChatPromptDraft) ? (
-              <div className="mt-3 rounded-lg border border-studio-border bg-studio-input p-3">
-                <div className="space-y-2 text-[11px] leading-snug text-studio-muted">
-                  <div className="flex gap-2">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
-                      1
-                    </span>
-                    <span>Paste into Claude or Gemini chat.</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
-                      2
-                    </span>
-                    <span>Copy the AI&apos;s full reply.</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
-                      3
-                    </span>
-                    <span>Paste it below.</span>
-                  </div>
-                </div>
+              <div className="mt-4 rounded-xl border border-studio-border bg-studio-input p-3">
+                <StepLabel
+                  number={3}
+                  title="Paste the AI reply"
+                  description="Copy the full chat response and paste it here."
+                />
                 <div className="mt-3 flex gap-1.5">
                   <a
                     href="https://claude.ai/new"
@@ -930,7 +755,7 @@ export function ProductVisualSidebar() {
                     setAiChatNotice(null);
                   }}
                   placeholder="Paste the AI reply here"
-                  rows={7}
+                  rows={6}
                   spellCheck={false}
                   className="mt-3 w-full resize-none rounded-lg border border-studio-border bg-black/30 p-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
                 />
@@ -941,42 +766,54 @@ export function ProductVisualSidebar() {
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-40"
                 >
                   {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                  Create from AI reply
+                  Render AI reply
                 </button>
               </div>
             ) : null}
-            {choiceSpecs ? (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {conceptUiArchetypes.filter((archetype) => choiceSpecs[archetype]).map((archetype) => (
-                  <div
-                    key={archetype}
-                    className="group relative rounded-lg border border-studio-border bg-studio-input p-2 text-left text-studio-muted transition-colors hover:border-studio-accent hover:text-studio-text"
-                  >
+            <div className="mt-4 space-y-3">
+              <StepLabel
+                number={4}
+                title="Choose the frame"
+                description="This controls what part of the mock becomes the image."
+              />
+              <div className="grid grid-cols-3 gap-1.5">
+                {FRAMING_PRESETS.map((preset) => {
+                  const active = framingPreset === preset.id;
+                  return (
                     <button
+                      key={preset.id}
                       type="button"
-                      aria-label={`Choose ${archetype} layout`}
-                      onClick={() => chooseAmbiguousSpec(archetype)}
-                      className="absolute inset-0 z-10 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-studio-accent"
-                    />
-                    <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide group-hover:text-studio-text">
-                      {archetype}
-                    </span>
-                    <span
-                      aria-hidden
-                      inert
-                      className="pointer-events-none block h-[72px] overflow-hidden rounded-md bg-studio-preview-surface"
+                      onClick={() => setFramingPreset(preset.id)}
+                      title={preset.description}
+                      className={[
+                        "rounded-lg border p-1.5 text-left transition-colors",
+                        active
+                          ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                          : "border-studio-border text-studio-muted hover:text-studio-text hover:bg-white/[0.04]",
+                      ].join(" ")}
                     >
-                      <span style={{ display: "block", transform: "scale(0.072)", transformOrigin: "top left" }}>
-                        {choiceSpecs[archetype] ? <SceneRenderer spec={choiceSpecs[archetype]} /> : null}
+                      <span className="block h-9 rounded-md border border-current/20 bg-studio-input p-1">
+                        <span
+                          className={[
+                            "block bg-current/70",
+                            preset.id === "full-screen"
+                              ? "h-full w-full rounded-sm"
+                              : preset.id === "hero-crop"
+                                ? "h-full w-2/3 rounded-sm"
+                                : "mx-auto mt-1 h-5 w-8 rounded-sm shadow-sm",
+                          ].join(" ")}
+                        />
                       </span>
-                    </span>
-                  </div>
-                ))}
+                      <span className="mt-1 block truncate text-[10px] font-semibold">{preset.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ) : null}
-            <details className="mt-3 rounded-lg border border-studio-border bg-studio-input p-2">
+            </div>
+
+            <details className="mt-4 rounded-lg border border-studio-border bg-studio-input p-2">
               <summary className="cursor-pointer text-[11px] font-semibold text-studio-muted hover:text-studio-text">
-                Advanced
+                Advanced: import / export spec JSON
               </summary>
               <div className="mt-2 flex gap-1.5">
                 <button
@@ -1013,51 +850,6 @@ export function ProductVisualSidebar() {
             </details>
           </Section>
         )}
-
-        {activeConceptSpec ? (
-          <Section title="Variants">
-            <div className="grid grid-cols-3 gap-1.5">
-              {FRAMING_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => toggleVariantPreset(preset.id)}
-                  aria-pressed={variantPresets[preset.id]}
-                  className={[
-                    "rounded-lg border px-2 py-2 text-left text-[10px] font-semibold transition-colors",
-                    variantPresets[preset.id]
-                      ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
-                      : "border-studio-border text-studio-muted hover:text-studio-text",
-                  ].join(" ")}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <label className="mt-3 flex items-center gap-2 text-[11px] font-medium text-studio-muted">
-              <input
-                type="checkbox"
-                checked={variantCalloutEnabled}
-                onChange={(e) => setVariantCalloutEnabled(e.currentTarget.checked)}
-                disabled={!activeConceptSpec.modifiers.aiCallout}
-                className="size-3 accent-studio-accent"
-              />
-              Include AI callout
-            </label>
-            <button
-              type="button"
-              onClick={batchExportVariants}
-              disabled={variantExporting}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-50"
-            >
-              {variantExporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-              Export selected variants
-            </button>
-            {variantStatus ? (
-              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{variantStatus}</p>
-            ) : null}
-          </Section>
-        ) : null}
 
         {sourceMode === "screenshot" && content.screenshot?.url && (
           <Section title="Settings">
@@ -1102,22 +894,6 @@ export function ProductVisualSidebar() {
         <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
           <div ref={conceptCaptureRef}>
             <SceneRenderer spec={conceptScene} />
-          </div>
-        </div>
-      ) : null}
-
-      {variantExportSpec ? (
-        <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
-          <div ref={variantSceneRef}>
-            <SceneRenderer spec={variantExportSpec} />
-          </div>
-        </div>
-      ) : null}
-
-      {variantProductContent ? (
-        <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
-          <div ref={variantProductRef}>
-            <ProductVisualCanvas content={variantProductContent} exportMode />
           </div>
         </div>
       ) : null}

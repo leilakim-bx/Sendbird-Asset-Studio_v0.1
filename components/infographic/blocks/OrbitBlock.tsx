@@ -5,10 +5,17 @@ import {
   MessageCircle,
   Mic,
   Monitor,
-  Phone,
   Smartphone,
   type LucideIcon,
 } from "lucide-react";
+import {
+  siGmail,
+  siInstagram,
+  siLine,
+  siMessenger,
+  siWhatsapp,
+  type SimpleIcon,
+} from "simple-icons";
 import type { InfographicBlock, OrbitIconKey } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK } from "@/lib/types/infographic";
 import { brand } from "@/lib/tokens/brand";
@@ -23,15 +30,22 @@ const ICON_RING_STROKE = brand.color.infographic.iconRing;
 const STAGE = { w: 560, h: 460 };
 const CENTER = { x: STAGE.w / 2, y: STAGE.h / 2 };
 
-const ICONS: Record<OrbitIconKey, LucideIcon> = {
+const LUCIDE_ICONS: Partial<Record<OrbitIconKey, LucideIcon>> = {
   mobile: Smartphone,
   voice: Mic,
-  whatsapp: Phone,
   email: Mail,
   chat: MessageCircle,
   web: Monitor,
   audio: AudioLines,
   site: Globe,
+};
+
+const SIMPLE_ICONS: Partial<Record<OrbitIconKey, SimpleIcon>> = {
+  whatsapp: siWhatsapp,
+  line: siLine,
+  instagram: siInstagram,
+  messenger: siMessenger,
+  gmail: siGmail,
 };
 
 const DEFAULT_NODES = [
@@ -180,7 +194,10 @@ function CycleDiagram({ block, scale = 1 }: Props) {
 }
 
 function HubSpokeDiagram({ block, scale = 1 }: Props) {
-  const satellites = (block.satellites?.length ? block.satellites : DEFAULT_SATELLITES).slice(0, 8);
+  const rawSatellites = block.satellites?.length ? block.satellites : DEFAULT_SATELLITES;
+  const satellites = rawSatellites
+    .filter((satellite) => satellite.key in LUCIDE_ICONS || satellite.key in SIMPLE_ICONS)
+    .slice(0, 8);
   const radius = satellites.length > 6 ? 124 : 116;
   const outerGuideRadius = radius + 72;
   const iconSize = Math.round(24 * scale);
@@ -196,7 +213,8 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
 
       {satellites.map((satellite, i) => {
         const p = nodePos(i, satellites.length, radius);
-        const Icon = ICONS[satellite.key] ?? Globe;
+        const simpleIcon = SIMPLE_ICONS[satellite.key];
+        const Icon = LUCIDE_ICONS[satellite.key] ?? Globe;
         return (
           <div
             key={`${satellite.key}-${i}`}
@@ -217,7 +235,13 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
               boxShadow: brand.elevation[1],
             }}
           >
-            <Icon size={iconSize} strokeWidth={2.1} aria-hidden />
+            {simpleIcon ? (
+              <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" aria-hidden style={{ display: "block" }}>
+                <path d={simpleIcon.path} fill="currentColor" />
+              </svg>
+            ) : (
+              <Icon size={iconSize} strokeWidth={2.1} aria-hidden />
+            )}
           </div>
         );
       })}
