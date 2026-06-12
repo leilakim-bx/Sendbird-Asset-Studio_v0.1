@@ -17,6 +17,7 @@ import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/l
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   conceptSceneToProductScreenshot,
@@ -24,6 +25,7 @@ import {
   type FramingPreset,
 } from "@/lib/concept-ui/export-scene";
 import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
+import { useOnceFlag } from "@/lib/use-once-flag";
 import { parseSceneSpec, type SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
 import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
@@ -187,6 +189,7 @@ export function ProductVisualSidebar() {
   const [aiChatError, setAiChatError] = useState<string | null>(null);
   const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
   const [copyFeedbackTick, setCopyFeedbackTick] = useState(0);
+  const [showConceptCoach, dismissConceptCoach] = useOnceFlag("coach-product-visual-concept-v1");
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
   const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -283,6 +286,7 @@ export function ProductVisualSidebar() {
   }
 
   function updateConceptPrompt(prompt: string) {
+    dismissConceptCoach();
     setConceptPrompt(prompt);
     setSpecNotice(null);
     setAiChatPromptCopied(false);
@@ -305,6 +309,7 @@ export function ProductVisualSidebar() {
   async function copyPromptForAiChat() {
     const prompt = effectiveConceptPrompt.trim();
     if (!prompt) return;
+    dismissConceptCoach();
     const text = buildAiChatPrompt({
       description: prompt,
       uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
@@ -678,7 +683,14 @@ export function ProductVisualSidebar() {
         )}
 
         {sourceMode === "concept" && (
-          <Section title="Concept UI">
+          <div className="relative">
+            {showConceptCoach && (
+              <CoachmarkBubble
+                text="Describe a feature to create the mock."
+                onDismiss={dismissConceptCoach}
+              />
+            )}
+            <Section title="Concept UI">
             <div className="space-y-3">
               <StepLabel
                 number={1}
@@ -688,6 +700,7 @@ export function ProductVisualSidebar() {
               <textarea
                 value={effectiveConceptPrompt}
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
+                onFocus={dismissConceptCoach}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}
                 className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
@@ -874,7 +887,8 @@ export function ProductVisualSidebar() {
                 <p className="mt-1.5 whitespace-pre-wrap text-[10px] leading-relaxed text-red-400">{specPasteError}</p>
               ) : null}
             </details>
-          </Section>
+            </Section>
+          </div>
         )}
 
         {sourceMode === "screenshot" && content.screenshot?.url && (

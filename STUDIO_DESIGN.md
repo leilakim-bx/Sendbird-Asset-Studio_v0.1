@@ -118,6 +118,12 @@ text-sm text-studio-text px-4 py-2.5
 지속 시간: 3000ms
 ```
 
+### Coachmark
+
+- 첫 진입 안내는 공통 `CoachmarkBubble`을 사용한다.
+- Chat UI는 Scenario 섹션, Infographic은 source 입력, Product Visual은 Concept UI 설명 입력에 고정한다.
+- 사용자가 해당 입력/선택/생성 행동을 시작하면 즉시 dismiss한다.
+
 ---
 
 ## Interaction Patterns
