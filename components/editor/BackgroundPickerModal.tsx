@@ -147,7 +147,7 @@ export function BackgroundPickerModal({
                   {bg.label}
                 </span>
                 {currentId === bg.id && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-[#1A1A1A] font-bold leading-none">
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-studio-accent-fg font-bold leading-none">
                     ✓
                   </span>
                 )}

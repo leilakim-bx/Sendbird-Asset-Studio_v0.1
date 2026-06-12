@@ -1,14 +1,15 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "compare" }>; scale?: number };
 
-const CARD_BG = "#FFFFFF";
-const HAIRLINE = "rgba(0,0,0,0.08)";
+const CARD_BG = brand.color.infographic.paper;
+const HAIRLINE = brand.color.infographic.grid;
 /** Highlight color — black (not the lime accent) for the "new/better" side. */
-const HL = "#292016";
+const HL = brand.color.ink;
 /** Neutral chip background for non-highlighted column names — infographic gray. */
-const CHIP_BG = "#D9D6D2";
+const CHIP_BG = brand.color.infographic.chip;
 
 /**
  * Two-column comparison. Renders as side-by-side cards (default) or an aligned
@@ -87,7 +88,7 @@ function ColHeader({ label, highlight, fs }: { label: string; highlight: boolean
         fontWeight: 700,
         letterSpacing: "0.04em",
         textTransform: "uppercase",
-        color: highlight ? "#FFFFFF" : INFOGRAPHIC_INK,
+        color: highlight ? brand.color.white : INFOGRAPHIC_INK,
         padding: "5px 12px",
         borderRadius: 8,
         background: highlight ? HL : CHIP_BG,
@@ -135,7 +136,7 @@ function CompareCard({
           fontWeight: 700,
           letterSpacing: "0.04em",
           textTransform: "uppercase",
-          color: highlight ? "#FFFFFF" : INFOGRAPHIC_INK,
+          color: highlight ? brand.color.white : INFOGRAPHIC_INK,
           background: highlight ? HL : CHIP_BG,
           padding: "5px 12px",
           borderRadius: 8,

@@ -11,13 +11,14 @@ import {
 } from "lucide-react";
 import type { InfographicBlock, OrbitIconKey } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "orbit" }>; scale?: number };
 
-const PAPER = "#FFFFFF";
-const ORBIT_BLACK = "#000000";
-const HUB_DASH_STROKE = "#66625E";
-const ICON_RING_STROKE = "#DDD9D1";
+const PAPER = brand.color.infographic.paper;
+const ORBIT_BLACK = brand.color.infographic.orbitBlack;
+const HUB_DASH_STROKE = brand.color.inkMutedStrong;
+const ICON_RING_STROKE = brand.color.infographic.iconRing;
 
 const STAGE = { w: 560, h: 460 };
 const CENTER = { x: STAGE.w / 2, y: STAGE.h / 2 };
@@ -144,7 +145,7 @@ function CycleDiagram({ block, scale = 1 }: Props) {
               background: highlight ? ORBIT_BLACK : PAPER,
               color: highlight ? PAPER : ORBIT_BLACK,
               boxSizing: "border-box",
-              boxShadow: "0 1px 0 rgba(0,0,0,0.03)",
+              boxShadow: brand.elevation[1],
             }}
           >
             {highlight && (
@@ -213,7 +214,7 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
               alignItems: "center",
               justifyContent: "center",
               color: INFOGRAPHIC_INK,
-              boxShadow: "0 1px 0 rgba(0,0,0,0.03)",
+              boxShadow: brand.elevation[1],
             }}
           >
             <Icon size={iconSize} strokeWidth={2.1} aria-hidden />

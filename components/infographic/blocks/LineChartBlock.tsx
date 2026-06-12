@@ -1,6 +1,7 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_ACCENT_HEX } from "@/lib/types/infographic";
 import { compactTrendAxisLabel, shouldShowTrendAxisLabel } from "@/lib/infographic-labels";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "line-chart" }> };
 
@@ -8,8 +9,8 @@ const VB_W = 720;
 const VB_H = 380;
 const PAD = { left: 46, right: 16, top: 18, bottom: 36 };
 /** Secondary line — light warm gray so line A (ink) stays primary. */
-const SERIES_B_COLOR = "#BDB5AB";
-const GRID = "rgba(0,0,0,0.08)";
+const SERIES_B_COLOR = brand.color.infographic.chartLineMuted;
+const GRID = brand.color.infographic.grid;
 /** Area fill is always lime (independent of the canvas accent), as a top-down gradient. */
 const LIME = INFOGRAPHIC_ACCENT_HEX.lime;
 

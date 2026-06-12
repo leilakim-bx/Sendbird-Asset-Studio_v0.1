@@ -13,7 +13,7 @@ type Props = {
   onCancel: () => void;
 };
 
-const LIME = "#CBFF4D";
+const LIME = "var(--studio-crop-selector)";
 const MIN = 0.1; // minimum crop edge (10% of the image)
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -140,7 +140,7 @@ export function CropSelector({ imageUrl, crop, onApply, onCancel }: Props) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
+      style={{ backgroundColor: "var(--app-overlay-crop-strong)" }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-studio-sidebar border border-studio-border rounded-2xl shadow-2xl flex flex-col max-w-[90vw] max-h-[90vh]">
@@ -183,7 +183,7 @@ export function CropSelector({ imageUrl, crop, onApply, onCancel }: Props) {
                   { left: 0, top: pct(sel.y), width: pct(sel.x), height: pct(sel.height) },
                   { left: pct(sel.x + sel.width), top: pct(sel.y), width: pct(1 - sel.x - sel.width), height: pct(sel.height) },
                 ].map((s, i) => (
-                  <div key={i} style={{ position: "absolute", background: "rgba(0,0,0,0.5)", pointerEvents: "none", ...s }} />
+                  <div key={i} style={{ position: "absolute", background: "var(--app-overlay-crop)", pointerEvents: "none", ...s }} />
                 ))}
 
                 {/* Selection rect */}
@@ -214,7 +214,7 @@ export function CropSelector({ imageUrl, crop, onApply, onCancel }: Props) {
                       top: `calc(${pct(hy)} - 6px)`,
                       width: 12, height: 12,
                       background: LIME,
-                      border: "1px solid rgba(0,0,0,0.35)",
+                      border: "1px solid var(--app-crop-border)",
                       borderRadius: 2,
                       cursor: cur,
                     }}

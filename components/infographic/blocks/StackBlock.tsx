@@ -1,22 +1,22 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "stack" }>; scale?: number };
 
-// Grayscale-only palette (same as bars/compare): #FFFFFF / #E5E3DF / #D9D6D2 / #66625E / #292016.
 /** Dark elements (pills, highlight bands, callout). */
-const DARK = "#292016";
+const DARK = brand.color.ink;
 /** Subtle band container grouping a non-highlight layer's cells (lightest gray). */
-const BAND = "#E5E3DF";
+const BAND = brand.color.infographic.lightBand;
 /** Cell fill on a light band. */
-const CELL = "#FFFFFF";
+const CELL = brand.color.infographic.paper;
 /** Cell fill inside a highlight (dark) band — one step lighter than DARK. */
-const HL_CELL = "#66625E";
+const HL_CELL = brand.color.inkMutedStrong;
 /** Muted text on a light background. */
-const MUTED = "#66625E";
+const MUTED = brand.color.inkMutedStrong;
 /** Muted text on a dark background. */
-const LIGHT_ON_DARK = "#D9D6D2";
+const LIGHT_ON_DARK = brand.color.infographic.lightOnDark;
 /** Connector line — warm gray, same as the node-list connectors. */
-const CONNECTOR = "#A8A39B";
+const CONNECTOR = brand.color.infographic.connector;
 
 /**
  * Layered stack / architecture diagram. Top-to-bottom bands, each with a dark
@@ -65,7 +65,7 @@ export function StackBlock({ block, scale = 1 }: Props) {
                     fontWeight: 700,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
-                    color: hl ? DARK : "#FFFFFF",
+                    color: hl ? DARK : brand.color.white,
                     background: hl ? "var(--ig-accent)" : DARK,
                     padding: "5px 14px",
                     borderRadius: 8,

@@ -38,7 +38,7 @@ export function BlockRenderer({
     case "kpi-group":
       return <KpiGroupBlock block={block} scale={scale} format={format} />;
     case "card-grid":
-      return <CardGridBlock block={block} scale={scale} />;
+      return <CardGridBlock block={block} scale={scale} maxHeight={maxHeight} format={format} />;
     case "bar-group":
       return <BarGroupBlock block={block} scale={scale} maxHeight={maxHeight} />;
     case "stacked-bar":
@@ -48,7 +48,7 @@ export function BlockRenderer({
     case "stack":
       return <StackBlock block={block} scale={scale} />;
     case "node-list":
-      return <NodeListBlock block={block} scale={scale} />;
+      return <NodeListBlock block={block} scale={scale} format={format} />;
     case "compare":
       return <CompareBlock block={block} scale={scale} />;
     case "line-chart":

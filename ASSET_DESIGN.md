@@ -5,6 +5,14 @@ Studio가 **만들어내는** 채팅 UI 목업(phone frame 안의 내용)의 디
 
 ---
 
+## Brand Tokens
+
+에셋 렌더 토큰의 source of truth는 `lib/tokens/brand.ts`다. Chat 목업,
+Infographic canvas/blocks, Product Visual canvas, Concept UI scene renderer는
+색, 폰트, radius, spacing, shadow 값을 컴포넌트에 직접 쓰지 않고 brand
+토큰에서 가져온다. Tool UI용 `lib/tokens/app.ts`는 에셋 렌더 경로에서
+import하지 않는다.
+
 ## Canvas (Export 기준)
 
 | 뷰포트 | 크기 | 용도 |

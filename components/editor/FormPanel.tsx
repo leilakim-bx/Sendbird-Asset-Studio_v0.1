@@ -22,9 +22,9 @@ const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice
 /** Solid red circle-with-exclamation badge used for "full"/"max" warnings. */
 const AlertCircleSolid = ({ size = 13 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" fill="#ef4444" />
-    <rect x="11" y="6.5" width="2" height="7" rx="1" fill="#ffffff" />
-    <circle cx="12" cy="16.75" r="1.25" fill="#ffffff" />
+    <circle cx="12" cy="12" r="10" fill="var(--app-error)" />
+    <rect x="11" y="6.5" width="2" height="7" rx="1" fill="var(--studio-text)" />
+    <circle cx="12" cy="16.75" r="1.25" fill="var(--studio-text)" />
   </svg>
 );
 
@@ -718,10 +718,10 @@ const MessageItem = memo(function MessageItem({
                   <ChecklistStatusIcon
                     status={item.status}
                     size={16}
-                    fill="#F3F4F6"
-                    check="#1a1a1a"
-                    arc="#F3F4F6"
-                    border="#6B7280"
+                    fill="var(--studio-text)"
+                    check="var(--studio-sidebar)"
+                    arc="var(--studio-text)"
+                    border="var(--studio-text-muted)"
                   />
                 </button>
                 <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
@@ -1183,7 +1183,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       {/* Resize handle — left edge (outside scroll container so h-full is always full panel height) */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:bg-studio-accent transition-colors"
         title="Drag to resize panel"
       />
 
@@ -1192,7 +1192,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       {/* AI MAGIC — generate a chat scenario from a description */}
       <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
         <div className="flex items-center gap-1.5 mb-2.5">
-          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center bg-studio-hover">
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
           <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
@@ -1208,7 +1208,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             placeholder=""
             rows={5}
             disabled={genLoading}
-            className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] disabled:opacity-60 disabled:cursor-not-allowed min-h-[96px]"
+            className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-app-placeholder disabled:opacity-60 disabled:cursor-not-allowed min-h-[96px]"
           />
           {/* Fixed example prompt — hidden when typing or focused */}
           {!genPrompt && !phFocused && (

@@ -4,6 +4,9 @@
 // the tool polishes it for releases/blogs. Canvas rendering, image upload, and
 // region selection land in STEP 2~5; this file is the type foundation only.
 
+import type { SceneSpec } from "@/lib/concept-ui/scene-spec";
+import { brand } from "@/lib/tokens/brand";
+
 export type ProductVisualFormat =
   | "feature-desktop"
   | "feature-mobile"
@@ -92,6 +95,8 @@ export type ProductVisualContent = {
   bgImage?: string;
   screenshot?: ProductVisualScreenshot;
   concept?: ProductVisualConcept;
+  /** New deterministic Concept UI renderer spec. Used for starter/sample scenes. */
+  conceptScene?: SceneSpec;
   title: string;
   subtitle?: string;
 };
@@ -126,19 +131,19 @@ export const FORMAT_MIN_HEIGHT: Record<ProductVisualFormat, number> = {
 /** Resolved background hex. Written as literal hex (not CSS vars) so the
  *  html-to-image export clone never depends on :root variables resolving. */
 export const PRODUCT_VISUAL_BG_HEX: Record<ProductVisualBg, string> = {
-  white:    "#FFFFFF",
-  sky:      "#D8F0FF",
-  stone:    "#D9D6D2",
-  warmgray: "#E5E3DF",
-  dark:     "#1C1917",
+  white:    brand.color.productVisual.bg.white,
+  sky:      brand.color.productVisual.bg.sky,
+  stone:    brand.color.productVisual.bg.stone,
+  warmgray: brand.color.productVisual.bg.warmgray,
+  dark:     brand.color.productVisual.bg.dark,
 };
 
 /** Formats with a single fixed (non-selectable) background. The canvas renders
  *  this hex regardless of `bg`, and the sidebar hides the Background picker. */
 export const FORMAT_FIXED_BG: Partial<Record<ProductVisualFormat, string>> = {
-  "release-thumbnail": "#E5E3DF",
-  "release-insert":    "#F7F5F0",
-  "blog":              "#F7F5F0",
+  "release-thumbnail": brand.color.productVisual.fixedBg.releaseThumbnail,
+  "release-insert":    brand.color.productVisual.fixedBg.releaseInsert,
+  "blog":              brand.color.productVisual.fixedBg.blog,
 };
 
 /** Formats that use a full-bleed background IMAGE (same library as the Chat
@@ -162,13 +167,13 @@ export const PRODUCT_VISUAL_EXAMPLE_SCREENSHOT: ProductVisualScreenshot = {
 // Fonts — same brand stacks the rest of the studio uses (mirrors infographic;
 // declared locally to keep Product Visual decoupled from infographic types).
 /** Serif display stack (brand "Serrif") — titles. */
-export const PRODUCT_VISUAL_SERIF = '"Serrif", Georgia, "Times New Roman", serif';
+export const PRODUCT_VISUAL_SERIF = brand.font.serif;
 /** Sans body stack (Helvetica Now Text) — subtitle + UI. */
-export const PRODUCT_VISUAL_SANS = '"Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
+export const PRODUCT_VISUAL_SANS = brand.font.sans;
 
 /** Ink colors for non-dark backgrounds (dark bg flips text to white). */
-export const PRODUCT_VISUAL_INK = "#1C1917";
-export const PRODUCT_VISUAL_INK_MUTED = "#6B6660";
+export const PRODUCT_VISUAL_INK = brand.color.productVisual.ink;
+export const PRODUCT_VISUAL_INK_MUTED = brand.color.productVisual.inkMuted;
 
 /** Per-format starter content. Used as the seed when entering a format (and on
  *  format switch — see store.setProductVisualFormat). `screenshot` is always

@@ -91,8 +91,8 @@ type EditorProps = {
 const MAX_COMPARE_ROWS_PRODUCT = 6;
 
 /** Hub title sits on one (nowrap) line under the logo — cap it so a long title
- *  never spills past the hub column / canvas edge. ~"Steward hub hub". */
-const MAX_HUB_TITLE = 16;
+ *  never spills past the hub column / canvas edge. ~"AI is brand equity". */
+const MAX_HUB_TITLE = 18;
 
 const MAX_CARD_GRID_CARDS = 4;
 const MAX_ORBIT_LABEL = 20;
@@ -250,6 +250,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
         ...card,
         badge: badgesEnabled ? card.badge?.trim() || `Panel ${i + 1}` : "",
       }));
+      const bodyMaxLength = cards.length === 1 ? 320 : 170;
       const setCards = (next: typeof b.cards) => onChange({ ...b, cards: next.slice(0, MAX_CARD_GRID_CARDS) });
       const setBadgesEnabled = (enabled: boolean) =>
         setCards(
@@ -287,7 +288,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               <textarea
                 className={inputCls + " resize-none min-h-16"}
                 placeholder="Body"
-                maxLength={170}
+                maxLength={bodyMaxLength}
                 value={card.body}
                 onChange={(e) =>
                   setCards(cards.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))
@@ -342,7 +343,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Shape">
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
               {(["bars", "split", "columns", "ranked"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -686,7 +687,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Shape">
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
               {(["cycle", "hub-spoke"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -775,7 +776,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
               {(["cards", "table"] as const).map((opt) => (
                 <button
                   key={opt}
@@ -1019,7 +1020,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           <Field label="Layout">
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
               {(["stacked", "grouped"] as const).map((opt) => (
                 <button
                   key={opt}

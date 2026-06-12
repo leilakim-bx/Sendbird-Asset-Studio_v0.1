@@ -9,10 +9,10 @@ import type { ChecklistItem } from "@/lib/store";
 export function ChecklistStatusIcon({
   status,
   size,
-  fill = "#111111",
-  check = "#ffffff",
-  arc = "#1a1a1a",
-  border = "#D1D5DB",
+  fill = "currentColor",
+  check = "currentColor",
+  arc = "currentColor",
+  border = "currentColor",
 }: {
   status: ChecklistItem["status"];
   size: number;
@@ -58,7 +58,9 @@ export function ChecklistStatusIcon({
   return (
     <div style={{
       width: size, height: size, borderRadius: "50%",
-      border: `${Math.max(1, Math.round(size * 0.125))}px solid ${border}`,
+      borderWidth: Math.max(1, Math.round(size * 0.125)),
+      borderStyle: "solid",
+      borderColor: border,
       flexShrink: 0,
     }} />
   );

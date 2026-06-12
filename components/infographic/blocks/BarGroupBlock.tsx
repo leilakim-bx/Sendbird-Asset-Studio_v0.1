@@ -1,6 +1,7 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
 import { BAR_COLUMNS_MAX_ITEMS } from "@/lib/infographic-block-limits";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   block: Extract<InfographicBlock, { type: "bar-group" }>;
@@ -11,19 +12,19 @@ type Props = {
 // Bar graphs use a fixed grayscale palette only — the accent (lime) appears
 // solely as the highlighted *number's* color, never as a bar fill.
 /** Faint full-width scale track (lightest gray). */
-const TRACK = "#D9D6D2";
+const TRACK = brand.color.infographic.track;
 /** Primary (A) bar fill — darkest. */
-const BAR_A = "#292016";
+const BAR_A = brand.color.infographic.bar;
 /** Secondary (B) bar fill — mid gray (stays visible on every background). */
-const BAR_B = "#8C867E";
+const BAR_B = brand.color.infographic.barMuted;
 /** Number color inside the bars. */
-const NUM_ON_BAR = "#ffffff";
+const NUM_ON_BAR = brand.color.white;
 /** Row (category) label. */
-const LABEL = "#292016";
+const LABEL = brand.color.ink;
 /** Light fill (split segments other than the first) — same as the track. */
-const SEG_LIGHT = "#D9D6D2";
+const SEG_LIGHT = brand.color.infographic.track;
 /** Number color on a light fill. */
-const NUM_MUTED = "#66625E";
+const NUM_MUTED = brand.color.inkMutedStrong;
 const BAR_H_A = 40;
 const BAR_H_B = 34;
 /** Min fill width so the in-bar number never clips for small values. */
@@ -37,7 +38,7 @@ const MIN_FILL = 50;
  *    e.g. 83 / 17. Big serif number + caption inside each segment.
  *  - "columns": vertical columns (added in a later pass).
  *
- * Palette is grayscale only (#ffffff / #D9D6D2 / #8C867E / #66625E / #292016);
+ * Palette is grayscale only; values come from brand infographic tokens.
  * the accent (var(--ig-accent), set by the canvas so the export clone resolves
  * it) appears solely on a highlighted *number*, never as a fill.
  */
@@ -70,7 +71,7 @@ export function BarGroupBlock({ block, scale = 1, maxHeight }: Props) {
     fontWeight: 600,
     letterSpacing: "0.04em",
     textTransform: "uppercase" as const,
-    color: "#8C867E",
+    color: brand.color.inkMuted,
   };
 
   return (
@@ -308,15 +309,15 @@ function SplitBar({
 }
 
 /** Ranked fills — dark end of the palette only, so bars stay legible on the
- *  light track. Light grays (#D9D6D2/#E5E3DF) would vanish into the track. A
+ *  light track. Light grays would vanish into the track. A
  *  highlighted row uses the accent fill (the one place accent is a bar fill). */
 const RANKED_FILL_RAMP: { fill: string; text: string }[] = [
-  { fill: "#292016", text: "#FFFFFF" },
-  { fill: "#66625E", text: "#FFFFFF" },
-  { fill: "#8C867E", text: "#FFFFFF" },
+  { fill: brand.color.infographic.bar, text: brand.color.white },
+  { fill: brand.color.inkMutedStrong, text: brand.color.white },
+  { fill: brand.color.inkMuted, text: brand.color.white },
 ];
 /** Light track behind each ranked row (the un-filled remainder). */
-const RANKED_TRACK = "#E5E3DF";
+const RANKED_TRACK = brand.color.infographic.lightBand;
 /** Largest bar fills this share of the full-width track; the remainder holds the
  *  right-pinned value so values align in one column regardless of bar length. */
 const RANKED_MAX_BAR_PCT = 72;
@@ -365,7 +366,7 @@ function Ranked({
     fontWeight: 600,
     letterSpacing: "0.04em",
     textTransform: "uppercase" as const,
-    color: "#8C867E",
+    color: brand.color.inkMuted,
   };
 
   return (
@@ -380,7 +381,7 @@ function Ranked({
       )}
       {items.map((it, i) => {
         const ramp = it.highlight
-          ? { fill: "var(--ig-accent)", text: "#292016" }
+          ? { fill: "var(--ig-accent)", text: brand.color.ink }
           : RANKED_FILL_RAMP[i % RANKED_FILL_RAMP.length];
         const w = (Math.max(0, it.valueA) / maxV) * RANKED_MAX_BAR_PCT;
         return (
@@ -436,7 +437,7 @@ function Ranked({
                 fontSize: fs(26),
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
-                color: "#292016",
+                color: brand.color.ink,
                 whiteSpace: "nowrap",
               }}
             >
@@ -455,7 +456,12 @@ const COL_CHART_H = 260;
 /** Floor so a column is always tall enough for its heading + chip. */
 const COL_MIN_H = 92;
 /** Light→dark grayscale ramp across columns (reads as ascending levels). */
-const COL_RAMP = ["#D9D6D2", "#8C867E", "#66625E", "#292016"];
+const COL_RAMP = [
+  brand.color.infographic.track,
+  brand.color.inkMuted,
+  brand.color.inkMutedStrong,
+  brand.color.ink,
+];
 
 /**
  * "columns" variant — vertical columns whose height ∝ valueA. Each column shows
@@ -480,7 +486,7 @@ function Columns({
         const h = Math.max(COL_MIN_H, (Math.max(0, it.valueA) / maxV) * COL_CHART_H);
         const fill = COL_RAMP[Math.min(i, COL_RAMP.length - 1)];
         const lightText = i >= 2; // darker fills → light text
-        const textColor = lightText ? "#FFFFFF" : "#292016";
+        const textColor = lightText ? brand.color.white : brand.color.ink;
         return (
           <div key={i} style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
             {/* Bar and label live in one column group, so their centers match. */}
@@ -520,8 +526,8 @@ function Columns({
                     style={{
                       fontSize: fs(11),
                       fontWeight: 600,
-                      color: "#292016",
-                      background: it.highlight ? "var(--ig-accent)" : "#FFFFFF",
+                      color: brand.color.ink,
+                      background: it.highlight ? "var(--ig-accent)" : brand.color.white,
                       padding: "4px 10px",
                       borderRadius: 8,
                       whiteSpace: "nowrap",

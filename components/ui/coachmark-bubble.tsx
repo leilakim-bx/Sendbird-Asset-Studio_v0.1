@@ -11,8 +11,8 @@ import { X } from "lucide-react";
  *
  * Dismisses on ✕ or — wired by the caller — when the user performs the action.
  */
-const BUBBLE_BG = "#C0A6E0"; // lavender (matches the design mock)
-const BUBBLE_FG = "#241B33"; // deep plum ink — readable on the lavender
+const BUBBLE_BG = "var(--app-coachmark-bg)";
+const BUBBLE_FG = "var(--app-coachmark-fg)";
 
 export function CoachmarkBubble({
   text,

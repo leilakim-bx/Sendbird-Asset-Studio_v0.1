@@ -1,38 +1,17 @@
 import { type NextRequest } from "next/server";
-import { env } from "@/lib/env";
-import {
-  ANALYZE_ARTICLE_SYSTEM_PROMPT,
-  buildAnalyzeUserPrompt,
-} from "@/lib/ai/analyze-article-prompt";
 import { validateSuggestions } from "@/lib/ai/validate-suggestions";
 
 /**
  * POST /api/analyze-article
  * Body: { article: string }
  *
- * Sends the article to Claude, then runs the response through
+ * Uses a local deterministic suggestion set, then runs it through
  * validate-suggestions so the route ONLY ever emits suggestions that pass our
- * schema + confidence floor. Mirrors generate-scenario (mock mode, env check,
- * status-coded errors). An empty `suggestions` array is a valid response.
- *
- * Requires ANTHROPIC_API_KEY in .env.local (defaults to "mock").
+ * schema + confidence floor. No external LLM calls are allowed in this studio.
+ * An empty `suggestions` array is a valid response.
  */
 
-// Swap to a stronger model here if extraction accuracy needs it — the
-// validator is the correctness guarantee regardless.
-const MODEL = "claude-3-5-haiku-20241022";
-
-type AnthropicResponse = {
-  content?: Array<{ type: string; text: string }>;
-  error?: { message: string };
-};
-
-// ── Mock mode ─────────────────────────────────────────────
-// Default key is "mock", so without a real key Analyze hits this. The data is
-// shaped to PASS validate-suggestions (valid blockType + content + confidence),
-// and a no-digits / keyword article returns [] to exercise the empty case.
-
-function mockRawSuggestions(article: string): unknown[] {
+function localRawSuggestions(article: string): unknown[] {
   const hasData = /\d/.test(article);
   const forceEmpty = /\bno data\b|\blorem\b/i.test(article);
   if (!hasData || forceEmpty) return [];
@@ -89,15 +68,6 @@ function mockRawSuggestions(article: string): unknown[] {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = env.anthropicApiKey;
-
-  if (!apiKey) {
-    return Response.json(
-      { error: "ANTHROPIC_API_KEY not configured in .env.local" },
-      { status: 503 },
-    );
-  }
-
   let article: string;
   try {
     const body = (await request.json()) as { article?: string };
@@ -110,50 +80,6 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "article is required" }, { status: 400 });
   }
 
-  // Mock mode — no real API call. Still validated, so the UI path is identical.
-  if (apiKey === "mock") {
-    await new Promise((r) => setTimeout(r, 800)); // simulate latency
-    const suggestions = validateSuggestions({ suggestions: mockRawSuggestions(article) }, article);
-    return Response.json({ suggestions });
-  }
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 2048,
-      system: ANALYZE_ARTICLE_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildAnalyzeUserPrompt(article) }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: { message: string } };
-    return Response.json(
-      { error: err.error?.message ?? `Anthropic API error: ${res.status}` },
-      { status: res.status },
-    );
-  }
-
-  const data = (await res.json()) as AnthropicResponse;
-  const text = data.content?.[0]?.text ?? "";
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return Response.json(
-      { error: "Model returned invalid JSON — try again or shorten the article." },
-      { status: 502 },
-    );
-  }
-
-  // Validation is the guard: only schema-valid, confident suggestions escape.
-  const suggestions = validateSuggestions(parsed, article);
+  const suggestions = validateSuggestions({ suggestions: localRawSuggestions(article) }, article);
   return Response.json({ suggestions });
 }

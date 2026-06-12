@@ -7,7 +7,10 @@ Studio가 **만들어내는** 목업 디자인 규칙은 `ASSET_DESIGN.md` 참�
 
 ## Color Tokens
 
-CSS 변수로 정의(`app/globals.css`), Tailwind `bg-studio-*` / `text-studio-*` 유틸리티로 사용.
+앱 UI 토큰의 source of truth는 `lib/tokens/app.ts`다. `app/layout.tsx`가
+토큰을 CSS 변수로 주입하고, `app/globals.css`는 Tailwind
+`bg-studio-*` / `text-studio-*` 유틸리티가 그 변수를 보도록 연결한다.
+컴포넌트는 hex 값을 직접 쓰지 않는다.
 
 | Token | Hex | 용도 |
 |---|---|---|
@@ -17,10 +20,10 @@ CSS 변수로 정의(`app/globals.css`), Tailwind `bg-studio-*` / `text-studio-*
 | `studio-text` | `#FFFFFF` | 기본 텍스트 |
 | `studio-muted` | `#888888` | 보조 텍스트, 아이콘 |
 | `studio-hover` | `#2E2E2E` | hover 상태 배경 |
-| `studio-accent` | `#D4FF4D` | 강조 (CTA 버튼 등) |
+| `studio-accent` | `#F2FF66` | 강조 (CTA 버튼 등) |
 | `studio-accent-fg` | `#000000` | accent 위 텍스트 |
 
-> **특수 컬러**: `#F2FF66` — resize handle hover, success pill 배경. `studio-accent`와 구분해서 사용.
+> **특수 컬러**: crop selector 전용 lime은 `studio-crop-selector`로 분리한다.
 
 ---
 

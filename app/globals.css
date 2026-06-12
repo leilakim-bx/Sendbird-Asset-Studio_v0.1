@@ -63,137 +63,12 @@
   font-display: swap;
 }
 
-/* ============================================================
-   Sendbird Design System — CSS Variables
-   ============================================================
-   sb-primary: black-based monochrome scale (primary-500 = #000000)
-   sb-neutral: standard gray scale
-   sb-bg / sb-surface: theme-responsive (changes in .dark)
-   ============================================================ */
-
-:root {
-  /* Primary — black monochrome (50–400: light grays, 500: black, 600–900: dark grays) */
-  --sb-primary-50:  #F9F9F9;
-  --sb-primary-100: #F0F0F0;
-  --sb-primary-200: #DEDEDE;
-  --sb-primary-300: #C2C2C2;
-  --sb-primary-400: #8C8C8C;
-  --sb-primary-500: #000000;
-  --sb-primary-600: #1A1A1A;
-  --sb-primary-700: #2E2E2E;
-  --sb-primary-800: #404040;
-  --sb-primary-900: #5C5C5C;
-
-  /* Neutral — standard gray */
-  --sb-neutral-50:  #F9FAFB;
-  --sb-neutral-100: #F3F4F6;
-  --sb-neutral-200: #E5E7EB;
-  --sb-neutral-300: #D1D5DB;
-  --sb-neutral-400: #9CA3AF;
-  --sb-neutral-500: #6B7280;
-  --sb-neutral-600: #4B5563;
-  --sb-neutral-700: #374151;
-  --sb-neutral-800: #1F2937;
-  --sb-neutral-900: #111827;
-
-  /* Semantic */
-  --sb-success: #12B669;
-  --sb-warning: #F59E0B;
-  --sb-error:   #EF4444;
-  --sb-info:    #3B82F6;
-
-  /* Theme-responsive (overridden in .dark) */
-  --sb-bg:             #FFFFFF;
-  --sb-surface:        #F9FAFB;
-  --sb-text-primary:   #000000;
-  --sb-text-secondary: #6B7280;
-  --sb-text-disabled:  #9CA3AF;
-}
-
-.dark {
-  --sb-bg:             #1A1A2E;
-  --sb-surface:        #252540;
-  --sb-text-primary:   #FFFFFF;
-  --sb-text-secondary: #A1A1B5;
-  --sb-text-disabled:  #6B6B80;
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans:    "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-mono:    "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-heading: "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-
-  /* ── Sendbird Color Tokens ─────────────────────────────── */
-
-  /* Primary */
-  --color-sb-primary-50:  var(--sb-primary-50);
-  --color-sb-primary-100: var(--sb-primary-100);
-  --color-sb-primary-200: var(--sb-primary-200);
-  --color-sb-primary-300: var(--sb-primary-300);
-  --color-sb-primary-400: var(--sb-primary-400);
-  --color-sb-primary-500: var(--sb-primary-500);
-  --color-sb-primary-600: var(--sb-primary-600);
-  --color-sb-primary-700: var(--sb-primary-700);
-  --color-sb-primary-800: var(--sb-primary-800);
-  --color-sb-primary-900: var(--sb-primary-900);
-
-  /* Neutral */
-  --color-sb-neutral-50:  var(--sb-neutral-50);
-  --color-sb-neutral-100: var(--sb-neutral-100);
-  --color-sb-neutral-200: var(--sb-neutral-200);
-  --color-sb-neutral-300: var(--sb-neutral-300);
-  --color-sb-neutral-400: var(--sb-neutral-400);
-  --color-sb-neutral-500: var(--sb-neutral-500);
-  --color-sb-neutral-600: var(--sb-neutral-600);
-  --color-sb-neutral-700: var(--sb-neutral-700);
-  --color-sb-neutral-800: var(--sb-neutral-800);
-  --color-sb-neutral-900: var(--sb-neutral-900);
-
-  /* Semantic */
-  --color-sb-success: var(--sb-success);
-  --color-sb-warning: var(--sb-warning);
-  --color-sb-error:   var(--sb-error);
-  --color-sb-info:    var(--sb-info);
-
-  /* Theme-responsive */
-  --color-sb-bg:             var(--sb-bg);
-  --color-sb-surface:        var(--sb-surface);
-  --color-sb-text-primary:   var(--sb-text-primary);
-  --color-sb-text-secondary: var(--sb-text-secondary);
-  --color-sb-text-disabled:  var(--sb-text-disabled);
-
-  /* ── Sendbird Typography ───────────────────────────────── */
-
-  /* Font families — fallback to Helvetica Neue until font files are wired up */
-  --font-sb-display: "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-sb-body:    "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
-
-  /* Font sizes */
-  --text-sb-xs:   0.75rem;
-  --text-sb-sm:   0.875rem;
-  --text-sb-base: 1rem;
-  --text-sb-lg:   1.125rem;
-  --text-sb-xl:   1.25rem;
-  --text-sb-2xl:  1.5rem;
-  --text-sb-3xl:  1.875rem;
-  --text-sb-4xl:  2.25rem;
-  --text-sb-5xl:  3rem;
-
-  /* ── Sendbird Border Radius ────────────────────────────── */
-  --radius-sb-sm:   0.25rem;
-  --radius-sb-md:   0.5rem;
-  --radius-sb-lg:   0.75rem;
-  --radius-sb-xl:   1rem;
-  --radius-sb-2xl:  1.5rem;
-  --radius-sb-full: 9999px;
-
-  /* ── Sendbird Shadows ──────────────────────────────────── */
-  --shadow-sb-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-sb-md: 0 4px 6px rgba(0,0,0,0.07);
-  --shadow-sb-lg: 0 10px 15px rgba(0,0,0,0.10);
-  --shadow-sb-xl: 0 20px 25px rgba(0,0,0,0.15);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
+  --font-heading: var(--font-app-heading);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -233,116 +108,22 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-/* Studio Shell — dark UI variables (defined directly in :root for @theme compatibility) */
-:root {
-  --studio-bg:         #252525;
-  --studio-sidebar:    #1A1A1A;
-  --studio-border:     #333333;
-  --studio-text:       #FFFFFF;
-  --studio-text-muted: #888888;
-  --studio-hover:      #2E2E2E;
-  --studio-accent:     #F2FF66;
-  --studio-accent-fg:  #000000;
-}
-
-/* Infographic template — flat/branded canvas tokens (export uses resolved hex
-   inline; these mirror lib/types/infographic.ts for any CSS-only consumers) */
-:root {
-  /* Backgrounds */
-  --ig-bg-sky:       #D8F0FF;
-  --ig-bg-stone:     #D9D6D2;
-  --ig-bg-warmgray:  #E5E3DF;
-
-  /* Accents */
-  --ig-accent-lime:  #F2FF66;
-  --ig-accent-blue:  #27A6F7;
-  --ig-accent-red:   #FF5E69;
-  --ig-accent-green: #25BD85;
-
-  /* Ink */
-  --ig-ink:        #1C1917;
-  --ig-ink-muted:  #7C7166;
-}
-
 /* Studio shell colors — separate @theme block so Tailwind generates bg-studio-* / text-studio-* utilities */
 @theme {
-  --color-studio-bg:        #252525;
-  --color-studio-sidebar:   #1A1A1A;
-  --color-studio-border:    #333333;
-  --color-studio-text:      #FFFFFF;
-  --color-studio-muted:     #888888;
-  --color-studio-hover:     #2E2E2E;
-  --color-studio-accent:    #F2FF66;
-  --color-studio-accent-fg: #000000;
+  --color-studio-bg: var(--studio-bg);
+  --color-studio-sidebar: var(--studio-sidebar);
+  --color-studio-border: var(--studio-border);
+  --color-studio-text: var(--studio-text);
+  --color-studio-muted: var(--studio-text-muted);
+  --color-studio-hover: var(--studio-hover);
+  --color-studio-accent: var(--studio-accent);
+  --color-studio-accent-fg: var(--studio-accent-fg);
+  --color-studio-input: var(--studio-input);
+  --color-studio-crop-selector: var(--studio-crop-selector);
+  --color-studio-preview-surface: var(--studio-preview-surface);
+  --color-app-error: var(--app-error);
+  --color-app-placeholder: var(--app-placeholder);
+  --color-app-overlay-modal: var(--app-overlay-modal);
 }
 
 @layer base {
@@ -353,7 +134,7 @@
     @apply bg-background text-foreground;
   }
   html {
-    font-family: "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-family: var(--font-app-sans);
   }
 }
 
@@ -362,23 +143,23 @@
 .sb-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: var(--app-checkbox-size);
+  height: var(--app-checkbox-size);
   flex-shrink: 0;
   border: none;
   outline: none;
-  border-radius: 5px;
-  background-color: #5A5A5A;
+  border-radius: var(--app-checkbox-radius);
+  background-color: var(--studio-checkbox);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 .sb-checkbox:hover {
-  background-color: #6B6B6B;
+  background-color: var(--studio-checkbox-hover);
 }
 .sb-checkbox:checked {
   background-color: var(--studio-accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-6'/%3E%3C/svg%3E");
+  background-image: var(--app-checkbox-check-icon);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 12px 12px;
+  background-size: var(--app-checkbox-icon-size) var(--app-checkbox-icon-size);
 }

@@ -1348,7 +1348,7 @@ let suggestionState = [];
 
 function showSuggestions() {
   const articleText = document.getElementById('ai-input').value.trim();
-  // In real app: would call Claude API here
+  // In real app: use local rules/presets here
   // For prototype: always show mock suggestions
   suggestionState = JSON.parse(JSON.stringify(MOCK_SUGGESTIONS));
   renderSuggestions();

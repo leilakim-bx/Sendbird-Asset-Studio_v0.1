@@ -1,3 +1,5 @@
+import { brand } from "@/lib/tokens/brand";
+
 // ── Infographic data model ────────────────────────────────
 // Content model for the "infographic" template. Flat/branded visual
 // language (solid background + bold numbers), distinct from the chat
@@ -179,24 +181,24 @@ export type InfographicContent = {
 // ── Palette maps (used by the renderer in a later step) ───
 
 export const INFOGRAPHIC_BG_HEX: Record<InfographicBg, string> = {
-  sky: "#D8F0FF",
-  stone: "#D9D6D2",
-  warmgray: "#F7F5F0",
+  sky: brand.color.infographic.bg.sky,
+  stone: brand.color.infographic.bg.stone,
+  warmgray: brand.color.infographic.bg.warmgray,
 };
 
 export const INFOGRAPHIC_ACCENT_HEX: Record<InfographicAccent, string> = {
-  lime: "#F2FF66",
-  blue: "#27A6F7",
-  red: "#FF5E69",
-  green: "#25BD85",
+  lime: brand.color.infographic.accent.lime,
+  blue: brand.color.infographic.accent.blue,
+  red: brand.color.infographic.accent.red,
+  green: brand.color.infographic.accent.green,
 };
 
 /** Ink (text) colors — shared across all infographic blocks. */
-export const INFOGRAPHIC_INK = "#1C1917";
-export const INFOGRAPHIC_INK_MUTED = "#7C7166";
+export const INFOGRAPHIC_INK = brand.color.ink;
+export const INFOGRAPHIC_INK_MUTED = brand.color.inkMuted;
 
 /** Serif display stack (brand "Serrif") — titles + big numbers. */
-export const INFOGRAPHIC_SERIF = '"Serrif", Georgia, "Times New Roman", serif';
+export const INFOGRAPHIC_SERIF = brand.font.serif;
 
 /** Sans body stack (Helvetica Now Text) — default text, title & footnote. */
-export const INFOGRAPHIC_SANS = '"Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif';
+export const INFOGRAPHIC_SANS = brand.font.sans;

@@ -4,6 +4,7 @@ import { useRef, useEffect, memo } from "react";
 import type { ChatMessage, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, StatusBlock, VoiceBlock, ItineraryBlock } from "@/lib/store";
 import { computeCapacity } from "@/lib/canvas-capacity";
 import { EXPORT_SIZES } from "@/lib/template-registry";
+import { brand, brandPx } from "@/lib/tokens/brand";
 import { ChecklistStatusIcon } from "./checklist-status-icon";
 import { itineraryIcon } from "./itinerary-icons";
 
@@ -28,6 +29,16 @@ export type FeatureMockupProps = {
 // ── Canvas dimensions ─────────────────────────────────────
 // 단일 소스: lib/template-registry 의 EXPORT_SIZES (preview/export 치수 불일치 방지)
 const SIZES = EXPORT_SIZES;
+const CHAT = brand.color.chat;
+const BRAND = brand.color;
+const RADIUS = brand.radius;
+const ELEVATION = brand.elevation;
+const FONT = brand.font;
+const TYPE = brand.typography.size;
+const LINE = brand.typography.lineHeight;
+const SPACE = brand.spacing;
+const STROKE = brand.stroke;
+const cssPx = brandPx;
 
 // ── ActionPills — shared button column ───────────────────
 // Used by BOTH the bot text bubble (TextBlock.buttons add-on) and the
@@ -38,12 +49,12 @@ function ActionPills({ buttons, scale, mt = 0 }: { buttons: string[]; scale: num
     <div style={{ display: "flex", flexDirection: "column", gap: Math.round(6 * scale), marginTop: mt }}>
       {buttons.map((btn, i) => (
         <div key={i} style={{
-          borderRadius: 12,
-          padding: `${Math.round(11 * scale)}px ${Math.round(16 * scale)}px`,
+          borderRadius: RADIUS[12],
+          padding: `${cssPx(Math.round(11 * scale))} ${cssPx(Math.round(16 * scale))}`,
           textAlign: "center",
-          fontSize: 14 * fs,
-          color: "#3B3530",
-          background: "#E5E3DF",
+          fontSize: TYPE[14] * fs,
+          color: CHAT.actionText,
+          background: CHAT.actionBg,
           whiteSpace: "nowrap",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -88,7 +99,7 @@ const ChatBubble = memo(function ChatBubble({
     <div style={{
       display: "flex",
       justifyContent: isUser ? "flex-end" : "flex-start",
-      padding: `0 ${Math.round(14 * scale)}px`,
+      padding: `0 ${cssPx(Math.round(14 * scale))}`,
     }}>
       <div style={{
         maxWidth: "75%",
@@ -97,9 +108,9 @@ const ChatBubble = memo(function ChatBubble({
         // when the text is short.
         ...(buttons && buttons.length > 0 ? { width: "75%", minWidth: "75%" } : {}),
         borderRadius: Math.round(br * scale),
-        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
-        background: "#ffffff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(14 * scale))} ${cssPx(Math.round(12 * scale))}`,
+        background: CHAT.bubble,
+        boxShadow: ELEVATION[2],
       }}>
         {/* Avatar + sender name */}
         <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(5 * scale) }}>
@@ -107,33 +118,33 @@ const ChatBubble = memo(function ChatBubble({
             displayAvatar
               ? /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={displayAvatar} alt={displayName}
-                  style={{ width: av, height: av, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-              : <div style={{ width: av, height: av, borderRadius: "50%", background: "#CBD5E1", flexShrink: 0 }} />
+                  style={{ width: av, height: av, borderRadius: RADIUS.circle, objectFit: "cover", flexShrink: 0 }} />
+              : <div style={{ width: av, height: av, borderRadius: RADIUS.circle, background: CHAT.avatarFallback, flexShrink: 0 }} />
           ) : (
-            <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
+            <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: RADIUS.circle, background: CHAT.botIndicator, flexShrink: 0 }} />
           )}
-          <span style={{ fontSize: 12 * fs, color: "#8C867E", lineHeight: 1 }}>
+          <span style={{ fontSize: TYPE[12] * fs, color: CHAT.bodyMuted, lineHeight: LINE.tight }}>
             {displayName}
           </span>
         </div>
         {/* Text */}
-        <p style={{ fontSize: 15 * fs, lineHeight: 1.4, color: "#1a1a1a", margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 15, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", wordBreak: "break-word" }}>
+        <p style={{ fontSize: TYPE[15] * fs, lineHeight: LINE.copy, color: CHAT.body, margin: 0, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 15, WebkitBoxOrient: "vertical", overflowWrap: "anywhere", wordBreak: "break-word" }}>
           {text}
         </p>
         {/* Internal AI activity log footer (bot 전용) */}
         {verifications && verifications.length > 0 && (
           <div style={{ marginTop: Math.round(10 * scale) }}>
-            <div style={{ borderTop: "1px solid #E5E7EB", marginBottom: Math.round(8 * scale) }} />
+            <div style={{ borderTop: `${STROKE.hairline} solid ${BRAND.border.hairline}`, marginBottom: Math.round(8 * scale) }} />
             <div style={{
-              fontSize: 10.5 * fs, fontWeight: 600, letterSpacing: "0.03em",
-              color: "#111111", textTransform: "uppercase", marginBottom: Math.round(6 * scale),
+              fontSize: TYPE[10.5] * fs, fontWeight: FONT.weight.semibold, letterSpacing: "0.03em",
+              color: CHAT.body, textTransform: "uppercase", marginBottom: Math.round(6 * scale),
             }}>
               AI agent activity log
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: Math.round(5 * scale) }}>
               {verifications.map((v, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: Math.round(7 * scale), fontSize: 12 * fs, color: "#736E68", lineHeight: 1.35 }}>
-                  <div style={{ width: Math.round(7 * scale), height: Math.round(7 * scale), borderRadius: "50%", background: "#A8A39B", flexShrink: 0 }} />
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: Math.round(7 * scale), fontSize: TYPE[12] * fs, color: CHAT.doneText, lineHeight: LINE.relaxed }}>
+                  <div style={{ width: Math.round(7 * scale), height: Math.round(7 * scale), borderRadius: RADIUS.circle, background: CHAT.activityDot, flexShrink: 0 }} />
                   <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v}</span>
                 </div>
               ))}
@@ -158,21 +169,21 @@ const ActionButtons = memo(function ActionButtons({ msg, scale, appName, br = 18
     <div style={{
       display: "flex",
       justifyContent: "flex-start",
-      padding: `0 ${Math.round(14 * scale)}px`,
+      padding: `0 ${cssPx(Math.round(14 * scale))}`,
     }}>
       <div style={{
         width: "75%",
         minWidth: "75%",
         maxWidth: "75%",
         borderRadius: Math.round(br * scale),
-        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
-        background: "#ffffff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(14 * scale))} ${cssPx(Math.round(12 * scale))}`,
+        background: CHAT.bubble,
+        boxShadow: ELEVATION[2],
       }}>
         {/* Bot dot + name */}
         <div style={{ display: "flex", alignItems: "center", gap: Math.round(6 * scale), marginBottom: Math.round(6 * scale) }}>
-          <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: "50%", background: "#111", flexShrink: 0 }} />
-          <span style={{ fontSize: 12 * fs, color: "#8C867E", lineHeight: 1 }}>{appName}</span>
+          <div style={{ width: Math.round(10 * scale), height: Math.round(10 * scale), borderRadius: RADIUS.circle, background: CHAT.botIndicator, flexShrink: 0 }} />
+          <span style={{ fontSize: TYPE[12] * fs, color: CHAT.bodyMuted, lineHeight: LINE.tight }}>{appName}</span>
         </div>
         {/* Buttons (shared with the bot text bubble's add-on) */}
         <ActionPills buttons={buttons} scale={scale} />
@@ -188,10 +199,10 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
   const fs = Math.min(1, scale);
   return (
     <div style={{
-      borderRadius: 12,
+      borderRadius: RADIUS[12],
       overflow: "hidden",
-      background: "#ffffff",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+      background: CHAT.bubble,
+      boxShadow: ELEVATION[2],
       flexShrink: 0,
       ...(cardWidth ? { width: cardWidth } : {}),
     }}>
@@ -201,30 +212,30 @@ function ProductCard({ item, scale, cardWidth }: { item: ProductItem; scale: num
             style={{ width: "100%", aspectRatio: "2/1", objectFit: "cover", display: "block" }} />
         : <div style={{
             width: "100%", aspectRatio: "2/1",
-            background: "#E5E7EB",
+            background: BRAND.border.hairline,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
+            <span style={{ fontSize: TYPE[11] * fs, color: CHAT.placeholder }}>Image</span>
           </div>
       }
-      <div style={{ padding: `6px ${Math.round(10 * scale)}px 8px` }}>
+      <div style={{ padding: `${cssPx(SPACE[6])} ${cssPx(Math.round(10 * scale))} ${cssPx(SPACE[8])}` }}>
         <p style={{
-          fontSize: 14 * fs, fontWeight: 700, color: "#111",
-          lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
+          fontSize: TYPE[14] * fs, fontWeight: FONT.weight.bold, color: CHAT.body,
+          lineHeight: LINE.body, margin: `0 0 ${cssPx(Math.round(3 * scale))}`,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{item.name}</p>
         <p style={{
-          fontSize: 12 * fs, color: "#8C867E",
-          margin: "0 0 4px",
+          fontSize: TYPE[12] * fs, color: CHAT.bodyMuted,
+          margin: `0 0 ${cssPx(SPACE[4])}`,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{item.sub}</p>
         {/* CTA — gray fill, no border. 라벨이 비면 버튼 자체를 숨김 */}
         {item.cta.trim() && (
           <div style={{
-            fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
-            background: "#E5E3DF", borderRadius: 8,
-            // scale 연동: desktop(~1.03)→7px 살짝 높게, mobile(~0.75)→5px 살짝 낮게
-            padding: `${Math.round(7 * scale)}px 0`, textAlign: "center",
+            fontSize: TYPE[13] * fs, fontWeight: FONT.weight.semibold, color: CHAT.actionText,
+            background: CHAT.actionBg, borderRadius: RADIUS[8],
+            // Scale follows the original desktop/mobile height tuning.
+            padding: `${cssPx(Math.round(7 * scale))} 0`, textAlign: "center",
           }}>{item.cta}</div>
         )}
       </div>
@@ -271,12 +282,12 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
     const item = items[0];
     const fs = Math.min(1, scale);
     return (
-      <div style={{ padding: `0 ${px}px` }}>
+      <div style={{ padding: `0 ${cssPx(px)}` }}>
         <div style={{
           borderRadius: Math.round(br * scale),
           overflow: "hidden",
-          background: "#ffffff",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+          background: CHAT.bubble,
+          boxShadow: ELEVATION[2],
           display: "flex",
           flexDirection: "row",
           maxWidth: "82%",
@@ -290,17 +301,17 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               : <div style={{
                   position: "absolute", inset: 0,
-                  background: "#E5E7EB",
+                  background: BRAND.border.hairline,
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <span style={{ fontSize: 11 * fs, color: "#9CA3AF" }}>Image</span>
+                  <span style={{ fontSize: TYPE[11] * fs, color: CHAT.placeholder }}>Image</span>
                 </div>
             }
           </div>
           {/* Content — right */}
           <div style={{
             flex: 1,
-            padding: `${Math.round(10 * scale)}px ${Math.round(12 * scale)}px`,
+            padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(12 * scale))}`,
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -308,20 +319,20 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
           }}>
             <div>
               <p style={{
-                fontSize: 14 * fs, fontWeight: 700, color: "#111",
-                lineHeight: 1.3, margin: `0 0 ${Math.round(3 * scale)}px`,
+                fontSize: TYPE[14] * fs, fontWeight: FONT.weight.bold, color: CHAT.body,
+                lineHeight: LINE.body, margin: `0 0 ${cssPx(Math.round(3 * scale))}`,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{item.name}</p>
               <p style={{
-                fontSize: 12 * fs, color: "#8C867E", margin: 0,
+                fontSize: TYPE[12] * fs, color: CHAT.bodyMuted, margin: 0,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>{item.sub}</p>
             </div>
             <div style={{
-              fontSize: 13 * fs, fontWeight: 600, color: "#3B3530",
-              background: "#E5E3DF", borderRadius: 8,
-              // scale 연동: desktop(~1.03)→7px 살짝 높게, mobile(~0.75)→5px 살짝 낮게
-              padding: `${Math.round(7 * scale)}px 0`, textAlign: "center",
+              fontSize: TYPE[13] * fs, fontWeight: FONT.weight.semibold, color: CHAT.actionText,
+              background: CHAT.actionBg, borderRadius: RADIUS[8],
+              // Scale follows the original desktop/mobile height tuning.
+              padding: `${cssPx(Math.round(7 * scale))} 0`, textAlign: "center",
             }}>{item.cta}</div>
           </div>
         </div>
@@ -331,7 +342,7 @@ const ProductCards = memo(function ProductCards({ msg, scale, br = 18 }: { msg: 
 
   // ── 2 items → 2-column grid ─────────────────────────────
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap, padding: `0 ${px}px` }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap, padding: `0 ${cssPx(px)}` }}>
       {items.map((item, i) => (
         <ProductCard key={i} item={item} scale={scale} />
       ))}
@@ -348,29 +359,36 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
   const gap = Math.round(8 * scale);
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${cssPx(Math.round(14 * scale))}` }}>
       <div style={{
         maxWidth: "90%",
         borderRadius: Math.round(br * scale),
-        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(12 * scale)}px`,
-        background: "#ffffff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(14 * scale))} ${cssPx(Math.round(12 * scale))}`,
+        background: CHAT.bubble,
+        boxShadow: ELEVATION[2],
       }}>
         <div style={{ display: "flex", flexDirection: "column", gap }}>
           {items.map((item) => (
             <div key={item.id} style={{ display: "flex", alignItems: "center", gap: Math.round(8 * scale) }}>
 
               {/* Status icon */}
-              <ChecklistStatusIcon status={item.status} size={sz} />
+              <ChecklistStatusIcon
+                status={item.status}
+                size={sz}
+                fill={CHAT.botIndicator}
+                check={BRAND.white}
+                arc={CHAT.body}
+                border={CHAT.pending}
+              />
 
               {/* Channel badge (optional) */}
               {item.badge && (
                 <span style={{
-                  fontSize: 10 * fs, fontWeight: 600, color: "#3B3530",
-                  background: "#E5E3DF", borderRadius: Math.round(6 * scale),
-                  padding: `${Math.round(3 * scale)}px ${Math.round(7 * scale)}px`,
+                  fontSize: TYPE[10] * fs, fontWeight: FONT.weight.semibold, color: CHAT.actionText,
+                  background: CHAT.actionBg, borderRadius: Math.round(6 * scale),
+                  padding: `${cssPx(Math.round(3 * scale))} ${cssPx(Math.round(7 * scale))}`,
                   letterSpacing: "0.03em", textTransform: "uppercase",
-                  lineHeight: 1, flexShrink: 0,
+                  lineHeight: LINE.tight, flexShrink: 0,
                 }}>
                   {item.badge}
                 </span>
@@ -378,10 +396,10 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
 
               {/* Label */}
               <span style={{
-                fontSize: 13 * fs,
-                color: item.status === "done" ? "#736E68" : "#1a1a1a",
+                fontSize: TYPE[13] * fs,
+                color: item.status === "done" ? CHAT.doneText : CHAT.body,
                 textDecoration: item.status === "done" ? "line-through" : "none",
-                lineHeight: 1.35,
+                lineHeight: LINE.relaxed,
                 minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
                 {item.label}
@@ -397,8 +415,8 @@ const ChecklistItems = memo(function ChecklistItems({ msg, scale, br = 18 }: { m
 // ── StatusPill ────────────────────────────────────────────
 
 const STATUS_PILL_STYLES = {
-  success: { bg: "#F2FF66", textColor: "#111111" },
-  warning: { bg: "#FF5E69", textColor: "#FFFFFF" },
+  success: { bg: BRAND.accent, textColor: CHAT.body },
+  warning: { bg: CHAT.statusWarningBg, textColor: BRAND.white },
 } as const;
 
 const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; scale: number }) {
@@ -408,7 +426,7 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
   const iconSize = Math.round(14 * scale);
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${cssPx(Math.round(14 * scale))}` }}>
       <div style={{
         display: "inline-flex",
         alignItems: "flex-start",
@@ -416,25 +434,25 @@ const StatusPill = memo(function StatusPill({ msg, scale }: { msg: ChatMessage; 
         maxWidth: "75%",
         background: bg,
         borderRadius: Math.round(18 * scale),
-        padding: `${Math.round(7 * scale)}px ${Math.round(14 * scale)}px`,
+        padding: `${cssPx(Math.round(7 * scale))} ${cssPx(Math.round(14 * scale))}`,
       }}>
         {/* Icon — 체크리스트 done 아이콘과 동일 (채워진 검은 원 + 흰 글리프) */}
         <div style={{ marginTop: Math.round(1 * scale), flexShrink: 0 }}>
           {variant === "success" ? (
-            <ChecklistStatusIcon status="done" size={iconSize} />
+            <ChecklistStatusIcon status="done" size={iconSize} fill={CHAT.botIndicator} check={BRAND.white} />
           ) : (
             <div style={{
-              width: iconSize, height: iconSize, borderRadius: "50%", background: "#ffffff",
+              width: iconSize, height: iconSize, borderRadius: RADIUS.circle, background: CHAT.bubble,
               display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <span style={{ fontSize: iconSize * 0.62, color: "#FF5E69", lineHeight: 1, fontWeight: 700 }}>!</span>
+              <span style={{ fontSize: iconSize * 0.62, color: CHAT.statusWarningBg, lineHeight: LINE.tight, fontWeight: FONT.weight.bold }}>!</span>
             </div>
           )}
         </div>
         {/* Label */}
         <span style={{
-          fontSize: 12 * fs, color: textColor, fontWeight: 500,
-          minWidth: 0, overflowWrap: "anywhere", lineHeight: 1.35,
+          fontSize: TYPE[12] * fs, color: textColor, fontWeight: FONT.weight.medium,
+          minWidth: 0, overflowWrap: "anywhere", lineHeight: LINE.relaxed,
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>
           {label}
@@ -452,20 +470,20 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
   const iconSize = Math.round(24 * scale);
 
   return (
-    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${Math.round(14 * scale)}px` }}>
+    <div style={{ display: "flex", justifyContent: "flex-start", padding: `0 ${cssPx(Math.round(14 * scale))}` }}>
       <div style={{
         width: "85%",
         borderRadius: Math.round(br * scale),
-        padding: `${Math.round(10 * scale)}px ${Math.round(14 * scale)}px ${Math.round(10 * scale)}px`,
-        background: "#ffffff",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(14 * scale))} ${cssPx(Math.round(10 * scale))}`,
+        background: CHAT.bubble,
+        boxShadow: ELEVATION[2],
       }}>
         {groups.map((g, gi) => {
           const last = gi === groups.length - 1;
           return (
             <div key={g.id} style={{ marginBottom: last ? Math.round(10 * scale) : Math.round(12 * scale) }}>
               {/* Group header */}
-              <div style={{ fontSize: 13 * fs, fontWeight: 700, color: "#111", marginBottom: Math.round(7 * scale) }}>
+              <div style={{ fontSize: TYPE[13] * fs, fontWeight: FONT.weight.bold, color: CHAT.body, marginBottom: Math.round(7 * scale) }}>
                 {g.label}
               </div>
               {/* Rows */}
@@ -475,18 +493,18 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
                   return (
                     <div key={it.id} style={{
                       display: "flex", alignItems: "center", gap: Math.round(13 * scale),
-                      background: "#F3F1ED", borderRadius: Math.round(12 * scale),
-                      padding: `${Math.round(11 * scale)}px ${Math.round(15 * scale)}px`,
+                      background: CHAT.rowBg, borderRadius: Math.round(12 * scale),
+                      padding: `${cssPx(Math.round(11 * scale))} ${cssPx(Math.round(15 * scale))}`,
                     }}>
-                      <Icon size={iconSize} strokeWidth={1.6} color="#5B554E" style={{ flexShrink: 0 }} />
+                      <Icon size={iconSize} strokeWidth={1.6} color={CHAT.iconMuted} style={{ flexShrink: 0 }} />
                       <div style={{ minWidth: 0 }}>
                         <div style={{
-                          fontSize: (isMobile ? 13 : 15) * fs, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.25,
+                          fontSize: (isMobile ? TYPE[13] : TYPE[15]) * fs, fontWeight: FONT.weight.bold, color: CHAT.body, lineHeight: LINE.normal,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         }}>{it.title}</div>
                         {it.sub && (
                           <div style={{
-                            fontSize: 13 * fs, color: "#8C867E", lineHeight: 1.3, marginTop: Math.round(2 * scale),
+                            fontSize: TYPE[13] * fs, color: CHAT.bodyMuted, lineHeight: LINE.body, marginTop: Math.round(2 * scale),
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           }}>{it.sub}</div>
                         )}
@@ -502,10 +520,10 @@ const ItineraryCard = memo(function ItineraryCard({ msg, scale, br = 18, isMobil
         {/* Footer CTA — black, inside the card (itinerary only) */}
         {cta && cta.trim() && (
           <div style={{
-            background: "#111111", color: "#ffffff",
+            background: CHAT.body, color: BRAND.white,
             borderRadius: Math.round(10 * scale),
-            padding: `${Math.round((isMobile ? 10 : 12) * scale)}px 0`, textAlign: "center",
-            fontSize: isMobile ? 11 : 15 * fs, fontWeight: 700,
+            padding: `${cssPx(Math.round((isMobile ? 10 : 12) * scale))} 0`, textAlign: "center",
+            fontSize: isMobile ? TYPE[11] : TYPE[15] * fs, fontWeight: FONT.weight.bold,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>{cta}</div>
         )}
@@ -521,16 +539,16 @@ const VoiceCard = memo(function VoiceCard({ block, width, isMobile }: { block: V
   const fs = Math.min(1, scale);
 
   // 텍스트 base 크기 — 모바일은 키운 값(28/18), 데스크탑은 원래 값(24/15). fs로 폭에 맞춰 추가 스케일.
-  const tBase = isMobile ? 28 : 24; // transcript / eyebrow
-  const cBase = isMobile ? 18 : 15; // caption
+  const tBase = isMobile ? TYPE[28] : TYPE[24]; // transcript / eyebrow
+  const cBase = isMobile ? TYPE[18] : TYPE[15]; // caption
 
   const cardBase = {
     width,
     borderRadius: Math.round(28 * scale),
-    background: "rgba(255,255,255,0.30)",
-    backdropFilter: "blur(20px)",
-    WebkitBackdropFilter: "blur(20px)",
-    border: "1px solid rgba(255,255,255,0.50)",
+    background: CHAT.glassVoiceBg,
+    backdropFilter: CHAT.glassBlur,
+    WebkitBackdropFilter: CHAT.glassBlur,
+    border: `${STROKE.hairline} solid ${CHAT.glassBorderStrong}`,
     boxSizing: "border-box" as const,
     // flex min-width:auto가 줄바꿈 불가 문자열의 min-content를 따라 카드를 늘리는 것 방지
     minWidth: 0,
@@ -544,12 +562,12 @@ const VoiceCard = memo(function VoiceCard({ block, width, isMobile }: { block: V
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/preview/voice_playerbar.png" alt="" style={{ width: "100%", height: "auto", display: "block" }} />
         {/* Body */}
-        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${Math.round(4 * scale)}px ${Math.round(16 * scale)}px ${Math.round(8 * scale)}px` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: Math.round(12 * scale), padding: `${cssPx(Math.round(4 * scale))} ${cssPx(Math.round(16 * scale))} ${cssPx(Math.round(8 * scale))}` }}>
           {block.eyebrow && (
-            <span style={{ fontSize: tBase * fs, fontWeight: 500, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
+            <span style={{ fontSize: tBase * fs, fontWeight: FONT.weight.medium, color: BRAND.ink, lineHeight: LINE.copy, letterSpacing: "-0.01em", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{block.eyebrow}</span>
           )}
           <span style={{
-            fontSize: tBase * fs, fontWeight: 400, color: "#292016", lineHeight: 1.4, letterSpacing: "-0.01em",
+            fontSize: tBase * fs, fontWeight: FONT.weight.regular, color: BRAND.ink, lineHeight: LINE.copy, letterSpacing: "-0.01em",
             overflowWrap: "anywhere", wordBreak: "break-word",
             display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
           }}>{block.transcript}</span>
@@ -560,19 +578,19 @@ const VoiceCard = memo(function VoiceCard({ block, width, isMobile }: { block: V
 
   // quote style
   return (
-    <div style={{ ...cardBase, padding: `${Math.round(44 * scale)}px ${Math.round(40 * scale)}px`, display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(24 * scale) }}>
+    <div style={{ ...cardBase, padding: `${cssPx(Math.round(44 * scale))} ${cssPx(Math.round(40 * scale))}`, display: "flex", flexDirection: "column", alignItems: "center", gap: Math.round(24 * scale) }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/preview/voice_icon.png" alt="" width={Math.round(56 * scale)} height={Math.round(56 * scale)} style={{ borderRadius: "50%", display: "block" }} />
+      <img src="/preview/voice_icon.png" alt="" width={Math.round(56 * scale)} height={Math.round(56 * scale)} style={{ borderRadius: RADIUS.circle, display: "block" }} />
       <span style={{
-        fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
-        fontSize: tBase * fs, fontWeight: 500, color: "#292016", lineHeight: 1.45, textAlign: "center", letterSpacing: "-0.01em",
+        fontFamily: FONT.serif,
+        fontSize: tBase * fs, fontWeight: FONT.weight.medium, color: BRAND.ink, lineHeight: LINE.loose, textAlign: "center", letterSpacing: "-0.01em",
         maxWidth: "100%", overflowWrap: "anywhere", wordBreak: "break-word",
         display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 8, overflow: "hidden",
       }}>
         {"“" + block.transcript + "”"}
       </span>
       {block.caption && (
-        <span style={{ fontSize: cBase * fs, color: "#4a4a4a", textAlign: "center" }}>{block.caption}</span>
+        <span style={{ fontSize: cBase * fs, color: CHAT.caption, textAlign: "center" }}>{block.caption}</span>
       )}
     </div>
   );
@@ -629,7 +647,7 @@ const PhoneFrame = memo(function PhoneFrame({
     const el = frameRef.current;
     if (!el) return;
     const check = () => {
-      // 12px 여백이 사라지기 직전에 감지 — strict (+ 여유 없음)
+      // Fixed bottom reserve disappears right before overflow.
       const overflows = el.scrollHeight > el.clientHeight;
       onOverflowChangeRef.current?.(overflows);
 
@@ -658,7 +676,7 @@ const PhoneFrame = memo(function PhoneFrame({
         width,
         borderRadius: frameR,
         overflow: "hidden",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.05)",
+        boxShadow: ELEVATION[3],
         ...(maxHeight !== undefined ? { maxHeight } : {}),
       }}
     >
@@ -668,10 +686,10 @@ const PhoneFrame = memo(function PhoneFrame({
         width: "100%",
         ...(maxHeight !== undefined ? { maxHeight, overflow: "hidden" } : { overflow: "hidden" }),
         borderRadius: frameR,
-        background: "rgba(255,255,255,0.25)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        border: "1px solid rgba(255,255,255,0.3)",
+        background: CHAT.glassBg,
+        backdropFilter: CHAT.glassBlur,
+        WebkitBackdropFilter: CHAT.glassBlur,
+        border: `${STROKE.hairline} solid ${CHAT.glassBorder}`,
         display: "flex",
         flexDirection: "column",
       }}
@@ -683,18 +701,18 @@ const PhoneFrame = memo(function PhoneFrame({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: `${Math.round(16 * scale)}px ${Math.round(16 * scale)}px ${Math.round(14 * scale)}px`,
-          borderBottom: "1px solid rgba(255,255,255,0.3)",
+          padding: `${cssPx(Math.round(16 * scale))} ${cssPx(Math.round(16 * scale))} ${cssPx(Math.round(14 * scale))}`,
+          borderBottom: `${STROKE.hairline} solid ${CHAT.glassBorder}`,
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: 17 * Math.min(1, scale), fontWeight: 500, color: "#111", letterSpacing: "-0.02em" }}>
+          <span style={{ fontSize: TYPE[17] * Math.min(1, scale), fontWeight: FONT.weight.medium, color: CHAT.body, letterSpacing: "-0.02em" }}>
             {appName}
           </span>
           <span style={{
             position: "absolute",
             right: 16,
-            fontSize: 16 * Math.min(1, scale),
-            color: "#6B7280",
+            fontSize: TYPE[16] * Math.min(1, scale),
+            color: CHAT.neutralText,
             letterSpacing: "0.15em",
             lineHeight: 1,
           }}>
@@ -704,8 +722,8 @@ const PhoneFrame = memo(function PhoneFrame({
       )}
 
       {/* Message list */}
-      {/* padding-bottom 12px 고정: scale에 무관하게 항상 12px 여백 보장 */}
-      <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale), padding: `${Math.round(14 * scale)}px 0 12px` }}>
+      {/* Bottom padding stays fixed regardless of scale. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: Math.round(8 * scale), padding: `${cssPx(Math.round(14 * scale))} 0 ${cssPx(SPACE[12])}` }}>
         {messages.map((msg) => {
           // Guard: localStorage에 저장된 구버전 메시지 등 block 없는 항목 방어
           if (!msg?.block) return null;
@@ -766,15 +784,14 @@ export const FeatureMockup = memo(function FeatureMockup({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVoice, isEmpty]);
 
-  // 최소 여백: 데스크탑 70px 고정, 모바일은 캔버스 비율 기반(~8%)
+  // Minimum edge reserve: fixed on desktop, proportional on mobile.
   const MIN_PAD = isMobile ? 24 : 70;
   const vPad    = Math.max(MIN_PAD, Math.round(canvasH * 0.08)); // 상단/하단
   const hPadL   = isSplit
     ? Math.max(MIN_PAD, Math.round(canvasW * 0.05))              // split 왼쪽
     : MIN_PAD;                                                   // center/mobile
 
-  // 프레임 너비
-  // 비율 × 고정 캔버스 = 목표 px: mobile 343×0.73≈250, desktop center 866×0.4273≈370
+  // Frame width follows the original canvas ratios.
   const maxFrameW = canvasW - hPadL - MIN_PAD;
   const frameW = Math.min(
     isMobile
@@ -794,13 +811,13 @@ export const FeatureMockup = memo(function FeatureMockup({
   const maxFrameH = isMobile ? undefined : canvasH - vPad * 2;
 
   // 패딩 문자열 (공통)
-  // split: 좌하단 기준 80px 여백 (top/right 0 — 클리핑으로 처리)
+  // Split layout anchors to the bottom-left reserve.
   const framePadding = isSplit
-    ? `0 0 ${MIN_PAD}px ${hPadL}px`
-    : `${vPad}px ${hPadL}px`;
+    ? `0 0 ${cssPx(MIN_PAD)} ${cssPx(hPadL)}`
+    : `${cssPx(vPad)} ${cssPx(hPadL)}`;
 
-  // 모바일: paddingBottom 최소 48px (배경이 마지막 버블 아래 48px까지 채워지도록)
-  const contentPadding = isMobile ? `${vPad}px ${hPadL}px 48px` : framePadding;
+  // Mobile keeps extra bottom reserve below the last bubble.
+  const contentPadding = isMobile ? `${cssPx(vPad)} ${cssPx(hPadL)} ${cssPx(SPACE[48])}` : framePadding;
 
   return (
     // 모바일: CSS Grid 겹침 → 배경이 콘텐츠 높이에 맞춰 자동으로 늘어남
@@ -832,8 +849,8 @@ export const FeatureMockup = memo(function FeatureMockup({
           ? { gridArea: "1/1" }
           : { position: "absolute", inset: 0 }),
         background: isSplit
-          ? "linear-gradient(to right, rgba(255,255,255,0.1) 0%, transparent 55%)"
-          : "rgba(255,255,255,0.02)",
+          ? CHAT.veilSplit
+          : CHAT.veilCenter,
       }} />
 
       {/* Phone frame container

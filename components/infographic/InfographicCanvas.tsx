@@ -34,7 +34,7 @@ const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 export function InfographicCanvas({ content, className, exportMode }: Props) {
   const { format, bg, accent, title, footnote, blocks } = content;
   const isProduct = format === "product";
-  // Product format always uses the fixed warm-gray background (#F7F5F0),
+  // Product format always uses the fixed warm background token,
   // regardless of the stored bg (which only applies to the blog format).
   const effectiveBg = isProduct ? "warmgray" : bg;
   // Stat is a centered standalone number — it never carries a title/footnote.
@@ -94,7 +94,7 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
             // snaps up to Bold(700). 500 maps to Medium for a true semibold look.
             fontWeight: 500,
             letterSpacing: "-0.01em",
-            color: "#0E1017",
+            color: INFOGRAPHIC_INK,
             margin: 0,
             maxWidth: 560,
             alignSelf: "center",

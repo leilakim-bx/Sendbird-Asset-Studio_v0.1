@@ -21,7 +21,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 
 - 마케터가 5분 안에 마케팅용 이미지를 만들 수 있게 한다.
 - Chat UI, Infographic, Product Visual 3개 에셋 유형을 한 스튜디오에서 관리한다.
-- AI는 초안 생성/추천에만 사용하고, 최종 결과는 사용자가 직접 확인/수정한다.
+- 초안 생성/추천은 외부 LLM 없이 로컬 프리셋과 규칙 기반 로직으로 제공한다.
 - 저장, 재편집, PNG export까지 브라우저에서 완료한다.
 
 ## 4. 사용자
@@ -37,7 +37,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 
 1. 사용자는 홈에서 템플릿을 선택한다.
 2. 에디터에서 문구, 데이터, 배경, 스크린샷, 레이아웃을 수정한다.
-3. 필요한 경우 AI 생성/분석 기능으로 초안을 만든다.
+3. 필요한 경우 프리셋/규칙 기반 생성 기능으로 초안을 만든다.
 4. 결과를 My files에 저장한다.
 5. PNG로 다운로드해 블로그, 웹, 슬라이드, 소셜 콘텐츠에 사용한다.
 
@@ -52,7 +52,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 레이아웃 | Center, Split |
 | 블록 | text, actions, products, checklist, status, voice, itinerary |
 | 편집 | 앱 이름, 유저 이름/아바타, 메시지, 배경, 레이아웃, export size |
-| AI | 프롬프트 기반 시나리오 생성 |
+| 생성 | 프롬프트를 로컬 시나리오 프리셋으로 매칭 |
 
 ### 6.2 Infographic
 
@@ -62,8 +62,8 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 포맷 | Product 866x660, Blog 664x가변 |
 | 블록 | stat, kpi-group, card-grid, bar-group, step, stack, node-list, compare, stacked-bar, line-chart, orbit |
 | 편집 | 제목, 푸트노트, 배경, accent color, 블록 추가/수정/삭제 |
-| AI | 기사/텍스트 분석 후 인포그래픽 후보 추천 |
-| 소스 입력 | URL 또는 텍스트 붙여넣기 |
+| 생성 | 붙여넣은 텍스트/데이터를 규칙 기반으로 인포그래픽 후보 추천 |
+| 소스 입력 | 텍스트, 차트 데이터, 이미지 노트 붙여넣기 |
 
 ### 6.3 Product Visual
 
@@ -84,20 +84,19 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 저장 | 썸네일과 편집 상태를 브라우저 localStorage에 저장 |
 | Autosave | Chat UI, Infographic 작업 초안 자동 저장 |
 | Export | `html-to-image` 기반 @2x PNG 다운로드 |
-| 이미지 업로드 | 배경/스크린샷 업로드, R2 설정 시 R2 저장, 미설정 시 로컬 fallback |
+| 이미지 업로드 | 배경은 로컬 filesystem 저장, Product Visual 스크린샷은 브라우저 로컬 data URL 저장 |
 | 이탈 방지 | 저장하지 않은 변경사항이 있으면 홈 이동 전 확인 |
 
-## 8. AI 요구사항
+## 8. 생성/추천 요구사항
 
 | 영역 | 내용 |
 |---|---|
-| 모델 | Claude 3.5 Haiku (`claude-3-5-haiku-20241022`) |
-| 호출 위치 | Next.js API route에서 서버사이드 호출 |
-| Mock 모드 | `ANTHROPIC_API_KEY=mock`이면 캔드 데이터로 동작 |
-| Chat UI | 프롬프트를 대화 블록 배열로 변환 |
-| Infographic | 기사/텍스트에서 시각화 후보 추천 |
-| 안전장치 | 응답 JSON 파싱 후 Zod/validator로 스키마 검증 |
-| 실패 처리 | 유효하지 않은 응답은 사용자에게 재시도 메시지 표시 |
+| 외부 LLM | 보안 정책상 금지 |
+| 외부 네트워크 | Pexels 검색/이미지 CDN만 허용 |
+| Chat UI | 프롬프트를 로컬 프리셋 대화 블록 배열로 변환 |
+| Infographic | 붙여넣은 기사/텍스트/데이터에서 규칙 기반 시각화 후보 추천 |
+| 안전장치 | 로컬 생성 결과도 validator로 스키마 검증 |
+| 실패 처리 | 사용 가능한 결과가 없으면 텍스트/데이터 보강 안내 |
 
 ## 9. 성공 기준
 
@@ -106,7 +105,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 제작 속도 | 기본 이미지 1개를 5분 이내 제작 |
 | 재사용성 | 저장한 에셋을 다시 열어 수정 가능 |
 | Export 품질 | PNG가 지정 사이즈와 @2x 해상도로 생성 |
-| 안정성 | API 키 없이도 mock 모드로 핵심 UI 검증 가능 |
+| 안정성 | 외부 LLM/API 키 없이도 핵심 UI 검증 가능 |
 | 확장성 | 새 템플릿/블록 추가 시 registry와 타입 중심으로 확장 가능 |
 
 ## 10. 비범위
@@ -123,9 +122,8 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 우선순위 | 항목 |
 |---|---|
 | P0 | Chat UI, Infographic, Product Visual 편집/저장/export 안정화 |
-| P0 | AI route mock/live 경로 검증 |
+| P0 | 로컬 생성 route와 validator 검증 |
 | P0 | 업로드 이미지 크기/형식 검증 |
-| P1 | R2 기반 업로드 운영 전환 |
 | P1 | 배포 접근 제어 강화 |
 | P2 | Supabase/DB 기반 사용자별 에셋 저장 |
 | P2 | Clerk 등 사용자 인증 도입 |
@@ -134,10 +132,10 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 
 | 리스크 | 대응 |
 |---|---|
-| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, Phase 2에서 DB/R2 이전 |
-| AI 응답 품질 편차 | validator 유지, mock fixture로 UI 회귀 테스트 |
-| 외부 이미지 CORS | same-origin proxy와 export 전 이미지 inline 처리 |
-| Vercel 보호 페이지 import 실패 | 텍스트 붙여넣기 또는 automation bypass 링크 사용 |
+| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, Phase 2에서 승인된 내부 저장소 검토 |
+| 로컬 생성 품질 한계 | 프리셋/규칙 registry와 validator 유지 |
+| Pexels 이미지 CORS | Pexels-only same-origin proxy와 export 전 이미지 inline 처리 |
+| URL import 미지원 | 본문/데이터/이미지 노트 붙여넣기로 처리 |
 | 운영 인증 약함 | 배포 전 Vercel protection 또는 정식 인증 도입 |
 
 ## 13. 관련 문서

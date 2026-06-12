@@ -36,16 +36,20 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
   { id: "blog", label: "Blog/Perspective" },
 ];
 
-const SOURCE_TEMPLATE = "Article:\n[paste article URL or full article]\n\nImage notes:\n1. \n2. \n3. ";
+const SOURCE_TEMPLATE = "Article:\n[paste article text, chart data, or key notes]\n\nImage notes:\n1. \n2. \n3. ";
 const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
 const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
-const TYPE_OPTIONS: { id: InfographicBlockType; label: string; description: string }[] = [
+type BlockLibraryId = InfographicBlockType | "single-card" | "column-chart";
+
+const TYPE_OPTIONS: { id: BlockLibraryId; label: string; description: string }[] = [
   { id: "orbit", label: "Orbit diagram", description: "Cycle, channels, or connected nodes" },
-  { id: "card-grid", label: "Card grid", description: "Short grouped ideas or feature cards" },
+  { id: "single-card", label: "Single card", description: "One feature, idea, or takeaway" },
+  { id: "card-grid", label: "Card grid", description: "Multiple grouped ideas or feature cards" },
   { id: "stat", label: "Big number", description: "One primary metric or result" },
   { id: "kpi-group", label: "Metrics", description: "Two to four quick performance numbers" },
   { id: "bar-group", label: "Bar chart", description: "Ranked values, splits, or progress" },
+  { id: "column-chart", label: "Column chart", description: "Maturity levels or staged growth" },
   { id: "stacked-bar", label: "Multi-series bar", description: "Composition across segments" },
   { id: "compare", label: "Comparison", description: "Before and after, old and new" },
   { id: "step", label: "Steps", description: "Flow, sequence, or process" },
@@ -89,6 +93,24 @@ const BLOCK_PREVIEW_CONTENT = {
       },
     ],
   },
+  "single-card": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-single-card",
+        type: "card-grid",
+        cards: [
+          {
+            title: "Thinking Messages",
+            body: "Replace the typing indicator with useful progress updates while the AI agent checks context, policy, and tools.",
+          },
+        ],
+      },
+    ],
+  },
   "card-grid": {
     format: "product",
     bg: "warmgray",
@@ -125,6 +147,43 @@ const BLOCK_PREVIEW_CONTENT = {
           { label: "Gen Z", valueA: 56 },
           { label: "Gen X", valueA: 47 },
           { label: "Boomers", valueA: 35 },
+        ],
+      },
+    ],
+  },
+  "column-chart": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-column-chart",
+        type: "bar-group",
+        variant: "columns",
+        items: [
+          {
+            label: "Manual",
+            valueA: 52,
+            heading: "Lv.1",
+            tag: "Today",
+            desc: "Team writes every prompt, test, and fix",
+          },
+          {
+            label: "Human steers",
+            valueA: 74,
+            heading: "Lv.2",
+            tag: "ZTI",
+            desc: "AI runs the loop, human sets direction",
+          },
+          {
+            label: "Zero touch",
+            valueA: 96,
+            heading: "Lv.3",
+            tag: "ZTI",
+            desc: "Fully autonomous improvement. No change needed.",
+            highlight: true,
+          },
         ],
       },
     ],
@@ -275,7 +334,7 @@ const BLOCK_PREVIEW_CONTENT = {
       },
     ],
   },
-} satisfies Record<InfographicBlockType, InfographicContent>;
+} satisfies Record<BlockLibraryId, InfographicContent>;
 
 const ORBIT_ICON_LABELS: Record<OrbitIconKey, string> = {
   mobile: "Mobile",
@@ -392,7 +451,21 @@ function SimpleItem({
   );
 }
 
-function blockTypeLabel(type: InfographicBlockType | undefined): string {
+function libraryBlockType(id: BlockLibraryId): InfographicBlockType {
+  if (id === "single-card") return "card-grid";
+  if (id === "column-chart") return "bar-group";
+  return id;
+}
+
+function libraryIdForBlock(block: InfographicBlock | undefined): BlockLibraryId {
+  if (block?.type === "card-grid" && block.cards.length <= 1) return "single-card";
+  if (block?.type === "bar-group" && block.variant === "columns") return "column-chart";
+  return block?.type ?? "stat";
+}
+
+function blockTypeLabel(type: InfographicBlockType | undefined, block?: InfographicBlock): string {
+  if (block?.type === "card-grid" && block.cards.length <= 1) return "Single card";
+  if (block?.type === "bar-group" && block.variant === "columns") return "Column chart";
   return TYPE_OPTIONS.find((item) => item.id === type)?.label ?? "Image";
 }
 
@@ -424,7 +497,7 @@ function InfographicMiniThumb({
   return (
     <div
       ref={frameRef}
-      className={`relative overflow-hidden rounded-md bg-[#F7F5F0] ${className}`}
+      className={`relative overflow-hidden rounded-md bg-studio-preview-surface ${className}`}
       style={{ aspectRatio: `${previewWidth} / ${previewHeight}` }}
       aria-hidden="true"
     >
@@ -443,7 +516,7 @@ function InfographicMiniThumb({
   );
 }
 
-function BlockPreviewThumb({ type }: { type: InfographicBlockType }) {
+function BlockPreviewThumb({ type }: { type: BlockLibraryId }) {
   return <InfographicMiniThumb content={BLOCK_PREVIEW_CONTENT[type]} />;
 }
 
@@ -480,8 +553,8 @@ function BlockLibraryModal({
   onChange,
   onClose,
 }: {
-  value: InfographicBlockType;
-  onChange: (type: InfographicBlockType) => void;
+  value: BlockLibraryId;
+  onChange: (type: BlockLibraryId) => void;
   onClose: () => void;
 }) {
   const current = TYPE_OPTIONS.find((item) => item.id === value);
@@ -536,8 +609,8 @@ function BlockTypeSelector({
   value,
   onChange,
 }: {
-  value: InfographicBlockType;
-  onChange: (type: InfographicBlockType) => void;
+  value: BlockLibraryId;
+  onChange: (type: BlockLibraryId) => void;
 }) {
   const [open, setOpen] = useState(false);
   const current = TYPE_OPTIONS.find((item) => item.id === value);
@@ -703,8 +776,113 @@ function inferSharedUnit(rows: PortableRow[]): string {
   return "";
 }
 
-function convertBlock(block: InfographicBlock, type: InfographicBlockType, title?: string): InfographicBlock {
-  if (block.type === type) return block;
+const DEFAULT_CARD_GRID_CARDS = [
+  {
+    badge: "01",
+    title: "Detect",
+    body: "Find risky conversations using sentiment and escalation signals.",
+  },
+  {
+    badge: "02",
+    title: "Prioritize",
+    body: "Rank accounts by urgency, value, and recent support activity.",
+  },
+  {
+    badge: "03",
+    title: "Resolve",
+    body: "Suggest next actions before a conversation needs manual review.",
+  },
+];
+
+function expandToCardGridCards(cards: Extract<InfographicBlock, { type: "card-grid" }>["cards"]) {
+  const [first] = cards;
+  const firstCard = first ? { ...first, badge: first.badge?.trim() || "01" } : DEFAULT_CARD_GRID_CARDS[0];
+  return [
+    firstCard,
+    ...DEFAULT_CARD_GRID_CARDS.slice(1),
+  ].slice(0, 4);
+}
+
+const DEFAULT_COLUMN_CHART_ITEMS: Extract<InfographicBlock, { type: "bar-group" }>["items"] = [
+  {
+    label: "Manual",
+    valueA: 52,
+    heading: "Lv.1",
+    tag: "Today",
+    desc: "Team writes every prompt, test, and fix",
+  },
+  {
+    label: "Human steers",
+    valueA: 74,
+    heading: "Lv.2",
+    tag: "ZTI",
+    desc: "AI runs the loop, human sets direction",
+  },
+  {
+    label: "Zero touch",
+    valueA: 96,
+    heading: "Lv.3",
+    tag: "ZTI",
+    desc: "Fully autonomous improvement. No change needed.",
+    highlight: true,
+  },
+];
+
+function makeColumnChartBlock(id: string, rows?: PortableRow[]): Extract<InfographicBlock, { type: "bar-group" }> {
+  const source = rows && rows.length >= 2 ? rows.slice(0, 4) : undefined;
+
+  return {
+    id,
+    type: "bar-group",
+    variant: "columns",
+    items: source
+      ? source.map((row, index) => ({
+          label: row.label,
+          valueA: row.value,
+          heading: `Lv.${index + 1}`,
+          tag: row.valueText || (index === 0 ? "Today" : "ZTI"),
+          desc: row.desc,
+          highlight: row.highlight ?? index === source.length - 1,
+        }))
+      : DEFAULT_COLUMN_CHART_ITEMS,
+  };
+}
+
+function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?: string): InfographicBlock {
+  const type = libraryBlockType(libraryId);
+
+  if (block.type === type) {
+    if (block.type === "bar-group" && libraryId === "column-chart" && block.variant !== "columns") {
+      return makeColumnChartBlock(block.id, rowsFromBlock(block));
+    }
+    if (block.type === "bar-group" && libraryId === "bar-group" && block.variant === "columns") {
+      return {
+        ...block,
+        variant: "ranked",
+        labelA: "",
+        labelB: "",
+        unit: block.unit ?? "%",
+        items: block.items.slice(0, 6).map((item, index) => ({
+          label: item.label,
+          valueA: item.valueA,
+          highlight: item.highlight ?? index === 0,
+        })),
+      };
+    }
+    if (block.type === "card-grid" && libraryId === "single-card") {
+      const [first] = block.cards;
+      return {
+        ...block,
+        cards: first
+          ? [{ ...first, badge: "" }]
+          : [{ badge: "", title: "Card title", body: "Add one focused explanation for this image." }],
+      };
+    }
+    if (block.type === "card-grid" && libraryId === "card-grid" && block.cards.length <= 1) {
+      return { ...block, cards: expandToCardGridCards(block.cards) };
+    }
+    return block;
+  }
 
   const rows = portableRows(block);
   const unit = inferSharedUnit(rows);
@@ -731,17 +909,22 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
           label: row.label,
         })),
       };
-    case "card-grid":
+    case "card-grid": {
+      const cards = rows.slice(0, libraryId === "single-card" ? 1 : 4).map((row, index) => ({
+        badge: libraryId === "single-card" ? "" : row.valueText || `Panel ${index + 1}`,
+        title: row.label,
+        body: row.desc || formatPortableNumber(row.value, row.valueText),
+      }));
       return {
         id,
         type: "card-grid",
-        cards: rows.slice(0, 4).map((row, index) => ({
-          badge: row.valueText || `Panel ${index + 1}`,
-          title: row.label,
-          body: row.desc || formatPortableNumber(row.value, row.valueText),
-        })),
+        cards: libraryId === "card-grid" && cards.length <= 1 ? expandToCardGridCards(cards) : cards,
       };
+    }
     case "bar-group":
+      if (libraryId === "column-chart") {
+        return makeColumnChartBlock(id, rows);
+      }
       return {
         id,
         type: "bar-group",
@@ -879,12 +1062,13 @@ function SelectedImageEditor({
       blocks: [next],
     });
   };
-  const setType = (type: InfographicBlockType) => {
-    if (!block || block.type === type) return;
+  const setType = (libraryId: BlockLibraryId) => {
+    const type = libraryBlockType(libraryId);
+    if (!block || libraryIdForBlock(block) === libraryId) return;
     onChange({
       ...content,
       showTitle: type === "stat" ? false : content.showTitle,
-      blocks: [convertBlock(block, type, content.title)],
+      blocks: [convertBlock(block, libraryId, content.title)],
     });
   };
 
@@ -899,7 +1083,7 @@ function SelectedImageEditor({
       </SimpleField>
 
       <SimpleField label="Block">
-        <BlockTypeSelector value={block.type} onChange={setType} />
+        <BlockTypeSelector value={libraryIdForBlock(block)} onChange={setType} />
       </SimpleField>
 
       {usesDetailedBlockEditor(block.type) && (
@@ -1207,7 +1391,7 @@ export function InfographicSidebar({
       const result = await onSuggestArticleImages(text);
       setArticleNotice(result.notice);
     } catch {
-      setArticleNotice("Could not read this source. Paste the article text or use an AI-accessible share link.");
+      setArticleNotice("Could not read this source. Paste the article text, chart data, or image notes.");
     } finally {
       setSourceLoading(false);
     }
@@ -1256,7 +1440,7 @@ export function InfographicSidebar({
           full panel height regardless of scroll). */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:bg-studio-accent transition-colors"
         title="Drag to resize panel"
       />
 
@@ -1269,7 +1453,7 @@ export function InfographicSidebar({
           <InfoTooltip text="Formats aren't interchangeable. Don't use a Product feature image in a blog, or a Blog/Perspective image as a product feature — each is sized and laid out for its own placement." />
         }
       >
-        <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
           {FORMAT_OPTIONS.map(({ id, label }) => (
             <button
               key={id}
@@ -1296,7 +1480,7 @@ export function InfographicSidebar({
           />
         )}
         <div className="flex items-center gap-1.5 mb-2.5">
-          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center bg-studio-hover">
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
           <span className="text-xs font-semibold text-studio-text tracking-tight">Create from source</span>
@@ -1309,9 +1493,9 @@ export function InfographicSidebar({
             dismissSourceCoach();
             setArticle(event.target.value);
           }}
-          placeholder="Paste article URL, full article, chart data, or image notes..."
+          placeholder="Paste full article text, chart data, or image notes..."
           rows={6}
-          className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
+          className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-app-placeholder min-h-[112px]"
         />
         <div className="mt-6 flex items-center justify-between gap-2">
           <button
@@ -1339,8 +1523,9 @@ export function InfographicSidebar({
               const active = candidate.id === activeArticleImageId;
               const status = active ? "Editing" : candidate.status === "ready" ? "Ready" : "Draft";
               const displayTitle = active ? content.title?.trim() || candidate.title : candidate.title;
-              const displayBlockType = active ? block?.type ?? candidate.blockType : candidate.blockType;
               const displayContent = active ? content : candidate.content;
+              const displayBlock = displayContent.blocks[0];
+              const displayBlockType = displayBlock?.type ?? candidate.blockType;
               return (
                 <button
                   key={candidate.id}
@@ -1369,7 +1554,7 @@ export function InfographicSidebar({
                     </span>
                     <span className="mt-1 flex items-center gap-1.5">
                       <span className="rounded-full bg-white/[0.04] px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-studio-muted">
-                        {blockTypeLabel(displayBlockType)}
+                        {blockTypeLabel(displayBlockType, displayBlock)}
                       </span>
                       <span className="text-[9px] text-studio-muted">{status}</span>
                     </span>

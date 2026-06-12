@@ -1,4 +1,5 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   block: Extract<InfographicBlock, { type: "stacked-bar" }>;
@@ -12,16 +13,16 @@ type Props = {
  * are separated by a thin gap (see SEG_GAP) rather than relying on contrast.
  */
 const STACK_RAMP: { fill: string; text: string }[] = [
-  { fill: "#292016", text: "#FFFFFF" },
-  { fill: "#66625E", text: "#FFFFFF" },
-  { fill: "#8C867E", text: "#FFFFFF" },
-  { fill: "#D9D6D2", text: "#292016" },
-  { fill: "#E5E3DF", text: "#292016" },
+  { fill: brand.color.infographic.bar, text: brand.color.white },
+  { fill: brand.color.inkMutedStrong, text: brand.color.white },
+  { fill: brand.color.inkMuted, text: brand.color.white },
+  { fill: brand.color.infographic.track, text: brand.color.ink },
+  { fill: brand.color.infographic.lightBand, text: brand.color.ink },
 ];
 /** Accent series fill — lime (resolved by the canvas so the export clone works). */
-const ACCENT = { fill: "var(--ig-accent)", text: "#292016" };
-const LABEL = "#292016";
-const LEGEND_TEXT = "#66625E";
+const ACCENT = { fill: "var(--ig-accent)", text: brand.color.ink };
+const LABEL = brand.color.ink;
+const LEGEND_TEXT = brand.color.inkMutedStrong;
 /** Gap between segments (px) — lets adjacent grays read as separate bands. */
 const SEG_GAP = 3;
 /** Hide a segment's value when it occupies less than this share of the track. */

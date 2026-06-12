@@ -1,24 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Download, Copy, ExternalLink } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
+import { ZodError } from "zod";
 import { useEditorStore } from "@/lib/store";
 import {
+  FORMAT_SIZES,
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
   isImageBgFormat,
-  type ProductVisualConceptKind,
+  type ProductVisualContent,
   type ProductVisualFormat,
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
-import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
 import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
+import { exportImage } from "@/lib/export";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
+import { ProductVisualCanvas } from "./ProductVisualCanvas";
+import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
+import {
+  conceptSceneToProductScreenshot,
+  exportConceptSceneElement,
+  type FramingPreset,
+} from "@/lib/concept-ui/export-scene";
+import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
+import { parseSceneSpec, type ConceptUiArchetype, type SceneSpec } from "@/lib/concept-ui/scene-spec";
+import { conceptUiArchetypes } from "@/lib/concept-ui/slots";
+import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
+import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
 
 const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "crop", label: "Crop" },
@@ -30,19 +44,80 @@ const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
 const CONCEPT_UI_HELPER =
-  "Describe what the feature does, what context it uses, and what result it shows.";
+  "Describe a feature. Studio will render a matching product UI mock.";
+const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
 const SOURCE_OPTIONS = [
   { id: "concept", label: "Concept UI" },
   { id: "screenshot", label: "Screenshot" },
 ] as const;
-const CONCEPT_GRAMMAR_LABELS: Record<ProductVisualConceptKind, string> = {
-  deployment: "Control panel",
-  conversation: "Conversation surface",
-  evaluation: "Review table",
-  analytics: "Metric dashboard",
-  settings: "Control panel",
-  workspace: "Object detail",
-};
+const FRAMING_PRESETS: { id: FramingPreset; label: string; description: string }[] = [
+  { id: "full-screen", label: "Full screen", description: "Entire 1600x1000 scene" },
+  { id: "hero-crop", label: "Hero crop", description: "Zoomed top-left crop" },
+  { id: "floating-panel", label: "Floating panel", description: "Panel only, transparent" },
+];
+
+function prettySpec(spec: SceneSpec): string {
+  return JSON.stringify(spec, null, 2);
+}
+
+function formatSpecError(error: unknown): string {
+  if (error instanceof ZodError) {
+    return error.issues.map((issue) => `${issue.path.join(".") || "spec"}: ${issue.message}`).join("\n");
+  }
+  if (error instanceof SyntaxError) return "Invalid JSON syntax.";
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function slugify(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "concept-ui";
+}
+
+function conceptSpecWithCallout(spec: SceneSpec, enabled: boolean): SceneSpec {
+  const next = structuredClone(spec) as SceneSpec;
+  if (!enabled) delete next.modifiers.aiCallout;
+  return parseSceneSpec(next);
+}
+
+async function copyTextToClipboard(text: string): Promise<"clipboard" | "legacy" | "manual"> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return "clipboard";
+    }
+  } catch {
+    // Fall through to the legacy path for embedded browser contexts.
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    textarea.style.top = "0";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (copied) return "legacy";
+  } catch {
+    // Manual copy UI below is the final fallback.
+  }
+
+  return "manual";
+}
 
 function IconTooltip({ label }: { label: string }) {
   return (
@@ -101,6 +176,36 @@ export function ProductVisualSidebar() {
   const [cropOpen, setCropOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
+  const [conceptPrompt, setConceptPrompt] = useState("");
+  const [conceptScene, setConceptScene] = useState<SceneSpec | null>(null);
+  const [conceptGenerating, setConceptGenerating] = useState(false);
+  const [conceptError, setConceptError] = useState<string | null>(null);
+  const [conceptCaptureId, setConceptCaptureId] = useState(0);
+  const [framingPreset, setFramingPreset] = useState<FramingPreset>("full-screen");
+  const [lastConceptSpec, setLastConceptSpec] = useState<SceneSpec | null>(null);
+  const [choiceSpecs, setChoiceSpecs] = useState<Partial<Record<ConceptUiArchetype, SceneSpec>> | null>(null);
+  const [specJsonDraft, setSpecJsonDraft] = useState("");
+  const [specPasteError, setSpecPasteError] = useState<string | null>(null);
+  const [specNotice, setSpecNotice] = useState<string | null>(null);
+  const [aiChatPromptCopied, setAiChatPromptCopied] = useState(false);
+  const [aiChatPromptDraft, setAiChatPromptDraft] = useState("");
+  const [aiChatReplyDraft, setAiChatReplyDraft] = useState("");
+  const [aiChatError, setAiChatError] = useState<string | null>(null);
+  const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
+  const [variantPresets, setVariantPresets] = useState<Record<FramingPreset, boolean>>({
+    "full-screen": true,
+    "hero-crop": true,
+    "floating-panel": true,
+  });
+  const [variantCalloutEnabled, setVariantCalloutEnabled] = useState(true);
+  const [variantExporting, setVariantExporting] = useState(false);
+  const [variantStatus, setVariantStatus] = useState<string | null>(null);
+  const [variantExportSpec, setVariantExportSpec] = useState<SceneSpec | null>(null);
+  const [variantProductContent, setVariantProductContent] = useState<ProductVisualContent | null>(null);
+  const conceptCaptureRef = useRef<HTMLDivElement>(null);
+  const variantSceneRef = useRef<HTMLDivElement>(null);
+  const variantProductRef = useRef<HTMLDivElement>(null);
+  const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!content?.screenshot || !isImageBgFormat(content.format) || content.screenshot.displayMode === "crop") return;
@@ -109,6 +214,63 @@ export function ProductVisualSidebar() {
       screenshot: { ...content.screenshot, displayMode: "crop" },
     });
   }, [content, setProductVisualContent]);
+
+  useEffect(() => {
+    if (!aiChatError?.startsWith("Copy is blocked") || !aiChatPromptDraft) return;
+    const timer = window.setTimeout(() => {
+      manualPromptRef.current?.focus();
+      manualPromptRef.current?.select();
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [aiChatError, aiChatPromptDraft]);
+
+  useEffect(() => {
+    if (!conceptGenerating || !conceptScene) return;
+    const scene = conceptScene;
+    let cancelled = false;
+
+    async function captureConceptScene() {
+      try {
+        console.info("[concept-ui] capture start", { preset: framingPreset, archetype: scene.archetype });
+        if ("fonts" in document) {
+          await Promise.race([
+            document.fonts.ready,
+            new Promise<void>((resolve) => window.setTimeout(resolve, 1000)),
+          ]);
+        }
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+        const el = conceptCaptureRef.current;
+        if (!el || cancelled) return;
+        console.info("[concept-ui] export start", { preset: framingPreset });
+        const exported = await exportConceptSceneElement(el, framingPreset);
+        console.info("[concept-ui] export complete", {
+          preset: framingPreset,
+          naturalWidth: exported.naturalWidth,
+          naturalHeight: exported.naturalHeight,
+        });
+        if (cancelled) return;
+        const latest = useEditorStore.getState().productVisualContent;
+        if (!latest) return;
+        setProductVisualContent({
+          ...latest,
+          sourceMode: "screenshot",
+          conceptScene: scene,
+          screenshot: conceptSceneToProductScreenshot(exported),
+        });
+        setConceptScene(null);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setConceptError(msg || "Could not generate Concept UI.");
+      } finally {
+        if (!cancelled) setConceptGenerating(false);
+      }
+    }
+
+    captureConceptScene();
+    return () => {
+      cancelled = true;
+    };
+  }, [conceptCaptureId, conceptGenerating, conceptScene, framingPreset, setProductVisualContent]);
 
   if (!content) return null;
 
@@ -120,30 +282,192 @@ export function ProductVisualSidebar() {
   function switchSourceMode(sourceMode: "screenshot" | "concept") {
     if (!content) return;
     if (sourceMode === "concept") {
-      const prompt = content.concept?.prompt || content.title || "A/B test production traffic between agent versions";
-      update({
-        sourceMode,
-        concept: content.concept ?? buildProductVisualConcept(prompt),
-      });
+      setConceptPrompt((prompt) => prompt || content.concept?.prompt || content.title || "AI support workspace");
+      update({ sourceMode });
       return;
     }
     update({ sourceMode });
   }
 
   function updateConceptPrompt(prompt: string) {
-    const currentConcept = content!.concept ?? buildProductVisualConcept(prompt);
-    update({
-      sourceMode: "concept",
-      concept: { ...currentConcept, prompt },
-    });
+    setConceptPrompt(prompt);
+    setChoiceSpecs(null);
+    setSpecNotice(null);
+    setAiChatPromptCopied(false);
+    setAiChatPromptDraft("");
+    setAiChatError(null);
+    setAiChatNotice(null);
   }
 
-  function regenerateConcept() {
-    const prompt = content!.concept?.prompt || content!.title || "A/B test production traffic between agent versions";
-    update({
-      sourceMode: "concept",
-      concept: buildProductVisualConcept(prompt),
+  function startConceptSpec(spec: SceneSpec, notice?: string) {
+    setChoiceSpecs(null);
+    setLastConceptSpec(spec);
+    setSpecJsonDraft(prettySpec(spec));
+    setSpecNotice(notice ?? null);
+    setConceptError(null);
+    setConceptScene(spec);
+    setConceptGenerating(true);
+    setConceptCaptureId((id) => id + 1);
+  }
+
+  async function regenerateConcept() {
+    const prompt = effectiveConceptPrompt.trim() || "AI support workspace with customer context";
+    setConceptError(null);
+    setSpecPasteError(null);
+    setChoiceSpecs(null);
+    const choice = ruleBasedSpecProvider.analyze({ description: prompt });
+    if (choice.kind === "needs-choice") {
+      const entries = await Promise.all(
+        choice.options.map(async (archetype) => {
+          const result = await ruleBasedSpecProvider.generate({
+            description: prompt,
+            uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
+            forcedArchetype: archetype,
+          });
+          return [archetype, result.spec] as const;
+        }),
+      );
+      setChoiceSpecs(Object.fromEntries(entries) as Partial<Record<ConceptUiArchetype, SceneSpec>>);
+      setSpecNotice("Choose a layout to continue.");
+      console.info("[concept-ui] rule mapping needs choice", { description: prompt, options: choice.options, confidence: 0 });
+      return;
+    }
+
+    const result = await ruleBasedSpecProvider.generate({
+      description: prompt,
+      uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
+      forcedArchetype: choice.archetype,
     });
+    console.info("[concept-ui] rule mapping generated", {
+      description: prompt,
+      archetype: choice.archetype,
+      confidence: choice.confidence,
+      provider: result.provider,
+    });
+    startConceptSpec(result.spec, result.notice);
+  }
+
+  async function copyPromptForAiChat() {
+    const prompt = effectiveConceptPrompt.trim();
+    if (!prompt) return;
+    const text = buildAiChatPrompt({
+      description: prompt,
+      uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
+      choice: analyzedChoice,
+    });
+    setAiChatPromptDraft(text);
+    setAiChatError(null);
+    setAiChatNotice(null);
+    const copyResult = await copyTextToClipboard(text);
+    if (copyResult === "manual") {
+      setAiChatPromptCopied(false);
+      setAiChatError("Copy is blocked in this browser. The prompt below is selected; press Cmd+C to copy it.");
+      window.setTimeout(() => {
+        manualPromptRef.current?.focus();
+        manualPromptRef.current?.select();
+      }, 120);
+    } else {
+      setAiChatPromptCopied(true);
+      setSpecNotice("Prompt copied. Paste it into Claude or Gemini.");
+    }
+  }
+
+  function useAiChatReply() {
+    const result = parseLlmSceneSpecResponse(aiChatReplyDraft);
+    if (!result.ok) {
+      console.info("[concept-ui] AI chat reply parse failed", {
+        rawLength: aiChatReplyDraft.length,
+        errorType: result.errorType,
+      });
+      setAiChatError(result.message);
+      setAiChatNotice(null);
+      return;
+    }
+
+    setAiChatError(null);
+    setAiChatNotice(result.notice ?? "AI reply imported.");
+    startConceptSpec(result.spec, result.notice ?? "AI reply imported.");
+  }
+
+  function toggleVariantPreset(preset: FramingPreset) {
+    setVariantPresets((current) => ({ ...current, [preset]: !current[preset] }));
+  }
+
+  async function batchExportVariants() {
+    if (!activeConceptSpec || variantExporting) return;
+    const selectedPresets = FRAMING_PRESETS.filter((preset) => variantPresets[preset.id]);
+    if (selectedPresets.length === 0) {
+      setVariantStatus("Select at least one preset.");
+      return;
+    }
+    setVariantExporting(true);
+    setVariantStatus("Preparing variants...");
+    const spec = conceptSpecWithCallout(activeConceptSpec, variantCalloutEnabled);
+    setVariantExportSpec(spec);
+    await wait(80);
+
+    try {
+      for (const preset of selectedPresets) {
+        const sceneEl = variantSceneRef.current;
+        if (!sceneEl) throw new Error("Variant scene is not ready.");
+        setVariantStatus(`Exporting ${preset.label}...`);
+        const exported = await exportConceptSceneElement(sceneEl, preset.id);
+        const latest = useEditorStore.getState().productVisualContent;
+        if (!latest) throw new Error("Product visual content is not ready.");
+        const nextContent: ProductVisualContent = {
+          ...latest,
+          sourceMode: "screenshot",
+          conceptScene: spec,
+          screenshot: conceptSceneToProductScreenshot(exported),
+        };
+        setVariantProductContent(nextContent);
+        await wait(90);
+        const productEl = variantProductRef.current;
+        if (!productEl) throw new Error("Variant product canvas is not ready.");
+        const size = FORMAT_SIZES[nextContent.format];
+        const height = typeof size.h === "number" ? size.h : undefined;
+        const filename = `${slugify(spec.content.title)}-${spec.archetype}-${preset.id}.png`;
+        await exportImage(productEl, size.w, height, filename);
+        await wait(140);
+      }
+      setVariantStatus(`Exported ${selectedPresets.length} variants.`);
+    } catch (err) {
+      setVariantStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setVariantProductContent(null);
+      setVariantExportSpec(null);
+      setVariantExporting(false);
+    }
+  }
+
+  function chooseAmbiguousSpec(archetype: ConceptUiArchetype) {
+    const spec = choiceSpecs?.[archetype];
+    if (!spec) return;
+    console.info("[concept-ui] layout picked", { archetype, description: effectiveConceptPrompt });
+    startConceptSpec(spec, "Generated from a base template. Edit text as needed.");
+  }
+
+  async function copySpecJson() {
+    const spec = activeConceptSpec;
+    if (!spec) return;
+    const text = prettySpec(spec);
+    try {
+      await navigator.clipboard.writeText(text);
+      setSpecNotice("Spec JSON copied.");
+    } catch {
+      setSpecJsonDraft(text);
+      setSpecNotice("Copy failed. JSON is shown below.");
+    }
+  }
+
+  function pasteSpecJson() {
+    try {
+      const parsed = parseSceneSpec(JSON.parse(specJsonDraft));
+      setSpecPasteError(null);
+      startConceptSpec(parsed, "Pasted spec validated.");
+    } catch (err) {
+      setSpecPasteError(formatSpecError(err));
+    }
   }
 
   async function handleFile(file: File | undefined) {
@@ -180,7 +504,9 @@ export function ProductVisualSidebar() {
   const imageBg = isImageBgFormat(content.format);
   const cropOnly = imageBg;
   const sourceMode = content.sourceMode ?? "screenshot";
-  const conceptPrompt = content.concept?.prompt ?? "";
+  const effectiveConceptPrompt = conceptPrompt || content.concept?.prompt || content.title || "";
+  const analyzedChoice = ruleBasedSpecProvider.analyze({ description: effectiveConceptPrompt });
+  const activeConceptSpec = lastConceptSpec ?? content.conceptScene ?? null;
   const displayModes = cropOnly ? DISPLAY_MODES.filter((m) => m.id === "crop") : DISPLAY_MODES;
   // Solid-color swatches: hidden for image-bg formats and for formats whose
   // background is locked to a fixed hex (canvas ignores `bg` there).
@@ -212,7 +538,7 @@ export function ProductVisualSidebar() {
     >
       <div
         onMouseDown={handleResizeStart}
-        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:bg-studio-accent transition-colors"
         title="Drag to resize panel"
       />
 
@@ -320,7 +646,7 @@ export function ProductVisualSidebar() {
         )}
 
         <Section title="Source">
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
             {SOURCE_OPTIONS.map((item) => {
               const active = sourceMode === item.id;
               return (
@@ -359,7 +685,7 @@ export function ProductVisualSidebar() {
           {content.screenshot?.url ? (
             <div className="flex flex-col gap-3">
               {/* Preview — hover reveals a Replace overlay */}
-              <div className="group relative rounded-lg overflow-hidden border border-studio-border bg-[#0E0E0E]">
+              <div className="group relative rounded-lg overflow-hidden border border-studio-border bg-studio-input">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={content.screenshot.url} alt="Uploaded screenshot" className="w-full h-28 object-contain" />
                 <button
@@ -441,32 +767,297 @@ export function ProductVisualSidebar() {
           <Section title="Concept UI">
             <div className="relative">
               <textarea
-                value={conceptPrompt}
+                value={effectiveConceptPrompt}
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}
-                className="w-full resize-none rounded-lg border border-studio-border bg-[#0E0E0E] px-3 py-2 pb-14 pr-14 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+                className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 pb-14 pr-14 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
               />
               <div className="absolute bottom-4 right-3">
                 <AiMagicButton
-                  label="Generate UI"
-                  loading={false}
-                  disabled={false}
+                  label="Generate base template"
+                  loading={conceptGenerating}
+                  disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
                   onClick={regenerateConcept}
                 />
               </div>
             </div>
             <p className="mt-1.5 text-[11px] leading-snug text-studio-muted">{CONCEPT_UI_HELPER}</p>
-            {content.concept && (
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={copyPromptForAiChat}
+                disabled={!effectiveConceptPrompt.trim()}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
+              >
+                <Copy size={14} />
+                Copy prompt for AI chat
+              </button>
+              <button
+                type="button"
+                onClick={regenerateConcept}
+                disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
+                className="rounded-lg border border-studio-border px-3 py-2 text-[11px] font-semibold text-studio-muted transition-colors hover:text-studio-text disabled:opacity-40"
+              >
+                Base
+              </button>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
+              {FRAMING_PRESETS.map((preset) => {
+                const active = framingPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setFramingPreset(preset.id)}
+                    title={preset.description}
+                    className={[
+                      "rounded-lg border p-1.5 text-left transition-colors",
+                      active
+                        ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                        : "border-studio-border text-studio-muted hover:text-studio-text hover:bg-white/[0.04]",
+                    ].join(" ")}
+                  >
+                    <span className="block h-9 rounded-md border border-current/20 bg-studio-input p-1">
+                      <span
+                        className={[
+                          "block bg-current/70",
+                          preset.id === "full-screen"
+                            ? "h-full w-full rounded-sm"
+                            : preset.id === "hero-crop"
+                              ? "h-full w-2/3 rounded-sm"
+                              : "mx-auto mt-1 h-5 w-8 rounded-sm shadow-sm",
+                        ].join(" ")}
+                      />
+                    </span>
+                    <span className="mt-1 block truncate text-[10px] font-semibold">{preset.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {conceptError ? (
+              <p className="mt-2 text-[11px] leading-snug text-red-400">{conceptError}</p>
+            ) : null}
+            {specNotice ? (
+              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{specNotice}</p>
+            ) : null}
+            {aiChatError ? (
+              <div className="mt-2 rounded-lg border border-red-400/30 bg-red-400/10 p-2">
+                <p className="text-[11px] leading-snug text-red-300">{aiChatError}</p>
+                {aiChatPromptDraft ? (
+                  <textarea
+                    ref={manualPromptRef}
+                    value={aiChatPromptDraft}
+                    readOnly
+                    rows={6}
+                    onFocus={(event) => event.currentTarget.select()}
+                    className="mt-2 w-full resize-none rounded-md border border-red-300/30 bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-red-50 outline-none"
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  onClick={copyPromptForAiChat}
+                  className="mt-2 rounded-md border border-red-300/40 px-2 py-1 text-[10px] font-semibold text-red-200 hover:bg-red-300/10"
+                >
+                  Copy prompt again
+                </button>
+              </div>
+            ) : null}
+            {aiChatNotice ? (
+              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{aiChatNotice}</p>
+            ) : null}
+            {analyzedChoice.kind === "resolved" && !choiceSpecs ? (
               <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-studio-muted">
-                <span className="truncate">{content.concept.title}</span>
+                <span className="truncate">Rule match</span>
                 <span className="shrink-0 rounded-full border border-studio-border px-2 py-0.5 uppercase tracking-wide">
-                  {CONCEPT_GRAMMAR_LABELS[content.concept.kind]}
+                  {analyzedChoice.archetype} / {Math.round(analyzedChoice.confidence * 100)}%
                 </span>
               </div>
-            )}
+            ) : null}
+            {(aiChatPromptCopied || aiChatPromptDraft) ? (
+              <div className="mt-3 rounded-lg border border-studio-border bg-studio-input p-3">
+                <div className="space-y-2 text-[11px] leading-snug text-studio-muted">
+                  <div className="flex gap-2">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
+                      1
+                    </span>
+                    <span>Paste into Claude or Gemini chat.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
+                      2
+                    </span>
+                    <span>Copy the AI&apos;s full reply.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
+                      3
+                    </span>
+                    <span>Paste it below.</span>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <a
+                    href="https://claude.ai/new"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-studio-border px-2 py-1.5 text-[11px] font-semibold text-studio-muted hover:text-studio-text"
+                  >
+                    Claude <ExternalLink size={11} />
+                  </a>
+                  <a
+                    href="https://gemini.google.com/app"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-studio-border px-2 py-1.5 text-[11px] font-semibold text-studio-muted hover:text-studio-text"
+                  >
+                    Gemini <ExternalLink size={11} />
+                  </a>
+                </div>
+                {aiChatPromptDraft && !aiChatPromptCopied ? (
+                  <textarea
+                    value={aiChatPromptDraft}
+                    readOnly
+                    rows={4}
+                    className="mt-3 w-full resize-none rounded-md border border-studio-border bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-studio-text outline-none"
+                  />
+                ) : null}
+                <textarea
+                  value={aiChatReplyDraft}
+                  onChange={(e) => {
+                    setAiChatReplyDraft(e.currentTarget.value);
+                    setAiChatError(null);
+                    setAiChatNotice(null);
+                  }}
+                  placeholder="Paste the AI reply here"
+                  rows={7}
+                  spellCheck={false}
+                  className="mt-3 w-full resize-none rounded-lg border border-studio-border bg-black/30 p-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                />
+                <button
+                  type="button"
+                  onClick={useAiChatReply}
+                  disabled={!aiChatReplyDraft.trim() || conceptGenerating}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-40"
+                >
+                  {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  Create from AI reply
+                </button>
+              </div>
+            ) : null}
+            {choiceSpecs ? (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {conceptUiArchetypes.filter((archetype) => choiceSpecs[archetype]).map((archetype) => (
+                  <div
+                    key={archetype}
+                    className="group relative rounded-lg border border-studio-border bg-studio-input p-2 text-left text-studio-muted transition-colors hover:border-studio-accent hover:text-studio-text"
+                  >
+                    <button
+                      type="button"
+                      aria-label={`Choose ${archetype} layout`}
+                      onClick={() => chooseAmbiguousSpec(archetype)}
+                      className="absolute inset-0 z-10 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-studio-accent"
+                    />
+                    <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide group-hover:text-studio-text">
+                      {archetype}
+                    </span>
+                    <span
+                      aria-hidden
+                      inert
+                      className="pointer-events-none block h-[72px] overflow-hidden rounded-md bg-studio-preview-surface"
+                    >
+                      <span style={{ display: "block", transform: "scale(0.072)", transformOrigin: "top left" }}>
+                        {choiceSpecs[archetype] ? <SceneRenderer spec={choiceSpecs[archetype]} /> : null}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <details className="mt-3 rounded-lg border border-studio-border bg-studio-input p-2">
+              <summary className="cursor-pointer text-[11px] font-semibold text-studio-muted hover:text-studio-text">
+                Advanced
+              </summary>
+              <div className="mt-2 flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={copySpecJson}
+                  disabled={!activeConceptSpec}
+                  className="rounded-md border border-studio-border px-2 py-1 text-[11px] font-semibold text-studio-muted hover:text-studio-text disabled:opacity-40"
+                >
+                  Copy spec JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={pasteSpecJson}
+                  disabled={!specJsonDraft.trim()}
+                  className="rounded-md bg-studio-accent px-2 py-1 text-[11px] font-semibold text-studio-accent-fg disabled:opacity-40"
+                >
+                  Paste spec JSON
+                </button>
+              </div>
+              <textarea
+                value={specJsonDraft}
+                onChange={(e) => {
+                  setSpecJsonDraft(e.currentTarget.value);
+                  setSpecPasteError(null);
+                }}
+                placeholder="Paste SceneSpec JSON"
+                spellCheck={false}
+                rows={5}
+                className="mt-2 w-full resize-none rounded-md border border-studio-border bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60"
+              />
+              {specPasteError ? (
+                <p className="mt-1.5 whitespace-pre-wrap text-[10px] leading-relaxed text-red-400">{specPasteError}</p>
+              ) : null}
+            </details>
           </Section>
         )}
+
+        {activeConceptSpec ? (
+          <Section title="Variants">
+            <div className="grid grid-cols-3 gap-1.5">
+              {FRAMING_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => toggleVariantPreset(preset.id)}
+                  aria-pressed={variantPresets[preset.id]}
+                  className={[
+                    "rounded-lg border px-2 py-2 text-left text-[10px] font-semibold transition-colors",
+                    variantPresets[preset.id]
+                      ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                      : "border-studio-border text-studio-muted hover:text-studio-text",
+                  ].join(" ")}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-[11px] font-medium text-studio-muted">
+              <input
+                type="checkbox"
+                checked={variantCalloutEnabled}
+                onChange={(e) => setVariantCalloutEnabled(e.currentTarget.checked)}
+                disabled={!activeConceptSpec.modifiers.aiCallout}
+                className="size-3 accent-studio-accent"
+              />
+              Include AI callout
+            </label>
+            <button
+              type="button"
+              onClick={batchExportVariants}
+              disabled={variantExporting}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-50"
+            >
+              {variantExporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+              Export selected variants
+            </button>
+            {variantStatus ? (
+              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{variantStatus}</p>
+            ) : null}
+          </Section>
+        ) : null}
 
         {sourceMode === "screenshot" && content.screenshot?.url && (
           <Section title="Settings">
@@ -475,7 +1066,7 @@ export function ProductVisualSidebar() {
                 {cropOnly ? "Select a key area first to crop." : "Select a key area first to crop or highlight."}
               </p>
             )}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
               {displayModes.map((m) => {
                 const enabled = !!content.screenshot?.crop;
                 const active = cropOnly ? m.id === "crop" : content.screenshot?.displayMode === m.id;
@@ -506,6 +1097,30 @@ export function ProductVisualSidebar() {
         )}
 
       </div>
+
+      {conceptScene ? (
+        <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
+          <div ref={conceptCaptureRef}>
+            <SceneRenderer spec={conceptScene} />
+          </div>
+        </div>
+      ) : null}
+
+      {variantExportSpec ? (
+        <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
+          <div ref={variantSceneRef}>
+            <SceneRenderer spec={variantExportSpec} />
+          </div>
+        </div>
+      ) : null}
+
+      {variantProductContent ? (
+        <div aria-hidden style={{ position: "fixed", left: "-10000px", top: 0, pointerEvents: "none" }}>
+          <div ref={variantProductRef}>
+            <ProductVisualCanvas content={variantProductContent} exportMode />
+          </div>
+        </div>
+      ) : null}
 
       {bgModalOpen && (
         <BackgroundPickerModal

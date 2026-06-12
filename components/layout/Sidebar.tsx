@@ -110,11 +110,11 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         title: "Create from article",
-        desc: "Paste an article URL or the full article and click Generate images from source. Asset Studio will suggest 2-5 infographic images from the article content.",
+        desc: "Paste the article text, chart data, or image notes and click Generate images from source. Asset Studio will suggest 2-5 infographic images from the pasted content.",
       },
       {
-        title: "Use protected links safely",
-        desc: "If a PMM Space or Vercel link requires login, paste the article text instead or ask the workspace owner for an AI-accessible share link. Do not share protection bypass secrets in open channels.",
+        title: "Keep sources pasted",
+        desc: "URL import is disabled by security policy. Copy readable text from protected pages or internal docs into the source field instead.",
       },
       {
         title: "Review each suggested image",
@@ -166,7 +166,7 @@ export function GuideModal({ onClose, initialSection = "getting-started" }: { on
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--app-overlay-modal)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="bg-studio-sidebar border border-studio-border rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col" style={{ height: 480 }}>
@@ -280,7 +280,7 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
     /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--app-overlay-modal)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Panel */}

@@ -20,7 +20,7 @@ export function ConfirmLeaveDialog({
   return (
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center p-6"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+      style={{ backgroundColor: "var(--app-overlay-modal)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-studio-sidebar border border-studio-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">

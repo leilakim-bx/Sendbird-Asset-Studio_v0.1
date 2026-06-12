@@ -28,10 +28,8 @@ const MAX_PREVIEW_W = 580;
 type SourceContentResponse =
   | {
       ok: true;
-      sourceType: "text" | "url";
+      sourceType: "text";
       text: string;
-      title?: string;
-      imageCount?: number;
     }
   | {
       ok: false;
@@ -416,10 +414,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       });
       data = (await response.json()) as SourceContentResponse;
       if (!response.ok && data.ok) {
-        return { count: 0, notice: "Could not read this source. Paste the article text or use an AI-accessible share link." };
+        return { count: 0, notice: "Could not read this source. Paste the article text, chart data, or image notes." };
       }
     } catch {
-      return { count: 0, notice: "Could not read this source. Paste the article text or use an AI-accessible share link." };
+      return { count: 0, notice: "Could not read this source. Paste the article text, chart data, or image notes." };
     }
 
     if (!data.ok) {
@@ -429,19 +427,13 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
 
     const count = applySourceText(data.text);
-    const sourceName = data.sourceType === "url" ? "URL" : "source";
-    const imageNote =
-      data.sourceType === "url" && data.imageCount
-        ? ` Found ${data.imageCount} reference image${data.imageCount === 1 ? "" : "s"}.`
-        : "";
-    const titleNote = data.sourceType === "url" && data.title ? `Read "${data.title}". ` : "";
 
     return {
       count,
       notice:
         count > 0
-          ? `${titleNote}Suggested ${count} image${count === 1 ? "" : "s"} from this ${sourceName}.${imageNote}`
-          : `${titleNote}No strong image candidates found. Paste chart data, image notes, or try a preset in Advanced settings.${imageNote}`,
+          ? `Suggested ${count} image${count === 1 ? "" : "s"} from this source.`
+          : "No strong image candidates found. Paste chart data, image notes, or try a preset in Advanced settings.",
     };
   }
 

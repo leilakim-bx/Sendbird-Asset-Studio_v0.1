@@ -1,12 +1,12 @@
 # Delight.ai Asset Studio — 프로젝트 컨텍스트 (Infographic 설계용)
 
-> 이 문서는 claude.ai 웹챗에 **통째로 붙여넣어** 프로젝트 맥락을 한 번에 전달하기 위한 것입니다.
-> 목적: 이 도구에 추가할 **Infographic 템플릿**(현재 미구현, 홈 화면 "Soon" 상태)을 설계하는 데 도움받기.
+> 이 문서는 내부 설계 맥락 참고용입니다.
+> 보안 정책상 프로젝트 맥락을 외부 LLM에 붙여넣지 않는다.
 
 ---
 
-## 0. 무엇을 도와줬으면 하는지 (붙여넣은 뒤 직접 말할 것)
-예) "아래 도구에 들어갈 **Infographic 템플릿**을 설계하고 싶어. 기존 Chat conversation 템플릿과 같은 패턴(블록 모델 + 배경 위 카드 + center/split 레이아웃 + PNG export)을 따라야 해. 어떤 블록/레이아웃/데이터 모델이 좋을지, 마케터가 텍스트만 채우면 깔끔한 인포그래픽이 나오게 하려면 어떻게 구성해야 할지 제안해줘."
+## 0. 참고 목적
+Infographic 템플릿의 블록 모델, 레이아웃, 데이터 모델, export 제약을 빠르게 파악하기 위한 내부 요약이다.
 
 ---
 
@@ -21,7 +21,8 @@
 - Tailwind v4 (CSS 기반) + shadcn + @base-ui/react
 - Zustand (localStorage persist)
 - **html-to-image** 로 DOM → PNG export (@2x)
-- 외부 이미지: Pexels (same-origin proxy 경유), 시나리오 생성: Anthropic API (현재 mock)
+- 외부 이미지: Pexels (Pexels-only same-origin proxy 경유)
+- 시나리오/추천 생성: 외부 LLM 없이 로컬 프리셋·규칙 기반
 
 ## 3. 핵심 아키텍처
 
@@ -94,12 +95,11 @@ Background → Layout → Scenario → Messages → User Profile → App Name
 
 ## 6. 코딩/운영 컨벤션 (참고)
 - 파일명 kebab-case, 컴포넌트 PascalCase, `any` 금지(`unknown`), 비즈니스 로직은 `/lib`·UI는 `/components` 분리.
-- 모든 외부 API는 mock 모드 지원(방화벽 환경 고려).
-- 현재 데이터: 배경=정적 파일, 에셋=localStorage (추후 R2/Supabase/Clerk 이전 예정). 인증 없음(베타 전 추가 예정).
+- 외부 네트워크 호출은 Pexels 검색/이미지 CDN으로 제한(방화벽 환경 고려).
+- 현재 데이터: 배경=정적 파일, 에셋=localStorage (추후 승인된 내부 저장소/Supabase/Clerk 검토). 인증 없음(베타 전 추가 예정).
 
 ---
 
 ### 사용법
-1. 위 전체를 claude.ai 새 대화창에 붙여넣기.
-2. 맨 위 "0번"에 적은 것처럼 **구체적으로 무엇을 원하는지** 한 줄 덧붙이기.
-3. 필요하면 기존 Chat 템플릿 export 이미지 1~2장을 첨부하면 비주얼 언어 전달이 훨씬 정확해짐.
+1. 내부 설계 리뷰나 구현 전 맥락 확인에 사용한다.
+2. 실제 작업 기준은 `PRD.md`, `DEVELOPMENT_DESIGN.md`, `STUDIO_DESIGN.md`, `ASSET_DESIGN.md`를 우선한다.

@@ -1,84 +1,16 @@
 import { type NextRequest } from "next/server";
-import { env } from "@/lib/env";
 import { validateScenario } from "@/lib/ai/validate-scenario";
 
 /**
  * POST /api/generate-scenario
  * Body: { prompt: string }
  *
- * Calls Anthropic Claude to generate a realistic AI-agent conversation built
- * from the Sendbird chat UI's bubble types (text / actions / products /
- * checklist / status / voice). The model returns a flat JSON array; everything
- * is run through `validateScenario`, which enforces the schema + role rules and
- * converts it into editor-ready ChatMessage[] (drops anything malformed).
- *
- * Requires ANTHROPIC_API_KEY in .env.local (set to "mock" for the canned path).
+ * Builds a local preset-based conversation from the marketer's prompt. No
+ * external LLM calls are allowed in this studio; the generated blocks still run
+ * through `validateScenario` before reaching the editor.
  */
 
-const SYSTEM_PROMPT = `
-You are a scenario writer for Sendbird's AI agent product marketing.
-Generate a realistic, concise chat conversation that demonstrates the described AI agent capability,
-composed from the building blocks below.
-
-Return ONLY a valid JSON array — no markdown, no explanation, no code fences.
-
-Each element must be exactly one of these shapes:
-
-1. Text message (the only shape a user may send):
-{ "type": "text", "role": "user" | "bot", "sender": "First name or bot", "text": "message content",
-  "verifications": ["optional bot-only activity log lines"],
-  "buttons": ["optional bot-only action buttons, 1-3"] }
-  → PREFERRED way to offer buttons: attach them to the bot's text so the reply and
-    its options render as ONE bubble. (Ignored on a user message.)
-
-2. Action buttons — standalone, buttons only (bot only, 1-3 buttons):
-{ "type": "actions", "buttons": ["Label A", "Label B"] }
-  → Use ONLY when buttons follow a non-text block (e.g. after "products"). For a
-    bot reply with text + buttons, use shape 1's "buttons" instead.
-
-3. Product cards (bot only, 1-2 items):
-{ "type": "products", "items": [{ "name": "Product name", "sub": "Price or subtitle", "cta": "Button label", "imageQuery": "2-3 word photo search term" }] }
-
-4. Checklist (bot only — multi-step task progress, 2-5 items):
-{ "type": "checklist", "items": [{ "label": "Step description", "status": "done" | "in-progress" | "pending", "badge": "optional short tag e.g. API/SMS" }] }
-
-5. Status pill (bot only — a single outcome):
-{ "type": "status", "label": "Order confirmed", "variant": "success" | "warning" }
-
-6. Voice card (bot only — a spoken line). A voice card is a STANDALONE hero: if you use it, return it as the ONLY element in the array (no text/actions around it):
-{ "type": "voice", "style": "quote" | "player", "transcript": "the spoken line", "caption": "optional caption", "eyebrow": "optional bold label" }
-
-7. Itinerary (bot only — a grouped schedule/agenda: day-grouped rows + optional footer button). Best for travel plans, trip itineraries, multi-day agendas. 1-4 groups, 1-5 rows each. "icon" MUST be one of: lodging, dining, activity, sightseeing, flight, transport, place, time:
-{ "type": "itinerary", "groups": [{ "label": "MON" (or "Day 1"/"Morning"), "items": [{ "icon": "lodging", "title": "Check in at 4pm", "sub": "InterContinental Thalasso" }] }], "cta": "optional footer button e.g. Start booking" }
-  → The itinerary card is tall. Keep this scenario compact: just the user's question followed directly by the itinerary card — do NOT add a separate bot intro line (e.g. "Here is your itinerary") before it.
-
-Interpreting the marketer's prompt:
-- The prompt may be short, vague, or just a few keywords. Treat it as the INTENT, not a script to copy.
-- Infer a concrete, credible scenario that best showcases the capability: invent specific names, products, prices, numbers, and steps that fit. Do NOT echo the prompt verbatim and never ask for clarification — always produce a finished scenario.
-- Proactively choose the bubble types that make the strongest demo for that intent (checklist, status, products, voice, actions, itinerary) — don't fall back to plain text when a richer card would land better.
-- Stay within the domain the marketer implied and respect any explicit detail they gave; fill in everything else with realistic specifics.
-
-Rules:
-- 3 to 5 messages total.
-- Start with a user "text" message.
-- Only "text" messages may have "role": "user". Every other shape is the bot — omit "role" for them.
-- Use a realistic first name for the user's "sender"; use "bot" for bot messages.
-- Keep copy short and punchy — this is marketing.
-- Pick the blocks that best fit the scenario (e.g. checklist for multi-step automation, status for a confirmation, voice for a voice-AI demo, products for shopping).
-- Never invent an "img" URL — provide "imageQuery" instead so the app can fetch a photo.
-`.trim();
-
-type AnthropicResponse = {
-  content?: Array<{ type: string; text: string }>;
-  error?: { message: string };
-};
-
-// ── Mock mode ─────────────────────────────────────────────
-// Set ANTHROPIC_API_KEY=mock in .env.local to test the UI without a real key.
-// The mock exercises ALL SEVEN bubble types across its keyword flavors so the
-// render path for every block can be verified end-to-end without a live key.
-
-function mockMessages(prompt: string): unknown[] {
+function localPresetMessages(prompt: string): unknown[] {
   const lower = prompt.toLowerCase();
   const short = prompt.length < 80 ? prompt : "";
 
@@ -162,15 +94,6 @@ function mockMessages(prompt: string): unknown[] {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = env.anthropicApiKey;
-
-  if (!apiKey) {
-    return Response.json(
-      { error: "ANTHROPIC_API_KEY not configured in .env.local" },
-      { status: 503 },
-    );
-  }
-
   let prompt: string;
   try {
     const body = (await request.json()) as { prompt?: string };
@@ -183,55 +106,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  // Mock mode — no real API call
-  if (apiKey === "mock") {
-    await new Promise((r) => setTimeout(r, 800)); // simulate latency
-    const messages = validateScenario(mockMessages(prompt));
-    return Response.json({ messages });
-  }
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-haiku-20241022",
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { error?: { message: string } };
-    return Response.json(
-      { error: err.error?.message ?? `Anthropic API error: ${res.status}` },
-      { status: res.status },
-    );
-  }
-
-  const data = (await res.json()) as AnthropicResponse;
-  const text = data.content?.[0]?.text ?? "";
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return Response.json(
-      { error: "Model returned invalid JSON — try rephrasing your prompt." },
-      { status: 500 },
-    );
-  }
-
-  // Structural safety layer: drops malformed messages, enforces role rules, and
-  // converts the flat model output into editor-ready ChatMessage[].
-  const messages = validateScenario(parsed);
+  const messages = validateScenario(localPresetMessages(prompt));
   if (messages.length === 0) {
     return Response.json(
-      { error: "The model didn't return a usable scenario — try rephrasing your prompt." },
+      { error: "No usable local scenario preset matched this prompt." },
       { status: 500 },
     );
   }

@@ -2,18 +2,17 @@ import { type NextRequest } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
-import { env } from "@/lib/env";
-import { uploadToR2, MAX_UPLOAD_SIZE } from "@/lib/storage/r2";
 
 /**
  * POST /api/upload-background
  *
- * R2가 설정된 경우: Cloudflare R2에 업로드 (backgrounds/{uuid}.{ext})
- * R2 미설정 (개발): /public/background/에 로컬 저장 (filesystem fallback)
+ * Stores uploaded background images in /public/background.
+ * External object storage is intentionally disabled by security policy.
  *
  * 반환: { id, label, url }
  */
 
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const EXT_MAP: Record<string, string> = {
@@ -45,7 +44,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // ── 공통 검증 (R2/filesystem 공통) ───────────────────────
+  // ── Validation ───────────────────────────────────────────
   if (!ALLOWED_TYPES.has(file.type)) {
     return Response.json(
       { error: "Only JPEG, PNG, WebP, and GIF images are allowed" },
@@ -62,19 +61,7 @@ export async function POST(request: NextRequest) {
 
   const label = deriveLabel(file.name);
 
-  // ── R2 업로드 (설정된 경우) ───────────────────────────────
-  if (env.r2) {
-    try {
-      const { key, publicUrl } = await uploadToR2(file, file.name);
-      // id는 key 전체를 사용 ("backgrounds/uuid.jpg") — 나중에 deleteFromR2에 재사용
-      return Response.json({ id: key, label, url: publicUrl });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Upload failed";
-      return Response.json({ error: message }, { status: 500 });
-    }
-  }
-
-  // ── Filesystem fallback (개발 환경 전용) ──────────────────
+  // ── Local filesystem storage ─────────────────────────────
   const UPLOAD_DIR = join(process.cwd(), "public", "background");
 
   if (!existsSync(UPLOAD_DIR)) {

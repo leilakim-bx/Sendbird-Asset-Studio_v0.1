@@ -1,14 +1,20 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
-type Props = { block: Extract<InfographicBlock, { type: "card-grid" }>; scale?: number };
+type Props = {
+  block: Extract<InfographicBlock, { type: "card-grid" }>;
+  scale?: number;
+  maxHeight?: number;
+  format?: InfographicFormat;
+};
 
-const CARD_BG = "#FFFFFF";
-const HAIRLINE = "rgba(0,0,0,0.08)";
-const BADGE_BG = "#E6E2D8";
+const CARD_BG = brand.color.infographic.paper;
+const HAIRLINE = brand.color.infographic.grid;
+const BADGE_BG = brand.color.infographic.badge;
 const MAX_CARDS = 4;
 
-export function CardGridBlock({ block, scale = 1 }: Props) {
+export function CardGridBlock({ block, scale = 1, maxHeight, format }: Props) {
   const rawCards = block.cards.slice(0, MAX_CARDS);
   const showBadges = rawCards.some((card) => !!card.badge?.trim());
   const cards = rawCards.map((card, i) => ({
@@ -16,8 +22,28 @@ export function CardGridBlock({ block, scale = 1 }: Props) {
     badge: showBadges ? card.badge?.trim() || `Panel ${i + 1}` : "",
   }));
   const fs = (n: number) => Math.round(n * scale);
+  const isSingleCard = cards.length === 1;
+  const isProduct = format === "product";
+  const isProductSingleCard = isSingleCard && isProduct;
   const columns = cards.length === 1 ? "minmax(0, 1fr)" : cards.length === 3 ? "repeat(3, minmax(0, 1fr))" : "repeat(2, minmax(0, 1fr))";
-  const maxWidth = cards.length === 3 ? 700 : cards.length === 1 ? 500 : 700;
+  const maxWidth = cards.length === 3 ? 700 : cards.length === 1 ? (isProduct ? 560 : 500) : 700;
+  const bodyFontSize = fs(cards.length === 3 ? 11 : 12);
+  const bodyLineHeight = bodyFontSize * 1.38;
+  const productSingleCardClamp = maxHeight
+    ? Math.min(
+        12,
+        Math.max(
+          5,
+          Math.floor(
+            (maxHeight - 52 - (showBadges ? 28 : 0) - fs(18) * 1.12 * 2 - 23) /
+              bodyLineHeight,
+          ),
+        ),
+      )
+    : 8;
+  const bodyLineClamp = isSingleCard
+    ? (isProduct ? productSingleCardClamp : 8)
+    : 4;
 
   return (
     <div
@@ -34,13 +60,15 @@ export function CardGridBlock({ block, scale = 1 }: Props) {
         <div
           key={i}
           style={{
-            minHeight: cards.length === 1 ? 176 : 136,
+            minHeight: isSingleCard ? (isProduct ? 210 : 176) : 136,
             background: CARD_BG,
             borderRadius: 10,
-            padding: cards.length === 3 ? "24px" : "26px 28px",
+            padding: cards.length === 3 ? "24px" : isProductSingleCard ? "30px 34px" : "26px 28px",
             boxSizing: "border-box",
             display: "flex",
             flexDirection: "column",
+            maxHeight: isProductSingleCard && maxHeight ? maxHeight : undefined,
+            overflow: "hidden",
           }}
         >
           {card.badge && (
@@ -70,7 +98,7 @@ export function CardGridBlock({ block, scale = 1 }: Props) {
             style={{
               fontFamily: INFOGRAPHIC_SERIF,
               margin: 0,
-              color: "#000000",
+              color: brand.color.black,
               fontSize: fs(18),
               lineHeight: 1.12,
               fontWeight: 600,
@@ -87,11 +115,11 @@ export function CardGridBlock({ block, scale = 1 }: Props) {
             style={{
               margin: 0,
               color: INFOGRAPHIC_INK_MUTED,
-              fontSize: fs(cards.length === 3 ? 11 : 12),
+              fontSize: bodyFontSize,
               lineHeight: 1.38,
               display: "-webkit-box",
               WebkitBoxOrient: "vertical",
-              WebkitLineClamp: cards.length === 1 ? 5 : 4,
+              WebkitLineClamp: bodyLineClamp,
               overflow: "hidden",
             }}
           >

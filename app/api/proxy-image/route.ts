@@ -1,11 +1,11 @@
 import { type NextRequest } from "next/server";
 
 /**
- * Server-side image proxy.
- * Fetches any external image URL and streams it back as same-origin,
- * so html-to-image can embed it in a canvas without CORS/SecurityError.
+ * Pexels-only image proxy.
+ * Streams Pexels image CDN URLs back as same-origin so html-to-image can embed
+ * them in a canvas without CORS/SecurityError.
  *
- * Usage: /api/proxy-image?url=https://...
+ * Usage: /api/proxy-image?url=https://images.pexels.com/...
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
@@ -22,10 +22,13 @@ export async function GET(request: NextRequest) {
     return new Response("Invalid url parameter", { status: 400 });
   }
 
+  if (!isAllowedPexelsImage(targetUrl)) {
+    return new Response("Only Pexels image URLs are allowed", { status: 403 });
+  }
+
   try {
     const upstream = await fetch(targetUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
-      // next.js fetch cache — cache proxied images for a day
       next: { revalidate: 86400 },
     });
 
@@ -44,5 +47,14 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     return new Response("Failed to proxy image", { status: 502 });
+  }
+}
+
+function isAllowedPexelsImage(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "images.pexels.com";
+  } catch {
+    return false;
   }
 }

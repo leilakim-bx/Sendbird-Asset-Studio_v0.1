@@ -1,4 +1,5 @@
 import type { ProductVisualScreenshot } from "@/lib/types/product-visual";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   screenshot: ProductVisualScreenshot | undefined;
@@ -6,9 +7,9 @@ type Props = {
   maxHeight: number;
 };
 
-const RADIUS = 8;             // screenshot (dashboard) corner radius
-const HIGHLIGHT_RADIUS = 6;   // spotlight rect — slightly rounded
-const SHADOW = "0 4px 24px rgba(0,0,0,0.08)";
+const RADIUS = brand.radius[8];
+const HIGHLIGHT_RADIUS = brand.spacing[6];
+const SHADOW = brand.elevation.productScreenshot;
 
 /** Fit an aspect ratio (w/h) into a box with object-fit: contain semantics. */
 function fitContain(aspect: number, maxW: number, maxH: number): { w: number; h: number } {
@@ -135,7 +136,7 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight }: Props) {
           width: pct(c.width),
           height: pct(c.height),
           borderRadius: HIGHLIGHT_RADIUS,
-          boxShadow: "0 0 0 9999px rgba(0,0,0,0.4)",
+          boxShadow: brand.elevation.productHighlightMask,
           boxSizing: "border-box",
         }}
       />

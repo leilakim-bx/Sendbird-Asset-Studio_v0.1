@@ -18,3 +18,19 @@ repo docs as the project source of truth:
 Keep implementation and documentation aligned. If a change alters product scope,
 data flow, export behavior, storage, AI routes, or visual rules, update the
 relevant document in the same task.
+
+## Token Boundaries
+
+- Generated asset render paths (Chat mockup, Infographic canvas/blocks,
+  Product Visual canvas, Concept UI scene renderer) must read visual values from
+  `lib/tokens/brand.ts` only.
+- Tool UI paths (forms, buttons, sidebars, modals, editor chrome) must read
+  visual values from `lib/tokens/app.ts` only, usually through the CSS variables
+  injected by `app/layout.tsx` and Tailwind `studio-*` utilities.
+- Do not import `brand.ts` from tool UI components, and do not import `app.ts`
+  from asset render components. Shared components must receive visual values
+  through props instead of importing either token file.
+- Do not hardcode hex colors, rgb/rgba/oklch colors, font stacks, radii,
+  spacing, or shadows inside components. Add or reuse a role-based token first.
+- Dev-only screens under `app/dev/**` and `components/concept-ui/dev/**` are not
+  token-enforced, but they must not be imported by asset render paths.

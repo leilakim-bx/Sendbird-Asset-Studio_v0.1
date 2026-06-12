@@ -1,5 +1,6 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "step" }>; scale?: number };
 
@@ -19,7 +20,7 @@ export function StepBlock({ block, scale = 1 }: Props) {
             gridTemplateColumns: "36px 1fr auto",
             alignItems: "center",
             gap: 14,
-            background: "#FFFFFF",
+            background: brand.color.infographic.paper,
             padding: "14px 16px",
             borderRadius: 14,
           }}
@@ -30,7 +31,7 @@ export function StepBlock({ block, scale = 1 }: Props) {
               height: 28,
               borderRadius: "50%",
               background: INFOGRAPHIC_INK,
-              color: "#fff",
+              color: brand.color.white,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

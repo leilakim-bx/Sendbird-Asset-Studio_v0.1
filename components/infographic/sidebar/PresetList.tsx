@@ -55,7 +55,7 @@ export function PresetList({
                 "shrink-0 flex items-center justify-center",
                 large ? "w-11 h-11 rounded-xl" : "w-6 h-6 rounded-md",
               ].join(" ")}
-              style={{ background: "#2E2E2E", color: "#FFFFFF" }}
+              style={{ background: "var(--studio-hover)", color: "var(--studio-text)" }}
             >
               {Icon && <Icon size={large ? 21 : 14} />}
             </span>

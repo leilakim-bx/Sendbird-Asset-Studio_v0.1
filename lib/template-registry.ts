@@ -1,6 +1,8 @@
 import type { ChatMessage } from "./store";
 import type { InfographicContent } from "./types/infographic";
-import { PRODUCT_VISUAL_EXAMPLE_SCREENSHOT, type ProductVisualContent } from "./types/product-visual";
+import type { ProductVisualContent } from "./types/product-visual";
+import dashboardActions from "./concept-ui/samples/dashboard-ai-actions.en.json";
+import { parseSceneSpec } from "./concept-ui/scene-spec";
 import { getAvatarForName } from "./avatar";
 
 /** Wrap an external image URL through our same-origin proxy */
@@ -52,6 +54,8 @@ export type ProductVisualTemplate = TemplateBase & {
 
 /** Discriminated by `kind` — narrow before accessing variant-specific fields. */
 export type Template = ChatTemplate | InfographicTemplate | ProductVisualTemplate;
+
+const PRODUCT_VISUAL_DEFAULT_CONCEPT_SCENE = parseSceneSpec(dashboardActions);
 
 // ── Export Sizes ──────────────────────────────────────────
 
@@ -169,9 +173,10 @@ export const TEMPLATES: Template[] = [
       format: "release-thumbnail", // most-used format first
       layout: "side-by-side",      // satisfies FORMAT_LAYOUTS["release-thumbnail"]
       bg: "warmgray",
-      screenshot: PRODUCT_VISUAL_EXAMPLE_SCREENSHOT,
-      title: "Introducing AI agent workspace",
-      subtitle: "Manage all your AI agents in one workspace.",
+      sourceMode: "concept",
+      conceptScene: PRODUCT_VISUAL_DEFAULT_CONCEPT_SCENE,
+      title: "AI action oversight",
+      subtitle: "Review agent actions, policy checks, and human handoffs.",
     },
   },
 ];

@@ -1,5 +1,6 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
-import { INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
+import { INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "stat" }>; scale?: number };
 
@@ -22,7 +23,7 @@ export function StatBlock({ block, scale = 1 }: Props) {
             fontWeight: 500,
             letterSpacing: "-0.015em",
             color: INFOGRAPHIC_INK_MUTED,
-            background: "rgba(0,0,0,0.05)",
+            background: brand.color.infographic.subtleFill,
             padding: "6px 14px",
             borderRadius: 8,
           }}
@@ -33,11 +34,11 @@ export function StatBlock({ block, scale = 1 }: Props) {
 
       <span
         style={{
-          fontFamily: '"Serrif", Georgia, "Times New Roman", serif',
+          fontFamily: INFOGRAPHIC_SERIF,
           fontSize: fs(116),
           lineHeight: 0.95,
           letterSpacing: "-0.05em",
-          color: "#292016",
+          color: brand.color.ink,
           width: "fit-content",
           alignSelf: "center",
           ...(highlightNumber

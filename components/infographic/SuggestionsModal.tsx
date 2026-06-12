@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Sparkles, X, Check } from "lucide-react";
 import {
   INFOGRAPHIC_BG_HEX,
-  INFOGRAPHIC_SERIF,
   type InfographicBg,
   type InfographicAccent,
   type InfographicContent,
@@ -86,8 +85,7 @@ export function SuggestionsModal({ open, suggestions, bg, accent, onClose, onCre
         <div className="flex items-center gap-2 border-b border-studio-border px-[22px] py-[18px]">
           <Sparkles size={18} className="text-studio-accent shrink-0" />
           <h2
-            className="flex-1 text-studio-text"
-            style={{ fontFamily: INFOGRAPHIC_SERIF, fontSize: 20, fontWeight: 500, color: "#fff" }}
+            className="flex-1 text-xl font-medium text-studio-text"
           >
             {empty
               ? "No infographics found"

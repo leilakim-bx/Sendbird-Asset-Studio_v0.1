@@ -31,8 +31,8 @@ const SCENARIO_META: Record<string, ScenarioMeta> = {
 const FALLBACK: ScenarioMeta = { Icon: Ban, typeLabel: "scenario" };
 
 // Dark gray chip (no border) + white line icon.
-const CHIP_BG = "#2E2E2E";
-const CHIP_FG = "#FFFFFF";
+const CHIP_BG = "var(--studio-hover)";
+const CHIP_FG = "var(--studio-text)";
 
 export function ScenarioList({
   activeId,

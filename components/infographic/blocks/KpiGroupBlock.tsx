@@ -1,5 +1,6 @@
 import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   block: Extract<InfographicBlock, { type: "kpi-group" }>;
@@ -44,7 +45,7 @@ export function KpiGroupBlock({ block, scale = 1, format }: Props) {
               fontWeight: 400,
               letterSpacing: isBlog ? "-0.02em" : "-0.04em",
               lineHeight: 1,
-              color: "#292016",
+              color: brand.color.ink,
               maxWidth: "100%",
               overflow: "hidden",
               textOverflow: "ellipsis",

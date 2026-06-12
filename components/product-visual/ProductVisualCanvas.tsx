@@ -8,8 +8,15 @@ import {
   PRODUCT_VISUAL_SANS,
 } from "@/lib/types/product-visual";
 import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
+import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
+import {
+  CONCEPT_UI_CANVAS_HEIGHT,
+  CONCEPT_UI_CANVAS_WIDTH,
+} from "@/lib/concept-ui/scene-tokens";
+import type { SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { ConceptUIDisplay } from "./ConceptUIDisplay";
 import { ScreenshotDisplay } from "./ScreenshotDisplay";
+import { brand, brandPx } from "@/lib/tokens/brand";
 
 type Props = {
   content: ProductVisualContent;
@@ -69,6 +76,43 @@ function screenshotDisplayHeight(content: ProductVisualContent, maxWidth: number
   return Math.min(maxWidth, screenshot.naturalWidth) / aspect;
 }
 
+function ConceptSceneDisplay({
+  spec,
+  maxWidth,
+  maxHeight,
+}: {
+  spec: SceneSpec;
+  maxWidth: number;
+  maxHeight: number;
+}) {
+  const scale = Math.min(maxWidth / CONCEPT_UI_CANVAS_WIDTH, maxHeight / CONCEPT_UI_CANVAS_HEIGHT);
+  const width = Math.round(CONCEPT_UI_CANVAS_WIDTH * scale);
+  const height = Math.round(CONCEPT_UI_CANVAS_HEIGHT * scale);
+
+  return (
+    <div
+      style={{
+        width,
+        height,
+        overflow: "hidden",
+        borderRadius: brand.radius[18],
+        boxShadow: brand.elevation.productScene,
+      }}
+    >
+      <div
+        style={{
+          width: CONCEPT_UI_CANVAS_WIDTH,
+          height: CONCEPT_UI_CANVAS_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        <SceneRenderer spec={spec} />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Product Visual canvas — a background with the polished screenshot centered on
  * top. No title/subtitle/layout: every format is just screenshot-on-background.
@@ -89,9 +133,10 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const imageBg = isImageBgFormat(format);
   const displayedScreenshot = sourceMode === "screenshot" ? screenshotForFormat(content) : undefined;
   const displayedConcept =
-    sourceMode === "concept"
+    sourceMode === "concept" && !content.conceptScene
       ? (content.concept ?? buildProductVisualConcept(content.title))
       : undefined;
+  const displayedConceptScene = sourceMode === "concept" ? content.conceptScene : undefined;
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
@@ -133,7 +178,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
         overflow: "hidden",
         fontFamily: PRODUCT_VISUAL_SANS,
         borderRadius: 0,
-        boxShadow: exportMode ? undefined : "0 1px 2px rgba(0,0,0,0.06), 0 8px 32px rgba(0,0,0,0.10)",
+        boxShadow: exportMode ? undefined : brand.elevation.productCanvas,
       }}
       data-export={exportMode ? "1" : undefined}
     >
@@ -153,16 +198,24 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: `${padY}px ${padX}px`,
+          padding: `${brandPx(padY)} ${brandPx(padX)}`,
           boxSizing: "border-box",
         }}
       >
         {sourceMode === "concept" ? (
-          <ConceptUIDisplay
-            concept={displayedConcept}
-            maxWidth={innerW}
-            maxHeight={contentH}
-          />
+          displayedConceptScene ? (
+            <ConceptSceneDisplay
+              spec={displayedConceptScene}
+              maxWidth={innerW}
+              maxHeight={contentH}
+            />
+          ) : (
+            <ConceptUIDisplay
+              concept={displayedConcept}
+              maxWidth={innerW}
+              maxHeight={contentH}
+            />
+          )
         ) : (
           <ScreenshotDisplay
             screenshot={displayedScreenshot}

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ChartLine, Home, Send, Sparkles, SquarePen, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ChartLine, Home, Send, Sparkles, SquarePen, type LucideIcon } from "lucide-react";
 import type { ProductVisualConcept, ProductVisualTone } from "@/lib/types/product-visual";
+import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   concept: ProductVisualConcept | undefined;
@@ -8,25 +9,26 @@ type Props = {
   maxHeight: number;
 };
 
-const SHADOW = "0 4px 16px rgba(0,0,0,0.05)";
-const INK = "#1A1A1A";
-const MUTED = "#8A8A86";
-const LINE = "#E8E6E1";
-const PAPER = "#FFFFFF";
-const CREAM = "#EFEDE8";
-const SECTION = "#F7F5F1";
-const ACTIVE = "#1A1A1A";
-const ACCENT = "#3D9970";
-const GREEN = "#3D9970";
-const RED = "#B23A48";
-const WARNING = "#C0623B";
-const POSITIVE_BG = "#DCEFE3";
-const WARNING_BG = "#F7E3D6";
-const NEGATIVE_BG = "#F6DFE0";
-const CHIP_NEUTRAL = "#EDEBE6";
-const CHIP_IF = "#DCE6F5";
-const CHIP_ACCENT = "#FBE8C8";
-const MUTED_LINE = "#B5B3AE";
+const PV = brand.color.productVisual;
+const SHADOW = brand.elevation.productLegacyCard;
+const INK = brand.color.ink;
+const MUTED = brand.color.inkMuted;
+const LINE = PV.line;
+const PAPER = brand.color.white;
+const CREAM = PV.cream;
+const SECTION = PV.section;
+const ACTIVE = brand.color.ink;
+const ACCENT = brand.color.positive;
+const GREEN = brand.color.positive;
+const RED = brand.color.negative;
+const WARNING = brand.color.warning;
+const POSITIVE_BG = PV.positiveBg;
+const WARNING_BG = PV.warningBg;
+const NEGATIVE_BG = PV.negativeBg;
+const CHIP_NEUTRAL = PV.chipNeutral;
+const CHIP_IF = PV.chipIf;
+const CHIP_ACCENT = PV.chipAccent;
+const MUTED_LINE = PV.mutedLine;
 
 function chipPalette(tone: ProductVisualTone | undefined): { background: string; color: string } {
   if (tone === "good") return { background: POSITIVE_BG, color: GREEN };
@@ -59,7 +61,7 @@ function chipStyle(tone: ProductVisualTone | undefined): CSSProperties {
   };
 }
 
-function Sparkline({ color = "#CFCAC3" }: { color?: string }) {
+function Sparkline({ color = PV.sparkline }: { color?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "end", gap: 3, height: 34, width: 86 }}>
       {[14, 22, 17, 25, 20, 18, 27, 12].map((h, index) => (
@@ -69,7 +71,7 @@ function Sparkline({ color = "#CFCAC3" }: { color?: string }) {
             width: 8,
             height: h,
             borderRadius: 4,
-            background: index === 6 ? color : "#E4E0DA",
+            background: index === 6 ? color : PV.sparklineBar,
             display: "block",
           }}
         />
@@ -162,8 +164,8 @@ function Sidebar({ compact, activeKind }: { compact: boolean; activeKind: Produc
               width: compact ? 26 : 34,
               height: compact ? 26 : 34,
               borderRadius: compact ? 8 : 10,
-              background: active ? "#E7E3DC" : "transparent",
-              color: "#000000",
+              background: active ? PV.navActive : "transparent",
+              color: brand.color.black,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -215,7 +217,7 @@ function SummaryRows({ concept, compact }: { concept: ProductVisualConcept; comp
 	            alignItems: "center",
 	            justifyContent: "space-between",
 	            gap: 12,
-	            background: "#FAF9F6",
+	            background: PV.panel,
 	            borderRadius: 8,
 	            padding: compact ? "7px 9px" : "9px 11px",
             fontSize: compact ? 10 : 12,
@@ -250,14 +252,14 @@ function DeploymentScene({ concept, compact }: { concept: ProductVisualConcept; 
 	          style={{
 	            marginTop: compact ? 12 : 18,
 	            borderRadius: 10,
-	            background: "#F6F1FF",
+	            background: PV.purpleSoft,
 	            padding: compact ? 11 : 14,
 	          }}
 	        >
           <div style={{ fontSize: compact ? 11 : 13, color: ACCENT, fontWeight: 760 }}>{concept.primaryLabel}</div>
           <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: compact ? 28 : 42, color: ACCENT, fontWeight: 760, lineHeight: 1 }}>{concept.primaryValue}</span>
-            <span style={{ height: 8, flex: 1, borderRadius: 999, background: "#DAD0FF", overflow: "hidden" }}>
+            <span style={{ height: 8, flex: 1, borderRadius: 999, background: PV.purpleBar, overflow: "hidden" }}>
               <span style={{ display: "block", width: "80%", height: "100%", background: ACCENT }} />
             </span>
           </div>
@@ -273,9 +275,9 @@ function DeploymentScene({ concept, compact }: { concept: ProductVisualConcept; 
 
 function ConversationScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
   const conversationBars = [
-    { align: "left", width: "48%", background: "#EEEAE4" },
+    { align: "left", width: "48%", background: CREAM },
     { align: "right", width: "52%", background: ACTIVE },
-    { align: "left", width: "34%", background: "#EEEAE4" },
+    { align: "left", width: "34%", background: CREAM },
   ] as const;
 
   return (
@@ -314,7 +316,7 @@ function ConversationScene({ concept, compact }: { concept: ProductVisualConcept
                   width: `${width}%`,
                   height: index === 0 ? 18 : 12,
                   borderRadius: 999,
-                  background: index === 0 ? "#EEEAE4" : "#DEDAD4",
+                  background: index === 0 ? CREAM : brand.color.surface[3],
                   display: "block",
                 }}
               />
@@ -581,7 +583,7 @@ function OversightReviewScene({ compact }: { compact: boolean }) {
           maxWidth: compact ? "100%" : 610,
           borderRadius: 20,
           background: PAPER,
-          boxShadow: "0 14px 34px rgba(0,0,0,0.08)",
+          boxShadow: brand.elevation.productLegacyPanelStrong,
           padding: compact ? 16 : 28,
           boxSizing: "border-box",
           overflow: "hidden",
@@ -724,7 +726,7 @@ function ConditionBlock({ compact }: { compact: boolean }) {
           style={{
             borderRadius: 6,
             background: CHIP_IF,
-            border: "1px solid #BED1EB",
+            border: `1px solid ${PV.infoBorder}`,
             color: INK,
             padding: compact ? "7px 8px" : "9px 11px",
             fontSize: compact ? 10 : 14,
@@ -813,7 +815,7 @@ function OutlinePanel({ compact }: { compact: boolean }) {
               height: row.depth === 0 ? 8 : 5,
               borderRadius: row.depth === 0 ? 999 : 2,
               background: row.active ? CHIP_ACCENT : "transparent",
-              border: `1px solid ${row.active ? "#E5C778" : LINE}`,
+              border: `1px solid ${row.active ? PV.warningBorder : LINE}`,
               flexShrink: 0,
             }}
           />
@@ -844,7 +846,7 @@ function ActionbookEditorScene({ compact }: { compact: boolean }) {
         borderRadius: 20,
         background: PAPER,
         border: `1px solid ${LINE}`,
-        boxShadow: "0 14px 34px rgba(0,0,0,0.06)",
+        boxShadow: brand.elevation.productLegacyPanel,
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -872,9 +874,13 @@ function ActionbookEditorScene({ compact }: { compact: boolean }) {
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              display: "flex",
+              alignItems: "center",
+              gap: compact ? 6 : 8,
             }}
           >
-            {"<-"} Refund processing v2
+            <ArrowLeft size={compact ? 14 : 18} strokeWidth={2.2} />
+            <span>Refund processing v2</span>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -992,9 +998,9 @@ function SettingsScene({ concept, compact }: { concept: ProductVisualConcept; co
 	      {!compact && (
 	        <div style={{ borderRadius: 18, background: PAPER, padding: 14 }}>
 	          <div style={{ fontSize: 14, color: INK, fontWeight: 780, marginBottom: 16 }}>Tester</div>
-	          <div style={{ borderRadius: 12, background: "#EEEAE4", padding: 10, display: "grid", gap: 7 }}>
-	            <span style={{ width: "82%", height: 12, borderRadius: 999, background: "#DEDAD4", display: "block" }} />
-	            <span style={{ width: "56%", height: 12, borderRadius: 999, background: "#DEDAD4", display: "block" }} />
+	          <div style={{ borderRadius: 12, background: CREAM, padding: 10, display: "grid", gap: 7 }}>
+	            <span style={{ width: "82%", height: 12, borderRadius: 999, background: brand.color.surface[3], display: "block" }} />
+	            <span style={{ width: "56%", height: 12, borderRadius: 999, background: brand.color.surface[3], display: "block" }} />
 	          </div>
 	          <div style={{ marginTop: 10, display: "flex", justifyContent: "end" }}>
 	            <span style={chipStyle("neutral")}>Suggested reply</span>
@@ -1050,6 +1056,33 @@ export function ConceptUIDisplay({ concept, maxWidth, maxHeight }: Props) {
   if (!concept) return null;
 
   const compact = maxWidth < 460 || maxHeight < 300;
+  const standaloneScene = isActionbookConcept(concept) || isOversightConcept(concept);
+
+  if (standaloneScene) {
+    const pad = compact ? 12 : 24;
+
+    return (
+      <div
+        style={{
+          width: maxWidth,
+          height: maxHeight,
+          borderRadius: 12,
+          overflow: "hidden",
+          background: CREAM,
+          color: INK,
+          padding: pad,
+          boxSizing: "border-box",
+        }}
+      >
+        {isActionbookConcept(concept) ? (
+          <ActionbookEditorScene compact={compact} />
+        ) : (
+          <OversightReviewScene compact={compact} />
+        )}
+      </div>
+    );
+  }
+
   const bodyPad = compact ? 12 : 18;
   const sidebarW = compact ? 44 : 66;
   const headerH = compact ? 36 : 44;
