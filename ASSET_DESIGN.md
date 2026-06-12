@@ -199,8 +199,8 @@ fontSize: 13 × fs
 
 - 선택적 `intro`: 카드 상단에 bot 설명문을 표시하며 최대 3줄로 클램프한다.
 - Bot 카드 상단에는 항상 indicator dot과 app name을 표시한다.
-- Group `label`은 선택 사항이며, 비어 있으면 날짜/섹션 헤더 영역을 렌더하지 않는다.
-- Row: icon, title, sub text, optional badge.
+- Group `label`은 선택 사항이며, 비어 있으면 날짜/섹션 헤더 영역을 렌더하지 않는다. Label 없는 group이 이어질 때는 row 간격과 동일하게 맞춘다.
+- Row: icon, title, sub text, optional badge. Row vertical padding은 compact하게 유지한다.
 - `badgeTone: "accent"`는 brand accent 토큰 강조 배지, 기본/`neutral`은 chat action background 토큰 배지.
 - Badge는 한 줄 ellipsis 처리해 row 높이를 흔들지 않는다.
 

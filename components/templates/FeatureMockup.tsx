@@ -519,8 +519,13 @@ const ItineraryCard = memo(function ItineraryCard({
           const last = gi === groups.length - 1;
           const groupLabel = g.label?.trim() ?? "";
           const hasGroupLabel = groupLabel.length > 0;
+          const nextGroupLabel = groups[gi + 1]?.label?.trim() ?? "";
+          const hasNextGroupLabel = nextGroupLabel.length > 0;
+          const groupGap = !last && !hasGroupLabel && !hasNextGroupLabel
+            ? Math.round(8 * scale)
+            : Math.round(12 * scale);
           return (
-            <div key={g.id} style={{ marginBottom: last ? Math.round(10 * scale) : Math.round(12 * scale) }}>
+            <div key={g.id} style={{ marginBottom: last ? Math.round(10 * scale) : groupGap }}>
               {/* Group header */}
               {hasGroupLabel && (
                 <div style={{ fontSize: TYPE[13] * fs, fontWeight: FONT.weight.bold, color: CHAT.body, marginBottom: Math.round(7 * scale) }}>
@@ -535,7 +540,7 @@ const ItineraryCard = memo(function ItineraryCard({
                     <div key={it.id} style={{
                       display: "flex", alignItems: "center", gap: Math.round(13 * scale),
                       background: CHAT.rowBg, borderRadius: Math.round(12 * scale),
-                      padding: `${cssPx(Math.round(11 * scale))} ${cssPx(Math.round(15 * scale))}`,
+                      padding: `${cssPx(Math.round(10 * scale))} ${cssPx(Math.round(15 * scale))}`,
                     }}>
                       <Icon size={iconSize} strokeWidth={1.6} color={CHAT.iconMuted} style={{ flexShrink: 0 }} />
                       <div style={{ minWidth: 0, flex: 1 }}>
