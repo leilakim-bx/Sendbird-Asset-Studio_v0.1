@@ -1,6 +1,10 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 
-type Props = { block: Extract<InfographicBlock, { type: "stacked-bar" }>; scale?: number };
+type Props = {
+  block: Extract<InfographicBlock, { type: "stacked-bar" }>;
+  scale?: number;
+  maxHeight?: number;
+};
 
 /**
  * Grayscale ramp for stacked segments (dark→light, in series order). Each entry
@@ -22,10 +26,6 @@ const LEGEND_TEXT = "#66625E";
 const SEG_GAP = 3;
 /** Hide a segment's value when it occupies less than this share of the track. */
 const VALUE_HIDE_FRAC = 0.07;
-/** Hairline around grouped bars so a light-gray fill still reads on any bg
- *  (grouped bars float alone on the canvas — e.g. #D9D6D2 on a stone bg). */
-const BAR_BORDER = "#8C867E";
-
 function seriesColor(i: number, accentIndex?: number) {
   if (accentIndex !== undefined && i === accentIndex) return ACCENT;
   return STACK_RAMP[i % STACK_RAMP.length];
@@ -36,13 +36,22 @@ function Legend({
   series,
   accentIndex,
   fs,
+  fit = 1,
 }: {
   series: string[];
   accentIndex?: number;
   fs: (n: number) => number;
+  fit?: number;
 }) {
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px", justifyContent: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: `${Math.max(4, 8 * fit)}px ${Math.max(8, 20 * fit)}px`,
+        justifyContent: "center",
+      }}
+    >
       {series.map((label, i) => {
         const c = seriesColor(i, accentIndex);
         return (
@@ -68,27 +77,37 @@ function Legend({
  * Palette is grayscale only; one series may be promoted to the accent (lime) via
  * `accentIndex`. A legend sits above the rows.
  */
-export function StackedBarBlock({ block, scale = 1 }: Props) {
+export function StackedBarBlock({ block, scale = 1, maxHeight }: Props) {
   // Same data model (series × rows.values); `layout: "grouped"` renders the
   // series as separate parallel bars per row instead of stacking end-to-end.
-  if (block.layout === "grouped") return <GroupedBars block={block} scale={scale} />;
+  if (block.layout === "grouped") return <GroupedBars block={block} scale={scale} maxHeight={maxHeight} />;
 
-  const fs = (n: number) => Math.round(n * scale);
   const u = block.unit ?? "";
   const { series, rows, normalize, accentIndex } = block;
 
   const rowSums = rows.map((r) => r.values.reduce((s, v) => s + Math.max(0, v || 0), 0));
   const maxSum = Math.max(...rowSums, 1);
-  const barH = Math.round(38 * scale);
+  const legendRows = Math.ceil(series.length / 4);
+  const baseLegendH = legendRows * 20 * scale + Math.max(0, legendRows - 1) * 8;
+  const baseOuterGap = 18;
+  const baseRowGap = 12;
+  const baseBarH = 38 * scale;
+  const naturalHeight = baseLegendH + baseOuterGap + rows.length * baseBarH + Math.max(0, rows.length - 1) * baseRowGap;
+  const fit = maxHeight && naturalHeight > maxHeight ? maxHeight / naturalHeight : 1;
+  const renderScale = scale * fit;
+  const fs = (n: number) => Math.max(8, Math.round(n * renderScale));
+  const barH = 38 * renderScale;
+  const rowGap = baseRowGap * fit;
+  const segmentGap = Math.max(1, SEG_GAP * fit);
   // Short category labels (Q1, January) — fixed gutter, ellipsis past it.
-  const labelW = Math.round(78 * scale);
+  const labelW = Math.round(78 * renderScale);
 
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 18,
+        gap: baseOuterGap * fit,
         width: "100%",
         maxWidth: 660,
         alignSelf: "center",
@@ -97,10 +116,10 @@ export function StackedBarBlock({ block, scale = 1 }: Props) {
       }}
     >
       {/* Legend */}
-      <Legend series={series} accentIndex={accentIndex} fs={fs} />
+      <Legend series={series} accentIndex={accentIndex} fs={fs} fit={fit} />
 
       {/* Rows */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: rowGap }}>
         {rows.map((row, ri) => {
           const sum = rowSums[ri] || 1;
           // In absolute mode the row track only fills (sum / maxSum) of its width.
@@ -124,7 +143,7 @@ export function StackedBarBlock({ block, scale = 1 }: Props) {
               </div>
               {/* Track (full width); inner holds the stacked segments. */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", gap: SEG_GAP, width: `${innerWidthPct}%`, height: barH }}>
+                <div style={{ display: "flex", gap: segmentGap, width: `${innerWidthPct}%`, height: barH }}>
                   {series.map((_, si) => {
                     const v = Math.max(0, row.values[si] ?? 0);
                     if (v <= 0) return null;
@@ -132,7 +151,7 @@ export function StackedBarBlock({ block, scale = 1 }: Props) {
                     const segPct = (v / sum) * 100; // share of this row's inner width
                     // Fraction of the whole track this segment actually occupies.
                     const trackFrac = normalize ? v / sum : v / maxSum;
-                    const showValue = trackFrac >= VALUE_HIDE_FRAC;
+                    const showValue = trackFrac >= VALUE_HIDE_FRAC && barH >= fs(12);
                     return (
                       <div
                         key={si}
@@ -182,10 +201,8 @@ export function StackedBarBlock({ block, scale = 1 }: Props) {
  * scaled to ONE global max (max across every row × series) so bars are comparable
  * group-to-group. There is no axis, so each bar's value is printed at its right
  * end. `normalize` is meaningless here (bars aren't stacked) and is ignored.
- * Every bar gets a hairline border so a light-gray fill still reads on any bg.
  */
-function GroupedBars({ block, scale = 1 }: Props) {
-  const fs = (n: number) => Math.round(n * scale);
+function GroupedBars({ block, scale = 1, maxHeight }: Props) {
   const u = block.unit ?? "";
   const { series, rows, accentIndex } = block;
 
@@ -195,8 +212,24 @@ function GroupedBars({ block, scale = 1 }: Props) {
     ...rows.flatMap((r) => series.map((_, si) => Math.max(0, r.values[si] ?? 0))),
     1,
   );
-  const barH = Math.round(13 * scale);
-  const labelW = Math.round(52 * scale);
+  const legendRows = Math.ceil(series.length / 4);
+  const baseLegendH = legendRows * 20 * scale + Math.max(0, legendRows - 1) * 8;
+  const baseOuterGap = 18;
+  const baseGroupGap = 16 * scale;
+  const baseBarGap = 5 * scale;
+  const baseBarH = 13 * scale;
+  const baseRowH = series.length * baseBarH + Math.max(0, series.length - 1) * baseBarGap;
+  const naturalHeight =
+    baseLegendH + baseOuterGap + rows.length * baseRowH + Math.max(0, rows.length - 1) * baseGroupGap;
+  const fit = maxHeight && naturalHeight > maxHeight ? maxHeight / naturalHeight : 1;
+  const renderScale = scale * fit;
+  const fs = (n: number) => Math.max(7, Math.round(n * renderScale));
+  const barH = 13 * renderScale;
+  const labelW = Math.round(52 * renderScale);
+  const groupGap = baseGroupGap * fit;
+  const barGap = Math.max(1, baseBarGap * fit);
+  const valueGap = Math.max(4, 8 * fit);
+  const showValues = barH >= 10;
   // Cap bar width so the value printed after it never runs off the track.
   const MAX_BAR_PCT = 80;
 
@@ -205,7 +238,7 @@ function GroupedBars({ block, scale = 1 }: Props) {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: 18,
+        gap: baseOuterGap * fit,
         width: "100%",
         maxWidth: 660,
         alignSelf: "center",
@@ -213,10 +246,10 @@ function GroupedBars({ block, scale = 1 }: Props) {
         marginRight: "auto",
       }}
     >
-      <Legend series={series} accentIndex={accentIndex} fs={fs} />
+      <Legend series={series} accentIndex={accentIndex} fs={fs} fit={fit} />
 
       {/* Category groups */}
-      <div style={{ display: "flex", flexDirection: "column", gap: Math.round(16 * scale) }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: groupGap }}>
         {rows.map((row, ri) => (
           <div key={ri} style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
@@ -225,6 +258,7 @@ function GroupedBars({ block, scale = 1 }: Props) {
                 flexShrink: 0,
                 fontSize: fs(14),
                 fontWeight: 600,
+                lineHeight: 1,
                 color: LABEL,
                 textAlign: "right",
                 whiteSpace: "nowrap",
@@ -235,37 +269,38 @@ function GroupedBars({ block, scale = 1 }: Props) {
               {row.label}
             </div>
             {/* Parallel bars — one per series, shared baseline. */}
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: Math.round(5 * scale) }}>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: barGap }}>
               {series.map((_, si) => {
                 const v = Math.max(0, row.values[si] ?? 0);
                 const c = seriesColor(si, accentIndex);
                 const w = (v / globalMax) * MAX_BAR_PCT;
                 return (
-                  <div key={si} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <div key={si} style={{ display: "flex", alignItems: "center", gap: valueGap, minWidth: 0 }}>
                     <div
                       style={{
                         width: `${w}%`,
                         height: barH,
                         minWidth: v > 0 ? 2 : 0,
                         background: c.fill,
-                        border: `1px solid ${BAR_BORDER}`,
                         borderRadius: 3,
-                        boxSizing: "border-box",
                         flexShrink: 0,
                       }}
                     />
-                    <span
-                      style={{
-                        fontSize: fs(12),
-                        fontWeight: 600,
-                        color: LEGEND_TEXT,
-                        whiteSpace: "nowrap",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {v}
-                      {u}
-                    </span>
+                    {showValues && (
+                      <span
+                        style={{
+                          fontSize: fs(12),
+                          fontWeight: 600,
+                          lineHeight: `${barH}px`,
+                          color: LEGEND_TEXT,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {v}
+                        {u}
+                      </span>
+                    )}
                   </div>
                 );
               })}

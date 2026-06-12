@@ -1,5 +1,6 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_ACCENT_HEX } from "@/lib/types/infographic";
+import { compactTrendAxisLabel, shouldShowTrendAxisLabel } from "@/lib/infographic-labels";
 
 type Props = { block: Extract<InfographicBlock, { type: "line-chart" }> };
 
@@ -40,6 +41,7 @@ export function LineChartBlock({ block }: Props) {
   const y1 = VB_H - PAD.bottom;
 
   const n = Math.max(xLabels.length, seriesA.values.length, seriesB?.values.length ?? 0);
+  const xLabelFontSize = n > 6 ? 11 : 13;
   const xAt = (i: number) => (n <= 1 ? x0 : x0 + (i / (n - 1)) * (x1 - x0));
   const yAt = (v: number) => y1 - (Math.max(0, Math.min(v, yMax)) / yMax) * (y1 - y0);
 
@@ -108,11 +110,22 @@ export function LineChartBlock({ block }: Props) {
         ))}
 
         {/* x-axis labels */}
-        {xLabels.map((lab, i) => (
-          <text key={i} x={xAt(i)} y={VB_H - 12} textAnchor="middle" fontSize={13} fill={INFOGRAPHIC_INK_MUTED}>
-            {lab}
-          </text>
-        ))}
+        {xLabels.map((lab, i) => {
+          if (!shouldShowTrendAxisLabel(i, xLabels.length)) return null;
+          return (
+            <text
+              key={i}
+              x={xAt(i)}
+              y={VB_H - 12}
+              textAnchor="middle"
+              fontSize={xLabelFontSize}
+              fill={INFOGRAPHIC_INK_MUTED}
+            >
+              <title>{lab}</title>
+              {compactTrendAxisLabel(lab, i)}
+            </text>
+          );
+        })}
       </svg>
 
       {/* legend — only when comparing two lines */}

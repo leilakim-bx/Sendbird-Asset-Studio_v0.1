@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ChartLine, Home, Send, Sparkles, SquarePen, type LucideIcon } from "lucide-react";
 import type { ProductVisualConcept, ProductVisualTone } from "@/lib/types/product-visual";
 
@@ -358,7 +358,320 @@ function EvaluationScene({ concept, compact }: { concept: ProductVisualConcept; 
   );
 }
 
+function isActionbookConcept(concept: ProductVisualConcept): boolean {
+  const text = [
+    concept.prompt,
+    concept.title,
+    concept.subtitle,
+    concept.badge,
+    concept.primaryLabel,
+    ...concept.chips.map((chip) => chip.label),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return text.includes("actionbook") || text.includes("action book");
+}
+
+function ActionbookSection({
+  title,
+  badge,
+  children,
+  compact,
+}: {
+  title: string;
+  badge?: string;
+  children: ReactNode;
+  compact: boolean;
+}) {
+  return (
+    <section style={{ display: "grid", gap: compact ? 6 : 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+        <span style={{ fontSize: compact ? 12 : 15, color: "#111111", fontWeight: 780 }}>{title}</span>
+        {badge && (
+          <span
+            style={{
+              borderRadius: 6,
+              background: "#F0EDE8",
+              color: MUTED,
+              padding: compact ? "3px 6px" : "5px 8px",
+              fontSize: compact ? 8 : 10,
+              lineHeight: 1,
+              fontWeight: 760,
+              letterSpacing: 0.4,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {badge}
+          </span>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TesterPreview({ compact }: { compact: boolean }) {
+  return (
+    <div
+      style={{
+        width: compact ? "100%" : 190,
+        maxWidth: "100%",
+        borderRadius: compact ? 12 : 16,
+        background: PAPER,
+        boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
+        border: `1px solid ${LINE}`,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          height: compact ? 34 : 42,
+          borderBottom: `1px solid ${LINE}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          padding: compact ? "0 9px" : "0 12px",
+          boxSizing: "border-box",
+        }}
+      >
+        <LogoMark size={compact ? 20 : 24} />
+        <span style={{ color: INK, fontSize: compact ? 10 : 13, fontWeight: 780 }}>Sendbird Airlines</span>
+      </div>
+      <div style={{ padding: compact ? 10 : 13, display: "grid", gap: compact ? 7 : 9 }}>
+        <div style={{ textAlign: "center", color: MUTED, fontSize: compact ? 8 : 9 }}>December 22, 2024</div>
+        <div
+          style={{
+            width: "70%",
+            borderRadius: 9,
+            background: CREAM,
+            padding: compact ? "7px 8px" : "8px 9px",
+            color: INK,
+            fontSize: compact ? 9 : 10,
+            lineHeight: 1.28,
+          }}
+        >
+          I am sorry you missed your flight. Did you get to reschedule?
+        </div>
+        {["Yes, I already rescheduled", "Not yet, can you check for me?"].map((label) => (
+          <div
+            key={label}
+            style={{
+              justifySelf: "end",
+              border: `1px solid ${ACTIVE}`,
+              borderRadius: 999,
+              padding: compact ? "5px 7px" : "6px 9px",
+              color: INK,
+              fontSize: compact ? 8 : 9,
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {label}
+          </div>
+        ))}
+        <div style={{ marginTop: compact ? 4 : 8, color: MUTED, fontSize: compact ? 8 : 9 }}>
+          AI-generated with memory
+        </div>
+        <div
+          style={{
+            marginTop: compact ? 12 : 22,
+            height: compact ? 22 : 28,
+            borderRadius: 999,
+            background: CREAM,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
+  const bodyTextStyle: CSSProperties = {
+    color: INK,
+    fontSize: compact ? 10 : 13,
+    lineHeight: 1.42,
+    fontWeight: 520,
+  };
+
+  return (
+    <div
+      style={{
+        height: "100%",
+        borderRadius: compact ? 10 : 14,
+        background: PAPER,
+        border: `1px solid ${LINE}`,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          minHeight: compact ? 40 : 54,
+          borderBottom: `1px solid ${LINE}`,
+          padding: compact ? "0 12px" : "0 18px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          boxSizing: "border-box",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              color: "#111111",
+              fontSize: compact ? 13 : 18,
+              lineHeight: 1.1,
+              fontWeight: 820,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            Workspace settings
+          </div>
+          {!compact && <div style={{ marginTop: 3, color: MUTED, fontSize: 11 }}>{concept.subtitle}</div>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {!compact && (
+            <span
+              style={{
+                borderRadius: 8,
+                border: `1px solid ${LINE}`,
+                padding: "7px 13px",
+                color: INK,
+                fontSize: 12,
+                fontWeight: 720,
+              }}
+            >
+              Version history
+            </span>
+          )}
+          <span
+            style={{
+              borderRadius: 8,
+              background: ACCENT,
+              color: PAPER,
+              padding: compact ? "7px 10px" : "8px 14px",
+              fontSize: compact ? 10 : 12,
+              fontWeight: 760,
+              lineHeight: 1,
+            }}
+          >
+            Edit
+          </span>
+        </div>
+      </div>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "grid",
+          gridTemplateColumns: compact ? "1fr" : "minmax(0, 1.06fr) minmax(170px, 0.9fr)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            minWidth: 0,
+            padding: compact ? 12 : 18,
+            overflow: "hidden",
+            display: "grid",
+            alignContent: "start",
+            gap: compact ? 12 : 18,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ color: "#111111", fontSize: compact ? 12 : 15, fontWeight: 820 }}>
+                Actionbook structure
+              </div>
+              {!compact && <div style={{ marginTop: 3, color: MUTED, fontSize: 11 }}>Cancel membership</div>}
+            </div>
+            <span style={chipStyle("accent")}>{concept.badge}</span>
+          </div>
+
+          <ActionbookSection title="Key Points" badge="NO ACTION NEEDED" compact={compact}>
+            <div style={bodyTextStyle}>
+              Behavioral rules that apply at all times, written in plain language with inline variables and anchor
+              links.
+            </div>
+          </ActionbookSection>
+
+          <ActionbookSection title="Global Actions" badge="WHENEVER" compact={compact}>
+            <div style={bodyTextStyle}>
+              Actions that fire whenever a trigger occurs, regardless of which intent is active.
+            </div>
+            <div
+              style={{
+                borderRadius: 8,
+                border: "1px solid #B9D4FF",
+                background: "#FBFDFF",
+                padding: compact ? 9 : 12,
+                display: "grid",
+                gap: compact ? 6 : 8,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span
+                  style={{
+                    borderRadius: 5,
+                    background: "#EAF3FF",
+                    border: "1px solid #B9D4FF",
+                    color: INK,
+                    padding: compact ? "4px 7px" : "6px 9px",
+                    fontSize: compact ? 9 : 11,
+                    fontWeight: 800,
+                    lineHeight: 1,
+                  }}
+                >
+                  IF
+                </span>
+                <span style={{ color: INK, fontSize: compact ? 10 : 13, fontWeight: 720 }}>
+                  CONTEXT_STATUS == ERROR
+                </span>
+              </div>
+              <div style={{ color: INK, fontSize: compact ? 9 : 12, lineHeight: 1.4 }}>
+                1. Say the order lookup fallback. Then call #order-lookup.
+              </div>
+            </div>
+          </ActionbookSection>
+
+          <ActionbookSection title="Intent Clarification" compact={compact}>
+            <div style={bodyTextStyle}>
+              Topic-specific handling blocks keep nested conditions readable and easy to update.
+            </div>
+          </ActionbookSection>
+        </div>
+
+        {!compact && (
+          <div
+            style={{
+              minWidth: 0,
+              background: "#E3E1DE",
+              borderLeft: `1px solid ${LINE}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 18,
+              boxSizing: "border-box",
+            }}
+          >
+            <TesterPreview compact={compact} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SettingsScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
+  if (isActionbookConcept(concept)) {
+    return <ActionbookEditorScene concept={concept} compact={compact} />;
+  }
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 190px", gap: compact ? 10 : 14 }}>
 	      <div style={{ borderRadius: 10, background: PAPER, padding: compact ? 12 : 16 }}>

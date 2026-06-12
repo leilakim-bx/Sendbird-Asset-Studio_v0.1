@@ -7,6 +7,7 @@ import {
   type InfographicFormat,
 } from "@/lib/types/infographic";
 import { newBlockId } from "@/lib/infographic-presets";
+import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
 
 export type ArticleImageStatus = "draft" | "ready";
 
@@ -294,7 +295,7 @@ function makeTrendCandidate(text: string): DraftCandidate | null {
     block: {
       id: newBlockId(),
       type: "line-chart",
-      xLabels: matches.map((match) => match.label),
+      xLabels: matches.map((match, index) => generatedTrendAxisLabel(match.label, index)),
       seriesA: {
         label: "Metric",
         values: matches.map((match) => match.value),

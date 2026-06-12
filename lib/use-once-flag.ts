@@ -12,11 +12,14 @@ export function useOnceFlag(key: string): [boolean, () => void] {
   const [active, setActive] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(key)) setActive(true);
-    } catch {
-      // localStorage unavailable (private mode / quota) — just don't show it.
-    }
+    const timer = window.setTimeout(() => {
+      try {
+        if (!localStorage.getItem(key)) setActive(true);
+      } catch {
+        // localStorage unavailable (private mode / quota) — just don't show it.
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [key]);
 
   const dismiss = () => {

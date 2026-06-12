@@ -9,7 +9,11 @@
     "prebuild": "node scripts/gen-avatars.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "verify:core": "npm run test:run && npm run build",
+    "verify": "npm run lint && npm run verify:core"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1056.0",
@@ -35,6 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.8"
   }
 }

@@ -10,6 +10,21 @@ function hasAny(text: string, words: string[]): boolean {
   return words.some((word) => text.includes(word));
 }
 
+function isActionbookEditorPrompt(text: string): boolean {
+  return hasAny(text, [
+    "actionbook",
+    "action book",
+    "rule",
+    "rules",
+    "editor",
+    "notion",
+    "doc",
+    "document",
+    "instruction",
+    "instructions",
+  ]);
+}
+
 function shortFeatureLabel(prompt: string): string {
   const cleaned = cleanPrompt(prompt);
   if (!cleaned) return "New AI agent feature";
@@ -92,6 +107,16 @@ export function detectProductVisualConceptKind(prompt: string): ProductVisualCon
       "messenger",
       "welcome",
       "suggested reply",
+      "actionbook",
+      "action book",
+      "rule",
+      "rules",
+      "editor",
+      "notion",
+      "doc",
+      "document",
+      "instruction",
+      "instructions",
     ])
   ) {
     return "settings";
@@ -189,6 +214,33 @@ export function buildProductVisualConcept(promptInput: string): ProductVisualCon
   }
 
   if (kind === "settings") {
+    if (isActionbookEditorPrompt(prompt.toLowerCase())) {
+      return {
+        prompt,
+        kind,
+        title: "Actionbook editor",
+        subtitle: feature,
+        badge: "Editor",
+        primaryLabel: "AI rules",
+        primaryValue: "Live",
+        metrics: [
+          { label: "Sections", value: "12", tone: "neutral" },
+          { label: "Variables", value: "Connected", tone: "accent" },
+          { label: "Validation", value: "Ready", tone: "good" },
+        ],
+        chips: [
+          { label: "Notion-style doc", tone: "accent" },
+          { label: "Inline rules", tone: "neutral" },
+          { label: "No-code edit", tone: "good" },
+        ],
+        rows: [
+          { label: "Instructions", value: "Editable", tone: "good" },
+          { label: "Conditions", value: "Structured", tone: "neutral" },
+          { label: "Publish status", value: "Synced", tone: "accent" },
+        ],
+      };
+    }
+
     return {
       prompt,
       kind,

@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, ChevronDown, AppWindow, FileText } from "lucide-react";
+import { Home, ChevronDown, AppWindow, FileText, BookOpen } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { useEditorStore, type SavedAsset } from "@/lib/store";
+import { GuideModal } from "@/components/layout/Sidebar";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
-import { exportImage, captureThumbnail, type ExportedImage } from "@/lib/export";
+import { exportImage, exportSvgImage, captureThumbnail, type ExportedImage } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
 import type { InfographicTemplate } from "@/lib/template-registry";
@@ -118,6 +119,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const [exportDownloads, setExportDownloads] = useState<ExportedImage[]>([]);
   const exportDownloadsRef = useRef<ExportedImage[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [articleImages, setArticleImages] = useState<ArticleImageCandidate[]>([]);
   const [activeArticleImageId, setActiveArticleImageId] = useState<string | null>(null);
@@ -179,13 +181,13 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     return () => ro.disconnect();
   }, []);
 
-  function filenameFor(c: InfographicContent, fmt: InfographicFormat, suffix?: string) {
+  function filenameFor(c: InfographicContent, fmt: InfographicFormat, suffix?: string, ext = "png") {
     const slug = (c.title ?? "infographic")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40) || "infographic";
-    return `${slug}${suffix ? `-${suffix}` : ""}-${fmt}.png`;
+    return `${slug}${suffix ? `-${suffix}` : ""}-${fmt}.${ext}`;
   }
 
   function filename(fmt: InfographicFormat) {
@@ -201,6 +203,17 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       // height undefined → variable height (captures natural element height)
       return await exportImage(ref, BLOG_W, undefined, filename("blog"));
     }
+  }
+
+  async function exportOneSvg(fmt: InfographicFormat) {
+    const ref = fmt === "product" ? productRef.current : blogRef.current;
+    if (!ref) throw new Error("Export canvas is not ready");
+    return await exportSvgImage(
+      ref,
+      fmt === "product" ? PRODUCT_W : BLOG_W,
+      fmt === "product" ? PRODUCT_H : undefined,
+      filenameFor(content, fmt, undefined, "svg"),
+    );
   }
 
   async function handleExport(fmt: InfographicFormat) {
@@ -223,6 +236,25 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
   }
 
+  async function handleExportSvg(fmt: InfographicFormat) {
+    setExporting(true);
+    setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
+    try {
+      const download = await exportOneSvg(fmt);
+      downloads.push(download);
+      replaceExportDownloads(downloads);
+    } catch (err) {
+      downloads.forEach((download) => download.revoke());
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("SVG export failed:", err);
+      setExportError(`SVG export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function exportArticleCandidate(candidate: ArticleImageCandidate) {
     const ref = articleImageRefs.current[candidate.id];
     if (!ref) throw new Error("Export canvas is not ready");
@@ -233,6 +265,19 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       fmt === "product" ? PRODUCT_W : BLOG_W,
       fmt === "product" ? PRODUCT_H : undefined,
       filenameFor(candidateContent, fmt, candidate.id),
+    );
+  }
+
+  async function exportArticleCandidateSvg(candidate: ArticleImageCandidate) {
+    const ref = articleImageRefs.current[candidate.id];
+    if (!ref) throw new Error("Export canvas is not ready");
+    const candidateContent = candidate.id === activeArticleImageId ? content : candidate.content;
+    const fmt = candidateContent.format;
+    return await exportSvgImage(
+      ref,
+      fmt === "product" ? PRODUCT_W : BLOG_W,
+      fmt === "product" ? PRODUCT_H : undefined,
+      filenameFor(candidateContent, fmt, candidate.id, "svg"),
     );
   }
 
@@ -264,6 +309,33 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
   }
 
+  async function handleExportSelectedSvg() {
+    const selected = articleImages.filter((candidate) => candidate.selected);
+    if (selected.length === 0) {
+      await handleExportSvg(format);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
+    try {
+      for (const candidate of selected) {
+        const download = await exportArticleCandidateSvg(candidate);
+        downloads.push(download);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      replaceExportDownloads(downloads);
+    } catch (err) {
+      downloads.forEach((download) => download.revoke());
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("SVG export failed:", err);
+      setExportError(`SVG export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function handleExportAll() {
     if (articleImages.length === 0) {
       await handleExport(format);
@@ -286,6 +358,32 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Export failed:", err);
       setExportError(`Export failed — ${msg || "unknown error"}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleExportAllSvg() {
+    if (articleImages.length === 0) {
+      await handleExportSvg(format);
+      return;
+    }
+    setExporting(true);
+    setExportError(null);
+    replaceExportDownloads([]);
+    const downloads: ExportedImage[] = [];
+    try {
+      for (const candidate of articleImages) {
+        const download = await exportArticleCandidateSvg(candidate);
+        downloads.push(download);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      replaceExportDownloads(downloads);
+    } catch (err) {
+      downloads.forEach((download) => download.revoke());
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("SVG export failed:", err);
+      setExportError(`SVG export failed — ${msg || "unknown error"}`);
     } finally {
       setExporting(false);
     }
@@ -398,6 +496,15 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
+        <div className="ml-auto">
+          <button
+            onClick={() => setGuideOpen(true)}
+            title="Open guide"
+            className="p-1.5 rounded-md text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+          >
+            <BookOpen size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Editor body */}
@@ -495,6 +602,55 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
                           {articleImages.length || 0}
                         </span>
                       </Menu.Item>
+
+                      <Menu.Separator className="h-px bg-studio-border mx-1 my-1.5" />
+                      <div className="flex items-center gap-1 px-3 pt-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-studio-text select-none">
+                        Export as SVG
+                        <span className="text-studio-muted font-semibold">· beta</span>
+                      </div>
+
+                      <Menu.Item
+                        onClick={() => handleExportSvg(format)}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                          {format === "product"
+                            ? <AppWindow size={16} className="text-studio-text" />
+                            : <FileText size={16} className="text-studio-text" />}
+                        </span>
+                        <span className="flex-1">Current image</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {format === "product" ? `${PRODUCT_W}×${PRODUCT_H}` : `${BLOG_W}×${blogHeight}`}
+                        </span>
+                      </Menu.Item>
+
+                      <Menu.Item
+                        onClick={handleExportSelectedSvg}
+                        disabled={articleImages.length === 0}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                          <FileText size={16} className="text-studio-text" />
+                        </span>
+                        <span className="flex-1">Selected images</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {selectedArticleImageCount || 0}
+                        </span>
+                      </Menu.Item>
+
+                      <Menu.Item
+                        onClick={handleExportAllSvg}
+                        disabled={articleImages.length === 0}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-studio-muted/20 shrink-0">
+                          <FileText size={16} className="text-studio-text" />
+                        </span>
+                        <span className="flex-1">All article images</span>
+                        <span className="text-[11px] text-studio-muted tabular-nums">
+                          {articleImages.length || 0}
+                        </span>
+                      </Menu.Item>
                     </Menu.Popup>
                   </Menu.Positioner>
                 </Menu.Portal>
@@ -572,6 +728,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
           onLeave={() => router.push("/")}
           onCancel={() => setLeaveOpen(false)}
         />
+      )}
+
+      {guideOpen && (
+        <GuideModal onClose={() => setGuideOpen(false)} initialSection="infographic" />
       )}
     </div>
   );

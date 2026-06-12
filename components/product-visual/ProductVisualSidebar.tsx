@@ -8,6 +8,7 @@ import {
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
   isImageBgFormat,
+  type ProductVisualConceptKind,
   type ProductVisualFormat,
   type ProductVisualBg,
 } from "@/lib/types/product-visual";
@@ -30,6 +31,18 @@ const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
 const CONCEPT_UI_HELPER =
   "Describe what the feature does, what context it uses, and what result it shows.";
+const SOURCE_OPTIONS = [
+  { id: "concept", label: "Concept UI" },
+  { id: "screenshot", label: "Screenshot" },
+] as const;
+const CONCEPT_GRAMMAR_LABELS: Record<ProductVisualConceptKind, string> = {
+  deployment: "Control panel",
+  conversation: "Conversation surface",
+  evaluation: "Review table",
+  analytics: "Metric dashboard",
+  settings: "Control panel",
+  workspace: "Object detail",
+};
 
 function IconTooltip({ label }: { label: string }) {
   return (
@@ -308,10 +321,7 @@ export function ProductVisualSidebar() {
 
         <Section title="Source">
           <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E0E0E]">
-            {([
-              { id: "screenshot", label: "Screenshot" },
-              { id: "concept", label: "Concept UI" },
-            ] as const).map((item) => {
+            {SOURCE_OPTIONS.map((item) => {
               const active = sourceMode === item.id;
               return (
                 <button
@@ -451,7 +461,7 @@ export function ProductVisualSidebar() {
               <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-studio-muted">
                 <span className="truncate">{content.concept.title}</span>
                 <span className="shrink-0 rounded-full border border-studio-border px-2 py-0.5 uppercase tracking-wide">
-                  {content.concept.kind}
+                  {CONCEPT_GRAMMAR_LABELS[content.concept.kind]}
                 </span>
               </div>
             )}

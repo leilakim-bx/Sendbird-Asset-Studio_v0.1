@@ -343,26 +343,29 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       return {
         id,
         type: "bar-group",
-        // Blank by default: labelA/labelB only surface as headers in "ranked" or
-        // "bars" + labelInside, where literal "A"/"B" would be noise.
+        variant: "ranked",
         labelA: "",
         labelB: "",
         unit: "%",
-        // Both series filled so the default "bars" (A/B) variant loads as a real
-        // two-series comparison, not a single bar. valueB is ignored by the
-        // split/columns/ranked variants.
-        items: [{ label: "Row", valueA: 50, valueB: 50 }],
+        items: [
+          { label: "Millennials", valueA: 63, highlight: true },
+          { label: "Gen Z", valueA: 56 },
+          { label: "Gen X", valueA: 47 },
+          { label: "Boomers", valueA: 35 },
+        ],
       };
     case "stacked-bar":
       return {
         id,
         type: "stacked-bar",
-        series: ["Series A", "Series B"],
-        unit: "",
+        series: ["Resolved", "Assisted", "Manual"],
+        unit: "%",
+        accentIndex: 0,
+        normalize: true,
         rows: [
-          { label: "Row 1", values: [60, 40] },
-          { label: "Row 2", values: [45, 55] },
-          { label: "Row 3", values: [70, 30] },
+          { label: "Billing", values: [52, 31, 17] },
+          { label: "Orders", values: [61, 24, 15] },
+          { label: "Access", values: [44, 38, 18] },
         ],
       };
     case "step":

@@ -1,7 +1,12 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { BAR_COLUMNS_MAX_ITEMS } from "@/lib/infographic-block-limits";
 
-type Props = { block: Extract<InfographicBlock, { type: "bar-group" }>; scale?: number };
+type Props = {
+  block: Extract<InfographicBlock, { type: "bar-group" }>;
+  scale?: number;
+  maxHeight?: number;
+};
 
 // Bar graphs use a fixed grayscale palette only — the accent (lime) appears
 // solely as the highlighted *number's* color, never as a bar fill.
@@ -36,10 +41,10 @@ const MIN_FILL = 50;
  * the accent (var(--ig-accent), set by the canvas so the export clone resolves
  * it) appears solely on a highlighted *number*, never as a fill.
  */
-export function BarGroupBlock({ block, scale = 1 }: Props) {
+export function BarGroupBlock({ block, scale = 1, maxHeight }: Props) {
   if (block.variant === "split") return <SplitBar block={block} scale={scale} />;
   if (block.variant === "columns") return <Columns block={block} scale={scale} />;
-  if (block.variant === "ranked") return <Ranked block={block} scale={scale} />;
+  if (block.variant === "ranked") return <Ranked block={block} scale={scale} maxHeight={maxHeight} />;
 
   const { items, unit } = block;
   const u = unit ?? "%";
@@ -332,16 +337,28 @@ const RANKED_PAD_R = 22;
 function Ranked({
   block,
   scale,
+  maxHeight,
 }: {
   block: Extract<InfographicBlock, { type: "bar-group" }>;
   scale: number;
+  maxHeight?: number;
 }) {
-  const fs = (n: number) => Math.round(n * scale);
   const u = block.unit ?? "%";
   const items = block.items;
   const maxV = Math.max(...items.map((it) => it.valueA), 1);
-  const barH = Math.round(58 * scale);
   const hasHeader = !!(block.labelA || block.labelB);
+  const baseBarH = 58 * scale;
+  const baseGap = 12;
+  const baseHeaderH = hasHeader ? Math.round(16 * scale) + 6 : 0;
+  const naturalHeight = baseHeaderH + items.length * baseBarH + Math.max(0, items.length - 1) * baseGap;
+  const fit = maxHeight && naturalHeight > maxHeight ? maxHeight / naturalHeight : 1;
+  const renderScale = scale * fit;
+  const fs = (n: number) => Math.max(8, Math.round(n * renderScale));
+  const barH = 58 * renderScale;
+  const rowGap = baseGap * fit;
+  const headerGap = 6 * fit;
+  const padLeft = Math.max(10, Math.round(RANKED_PAD_L * fit));
+  const padRight = Math.max(12, Math.round(RANKED_PAD_R * fit));
 
   const headerStyle = {
     fontSize: fs(13),
@@ -352,11 +369,11 @@ function Ranked({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: rowGap, width: "100%" }}>
       {hasHeader && (
         // Headers sit flush to the track's outer edges (labelA hard-left, labelB
         // hard-right), framing the full chart width.
-        <div style={{ position: "relative", height: fs(16), marginBottom: 6 }}>
+        <div style={{ position: "relative", height: fs(16), marginBottom: headerGap }}>
           <span style={{ ...headerStyle, position: "absolute", left: 0, top: 0 }}>{block.labelA}</span>
           <span style={{ ...headerStyle, position: "absolute", right: 0, top: 0 }}>{block.labelB}</span>
         </div>
@@ -387,11 +404,11 @@ function Ranked({
                 top: 0,
                 height: "100%",
                 width: `${w}%`,
-                minWidth: Math.round(120 * scale),
+                minWidth: Math.round(120 * renderScale),
                 background: ramp.fill,
                 display: "flex",
                 alignItems: "center",
-                paddingLeft: RANKED_PAD_L,
+                paddingLeft: padLeft,
                 paddingRight: 12,
                 boxSizing: "border-box",
               }}
@@ -412,7 +429,7 @@ function Ranked({
             <span
               style={{
                 position: "absolute",
-                right: RANKED_PAD_R,
+                right: padRight,
                 top: "50%",
                 transform: "translateY(-50%)",
                 fontFamily: INFOGRAPHIC_SERIF,
@@ -454,84 +471,103 @@ function Columns({
   scale: number;
 }) {
   const fs = (n: number) => Math.round(n * scale);
-  const items = block.items;
+  const items = block.items.slice(0, BAR_COLUMNS_MAX_ITEMS);
   const maxV = Math.max(...items.map((it) => it.valueA), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-      {/* Columns row — anchored to a shared baseline. */}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 16, height: COL_CHART_H }}>
-        {items.map((it, i) => {
-          const h = Math.max(COL_MIN_H, (Math.max(0, it.valueA) / maxV) * COL_CHART_H);
-          const fill = COL_RAMP[Math.min(i, COL_RAMP.length - 1)];
-          const lightText = i >= 2; // darker fills → light text
-          const textColor = lightText ? "#FFFFFF" : "#292016";
-          return (
+    <div style={{ display: "flex", alignItems: "flex-start", gap: 16, width: "100%" }}>
+      {items.map((it, i) => {
+        const h = Math.max(COL_MIN_H, (Math.max(0, it.valueA) / maxV) * COL_CHART_H);
+        const fill = COL_RAMP[Math.min(i, COL_RAMP.length - 1)];
+        const lightText = i >= 2; // darker fills → light text
+        const textColor = lightText ? "#FFFFFF" : "#292016";
+        return (
+          <div key={i} style={{ flex: 1, minWidth: 0, textAlign: "center" }}>
+            {/* Bar and label live in one column group, so their centers match. */}
+            <div style={{ height: COL_CHART_H, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: h,
+                  background: fill,
+                  borderRadius: 12,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "0 12px 18px",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                }}
+              >
+                {it.heading && (
+                  <span
+                    style={{
+                      fontFamily: INFOGRAPHIC_SERIF,
+                      fontSize: fs(26),
+                      fontWeight: 500,
+                      letterSpacing: "-0.02em",
+                      color: textColor,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {it.heading}
+                  </span>
+                )}
+                {it.tag && (
+                  <span
+                    style={{
+                      fontSize: fs(11),
+                      fontWeight: 600,
+                      color: "#292016",
+                      background: it.highlight ? "var(--ig-accent)" : "#FFFFFF",
+                      padding: "4px 10px",
+                      borderRadius: 8,
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {it.tag}
+                  </span>
+                )}
+              </div>
+            </div>
             <div
-              key={i}
               style={{
-                flex: 1,
-                height: h,
-                background: fill,
-                borderRadius: 12,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                gap: 12,
-                padding: "0 12px 18px",
-                boxSizing: "border-box",
+                marginTop: 14,
+                fontSize: fs(14),
+                fontWeight: 600,
+                color: LABEL,
+                lineHeight: 1.3,
+                whiteSpace: "nowrap",
                 overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              {it.heading && (
-                <span
-                  style={{
-                    fontFamily: INFOGRAPHIC_SERIF,
-                    fontSize: fs(26),
-                    fontWeight: 500,
-                    letterSpacing: "-0.02em",
-                    color: textColor,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {it.heading}
-                </span>
-              )}
-              {it.tag && (
-                <span
-                  style={{
-                    fontSize: fs(11),
-                    fontWeight: 600,
-                    color: "#292016",
-                    background: it.highlight ? "var(--ig-accent)" : "#FFFFFF",
-                    padding: "4px 10px",
-                    borderRadius: 8,
-                    whiteSpace: "nowrap",
-                    maxWidth: "100%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {it.tag}
-                </span>
-              )}
+              {it.label}
             </div>
-          );
-        })}
-      </div>
-
-      {/* Labels row — aligned under each column. */}
-      <div style={{ display: "flex", gap: 16, marginTop: 14 }}>
-        {items.map((it, i) => (
-          <div key={i} style={{ flex: 1, textAlign: "center" }}>
-            <div style={{ fontSize: fs(14), fontWeight: 600, color: LABEL, lineHeight: 1.3 }}>{it.label}</div>
             {it.desc && (
-              <div style={{ marginTop: 4, fontSize: fs(12), color: NUM_MUTED, lineHeight: 1.4 }}>{it.desc}</div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: fs(12),
+                  color: NUM_MUTED,
+                  lineHeight: 1.4,
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                }}
+              >
+                {it.desc}
+              </div>
             )}
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }

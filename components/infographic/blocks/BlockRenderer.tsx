@@ -1,4 +1,4 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { StatBlock } from "./StatBlock";
 import { KpiGroupBlock } from "./KpiGroupBlock";
 import { CardGridBlock } from "./CardGridBlock";
@@ -14,23 +14,35 @@ import { OrbitBlock } from "./OrbitBlock";
 /**
  * Renders a single infographic block by type.
  *
- * `scale` multiplies text sizes only (not spacing) — the canvas passes >1 for
- * the fixed-height product format so its copy isn't dwarfed by the larger box.
+ * `scale` lets blocks enlarge product-format typography and key sizing so their
+ * content isn't dwarfed by the larger fixed frame.
+ * `maxHeight` is a product-format safety bound for dense blocks that can
+ * otherwise overflow the fixed 866×660 frame.
  * LineChartBlock is intentionally excluded: its SVG already scales with the
  * wider product canvas, so a font scale on top would double-enlarge it.
  */
-export function BlockRenderer({ block, scale = 1 }: { block: InfographicBlock; scale?: number }) {
+export function BlockRenderer({
+  block,
+  scale = 1,
+  maxHeight,
+  format,
+}: {
+  block: InfographicBlock;
+  scale?: number;
+  maxHeight?: number;
+  format?: InfographicFormat;
+}) {
   switch (block.type) {
     case "stat":
       return <StatBlock block={block} scale={scale} />;
     case "kpi-group":
-      return <KpiGroupBlock block={block} scale={scale} />;
+      return <KpiGroupBlock block={block} scale={scale} format={format} />;
     case "card-grid":
       return <CardGridBlock block={block} scale={scale} />;
     case "bar-group":
-      return <BarGroupBlock block={block} scale={scale} />;
+      return <BarGroupBlock block={block} scale={scale} maxHeight={maxHeight} />;
     case "stacked-bar":
-      return <StackedBarBlock block={block} scale={scale} />;
+      return <StackedBarBlock block={block} scale={scale} maxHeight={maxHeight} />;
     case "step":
       return <StepBlock block={block} scale={scale} />;
     case "stack":

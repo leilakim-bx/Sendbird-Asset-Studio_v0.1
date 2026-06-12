@@ -92,6 +92,26 @@ async function captureBlob(
   }
 }
 
+async function captureSvgBlob(
+  element: HTMLElement,
+  width: number,
+  height?: number,
+): Promise<Blob> {
+  const options = {
+    ...SHARED_OPTIONS,
+    width,
+    ...(height !== undefined ? { height } : {}),
+    style: { borderRadius: "0" },
+  };
+  const restore = await inlineImages(element);
+  try {
+    const dataUrl = await toSvg(element, options);
+    return await (await fetch(dataUrl)).blob();
+  } finally {
+    restore();
+  }
+}
+
 function isAbortError(err: unknown): boolean {
   return err instanceof DOMException && err.name === "AbortError";
 }
@@ -174,6 +194,16 @@ export async function exportImage(
     };
   }
 
+  return triggerDownload(blob, filename);
+}
+
+export async function exportSvgImage(
+  element: HTMLElement,
+  width: number,
+  height: number | undefined,
+  filename: string,
+): Promise<ExportedImage> {
+  const blob = await captureSvgBlob(element, width, height);
   return triggerDownload(blob, filename);
 }
 

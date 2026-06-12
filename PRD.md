@@ -1,106 +1,148 @@
-# PRD — Delight.ai Asset Studio
+# PRD - Delight.ai Asset Studio
 
-> Sendbird 마케팅팀 사내 에셋 제작 툴 · v1.0.0 · 최종 정리 2026-06-07
+> Sendbird 마케팅팀 사내 에셋 제작 스튜디오\
+> 기준일: 2026-06-12 / 상태: MVP 고도화 중
 
----
+## 1. 제품 요약
 
-## 1. 한 줄 요약
+Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케팅용 이미지를 직접 만드는 사내 웹툴이다.
 
-마케터가 **디자이너 없이** 제품 데모 이미지(채팅 UI 목업·인포그래픽)를 직접 만들어 PNG로 내보내는 사내 웹툴.
+핵심 흐름은 **템플릿 선택 -> 내용 편집 -> 이미지 저장/PNG export**다.
 
-## 2. 배경 & 문제
+## 2. 문제 정의
 
-- 데모/마케팅용 이미지(채팅 UI 목업, 데이터 인포그래픽)는 매번 디자이너 리소스가 필요 → 병목.
-- 마케터가 **템플릿 선택 → 내용 입력 → 배경 선택 → 다운로드** 흐름으로 직접 만들 수 있으면 해결.
-- 핵심 가치: **빠르고 쉽게**. 불필요한 단계·설정은 최소화한다.
-
-## 3. 사용자
-
-- **주 사용자**: 마케터 (사내 약 5~10명)
-- 권한 분리 없음 — 로그인한 사용자는 모두 동일 권한
-- 디자인/코드 지식 불필요
-
-## 4. 핵심 기능 (MVP)
-
-### 4.1 채팅 UI 목업 생성
-- 시나리오 프리셋 선택 → 메시지 버블 편집 → 배경/레이아웃 선택 → PNG export
-- **버블 6종**: text · actions(버튼) · products(상품카드) · checklist · status(상태 pill) · voice(보이스 카드)
-- 레이아웃: Split / Center, 사이즈: Desktop / Mobile
-- 상품 이미지는 Pexels에서 자동 검색·교체
-
-### 4.2 인포그래픽 생성
-- 포맷: Product feature / Blog·Perspective
-- 프리셋 + 블록 편집 (stat · kpi-group · bar-group · step · node-list)
-- 배경/액센트 컬러, 타이틀/푸트노트
-- PNG export (@2x)
-
-### 4.3 Create with AI (AI 보조 생성)
-- **챗**: 프롬프트 입력 → AI가 6종 버블을 조합해 시나리오 자동 생성
-- **인포그래픽**: 기사 붙여넣기 → AI가 데이터에 맞는 인포그래픽 추천(Analyze)
-- **안전장치**: 모델 응답을 스키마 검증기로 통과(깨진/형식 안 맞는 결과 자동 폐기)
-- **Mock 모드**: API 키 없이도 캔드 데이터로 동작 (방화벽/오프라인 대응)
-
-### 4.4 공통
-- PNG 다운로드 (@2x, Desktop/Mobile)
-- 시나리오·배경 라이브러리
-- 작업 에셋 저장/불러오기
-
-## 5. AI 기능 상세 & 비용
-
-| 항목 | 내용 |
+| 문제 | 영향 |
 |---|---|
-| 모델 | Claude 3.5 Haiku (`claude-3-5-haiku`) — 서버사이드 호출 |
-| 활성화 조건 | `ANTHROPIC_API_KEY` 발급 후 환경변수에 주입하면 끝 (코드 변경 불필요) |
-| Mock 모드 | 키 미설정 시 자동 — 무료, 항상 동작 |
-| 검증 | `validate-scenario`(챗) / `validate-suggestions`(인포그래픽) |
+| 데모 이미지, 릴리즈 썸네일, 인포그래픽 제작이 디자이너에게 집중됨 | 캠페인/블로그/릴리즈 제작 속도 저하 |
+| 같은 유형의 이미지를 매번 새로 디자인함 | 브랜드 일관성 저하, 반복 작업 증가 |
+| 마케터가 직접 수정하기 어려움 | 작은 문구/수치 변경도 병목 발생 |
 
-**예상 월 비용** (단가는 학습 시점 추정 — 콘솔에서 현재가 확인 필요. 1인당 월 챗 30회+인포그래픽 20회 가정):
+## 3. 목표
 
-| 인원 | Haiku(현재) | Sonnet(품질↑ 전환 시) |
-|---|---|---|
-| 5명 | 약 $1.0 (₩1,300) | 약 $3.6 (₩4,900) |
-| 10명 | 약 $1.9 (₩2,600) | 약 $7.2 (₩9,800) |
+- 마케터가 5분 안에 마케팅용 이미지를 만들 수 있게 한다.
+- Chat UI, Infographic, Product Visual 3개 에셋 유형을 한 스튜디오에서 관리한다.
+- AI는 초안 생성/추천에만 사용하고, 최종 결과는 사용자가 직접 확인/수정한다.
+- 저장, 재편집, PNG export까지 브라우저에서 완료한다.
 
-→ 사내 규모(5~10명)에선 **비용 부담 사실상 없음** (월 1만 원 안쪽). 콘솔 spend limit으로 상한 통제 가능.
+## 4. 사용자
 
-## 6. 기술 스택
+| 구분 | 설명 |
+|---|---|
+| 주 사용자 | Sendbird/Delight.ai 마케팅, PMM, 콘텐츠 담당자 |
+| 사용 빈도 | 릴리즈, 블로그, 캠페인, 세일즈 자료 제작 시 반복 사용 |
+| 기술 수준 | 디자인 툴/코딩 지식 없이 사용 가능해야 함 |
+| 권한 | MVP에서는 사용자별 권한 분리 없음 |
 
-- **Frontend**: Next.js 16 (App Router) · React 19 · TypeScript
-- **UI**: Tailwind v4 · shadcn · @base-ui/react · lucide-react
-- **상태**: Zustand (persist → localStorage 캐싱)
-- **Export**: html-to-image (PNG)
-- **외부 API**: Pexels(이미지 검색) · Anthropic(AI 생성) — 모두 mock 모드 지원
+## 5. 핵심 사용 시나리오
 
-### 아키텍처 원칙
-1. 비즈니스 로직은 `/lib`, UI 로직은 `/components`로 분리
-2. API route는 얇게 — 실제 로직은 `/lib`
-3. 새 템플릿은 template-registry에 **등록만** 하면 추가
-4. 모든 외부 API 호출은 mock 모드 지원 (방화벽 환경 필수)
+1. 사용자는 홈에서 템플릿을 선택한다.
+2. 에디터에서 문구, 데이터, 배경, 스크린샷, 레이아웃을 수정한다.
+3. 필요한 경우 AI 생성/분석 기능으로 초안을 만든다.
+4. 결과를 My files에 저장한다.
+5. PNG로 다운로드해 블로그, 웹, 슬라이드, 소셜 콘텐츠에 사용한다.
 
-## 7. 데이터 · 인증 현황
+## 6. 템플릿 범위
 
-| 영역 | 현재 | 향후 |
-|---|---|---|
-| 배경 이미지 | `/public/background` (파일시스템) | Cloudflare R2 |
-| 에셋 저장 | localStorage (Zustand persist) | DB(Supabase) |
-| 인증 | SITE_PASSWORD 게이트 (사이트 비밀번호) | Clerk(사용자별) |
+### 6.1 Chat UI
 
-## 8. 비범위 (Non-goals, 현재 단계)
+| 항목 | 요구사항 |
+|---|---|
+| 목적 | AI agent 대화 흐름을 제품 데모 이미지로 제작 |
+| 포맷 | Desktop 866x660, Mobile 343x가변 |
+| 레이아웃 | Center, Split |
+| 블록 | text, actions, products, checklist, status, voice, itinerary |
+| 편집 | 앱 이름, 유저 이름/아바타, 메시지, 배경, 레이아웃, export size |
+| AI | 프롬프트 기반 시나리오 생성 |
 
-- 사용자별 권한/역할 분리 ❌
-- 사용자별 자산 관리·공유 ❌ (localStorage 로컬 저장만)
-- 실시간 협업 ❌
-- AI 생성 결과의 100% 정확도 보장 ❌ (검증기로 형식 안전성만 보장)
+### 6.2 Infographic
 
-## 9. 마이그레이션 로드맵
+| 항목 | 요구사항 |
+|---|---|
+| 목적 | 블로그/리포트/제품 메시지를 시각 자료로 변환 |
+| 포맷 | Product 866x660, Blog 664x가변 |
+| 블록 | stat, kpi-group, card-grid, bar-group, step, stack, node-list, compare, stacked-bar, line-chart, orbit |
+| 편집 | 제목, 푸트노트, 배경, accent color, 블록 추가/수정/삭제 |
+| AI | 기사/텍스트 분석 후 인포그래픽 후보 추천 |
+| 소스 입력 | URL 또는 텍스트 붙여넣기 |
 
-- **Phase 1**: 배경 이미지 R2 이전 + Vercel Password Protection
-- **Phase 2**: Supabase 도입 — 에셋/배경 메타데이터 DB 저장
-- **Phase 3**: Clerk 인증 — 사용자별 자산 관리
+### 6.3 Product Visual
 
-## 10. 리스크 · 오픈 이슈
+| 항목 | 요구사항 |
+|---|---|
+| 목적 | 실제 제품 스크린샷을 릴리즈/블로그용 이미지로 정리 |
+| 포맷 | Feature Desktop, Feature Mobile, Release Thumbnail, Release Insert, Blog |
+| 입력 | 스크린샷 업로드 또는 Concept UI 설명 입력 |
+| 편집 | crop/highlight, 제목, 부제, 배경, 포맷별 레이아웃 |
+| Export | 포맷별 정확한 PNG 크기 또는 가변 높이 |
 
-- **AI 라이브 경로 미검증**: 현재까지 동작 검증은 mock 모드로만 완료. 실제 키 연결 후 모델이 스키마(특히 챗 6종 버블, voice 단독 규칙)를 잘 지키는지 1회 실측 필요.
-- **IT 방화벽**: AI 호출은 서버사이드라 Vercel 배포 시 사내망 영향 없음. 단, 사내망 로컬 dev에선 `api.anthropic.com` 아웃바운드 허용 필요.
-- **데이터 영속성**: 에셋이 localStorage라 브라우저/기기 변경 시 유실 → Phase 2 DB 이전으로 해소.
-- **인증 강도**: 현재 단일 비밀번호 게이트 → 배포 전 Phase 1/3로 보강 권장.
+## 7. 공통 기능
+
+| 기능 | 요구사항 |
+|---|---|
+| 홈 | 템플릿 갤러리와 My files 표시 |
+| My files | 저장한 에셋 검색, 리스트/그리드 보기, 이름 변경, 삭제, 재편집 |
+| 저장 | 썸네일과 편집 상태를 브라우저 localStorage에 저장 |
+| Autosave | Chat UI, Infographic 작업 초안 자동 저장 |
+| Export | `html-to-image` 기반 @2x PNG 다운로드 |
+| 이미지 업로드 | 배경/스크린샷 업로드, R2 설정 시 R2 저장, 미설정 시 로컬 fallback |
+| 이탈 방지 | 저장하지 않은 변경사항이 있으면 홈 이동 전 확인 |
+
+## 8. AI 요구사항
+
+| 영역 | 내용 |
+|---|---|
+| 모델 | Claude 3.5 Haiku (`claude-3-5-haiku-20241022`) |
+| 호출 위치 | Next.js API route에서 서버사이드 호출 |
+| Mock 모드 | `ANTHROPIC_API_KEY=mock`이면 캔드 데이터로 동작 |
+| Chat UI | 프롬프트를 대화 블록 배열로 변환 |
+| Infographic | 기사/텍스트에서 시각화 후보 추천 |
+| 안전장치 | 응답 JSON 파싱 후 Zod/validator로 스키마 검증 |
+| 실패 처리 | 유효하지 않은 응답은 사용자에게 재시도 메시지 표시 |
+
+## 9. 성공 기준
+
+| 지표 | 기준 |
+|---|---|
+| 제작 속도 | 기본 이미지 1개를 5분 이내 제작 |
+| 재사용성 | 저장한 에셋을 다시 열어 수정 가능 |
+| Export 품질 | PNG가 지정 사이즈와 @2x 해상도로 생성 |
+| 안정성 | API 키 없이도 mock 모드로 핵심 UI 검증 가능 |
+| 확장성 | 새 템플릿/블록 추가 시 registry와 타입 중심으로 확장 가능 |
+
+## 10. 비범위
+
+- 실시간 협업
+- 사용자별 권한/역할 관리
+- 서버 DB 기반 에셋 관리
+- Figma 편집 기능 대체
+- AI 결과의 사실 정확성 보장
+- 공개 SaaS 형태의 외부 사용자 온보딩
+
+## 11. 우선순위
+
+| 우선순위 | 항목 |
+|---|---|
+| P0 | Chat UI, Infographic, Product Visual 편집/저장/export 안정화 |
+| P0 | AI route mock/live 경로 검증 |
+| P0 | 업로드 이미지 크기/형식 검증 |
+| P1 | R2 기반 업로드 운영 전환 |
+| P1 | 배포 접근 제어 강화 |
+| P2 | Supabase/DB 기반 사용자별 에셋 저장 |
+| P2 | Clerk 등 사용자 인증 도입 |
+
+## 12. 리스크
+
+| 리스크 | 대응 |
+|---|---|
+| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, Phase 2에서 DB/R2 이전 |
+| AI 응답 품질 편차 | validator 유지, mock fixture로 UI 회귀 테스트 |
+| 외부 이미지 CORS | same-origin proxy와 export 전 이미지 inline 처리 |
+| Vercel 보호 페이지 import 실패 | 텍스트 붙여넣기 또는 automation bypass 링크 사용 |
+| 운영 인증 약함 | 배포 전 Vercel protection 또는 정식 인증 도입 |
+
+## 13. 관련 문서
+
+- 개발 설계: `DEVELOPMENT_DESIGN.md`
+- 에디터 UI 디자인 규칙: `STUDIO_DESIGN.md`
+- 생성 에셋 디자인 규칙: `ASSET_DESIGN.md`
+- 보호된 URL import 가이드: `docs/source-import-access.md`

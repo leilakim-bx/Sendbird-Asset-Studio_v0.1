@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, ChevronDown, Plus, X, Lightbulb } from "lucide-react";
+import { ChevronDown, Plus, X, Lightbulb } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
+import { BAR_COLUMNS_MAX_ITEMS, STEP_MAX_ITEMS_PRODUCT } from "@/lib/infographic-block-limits";
+import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
 import type { InfographicBlock, InfographicFormat, OrbitIconKey } from "@/lib/types/infographic";
 
 // Matches the chat sidebar inputs: same-bg field defined by a border, ring on focus.
@@ -19,11 +21,29 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function AddRow({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+function AddRow({
+  onClick,
+  children,
+  disabled,
+  title,
+}: {
+  onClick: () => void;
+  children: ReactNode;
+  disabled?: boolean;
+  title?: string;
+}) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-studio-border rounded-md text-[11px] text-studio-muted hover:border-studio-accent hover:text-studio-accent transition-colors"
+      disabled={disabled}
+      title={title}
+      className={[
+        "w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-studio-border rounded-md text-[11px] transition-colors",
+        disabled
+          ? "cursor-not-allowed border-studio-border text-studio-muted/50"
+          : "text-studio-muted hover:border-studio-accent hover:text-studio-accent",
+      ].join(" ")}
     >
       <Plus size={11} />
       {children}
@@ -101,8 +121,51 @@ const DEFAULT_ORBIT_SATELLITES: Array<{ key: OrbitIconKey }> = [
   { key: "site" },
 ];
 
-function orbitIconLabel(key: OrbitIconKey): string {
-  return ORBIT_ICON_OPTIONS.find((option) => option.key === key)?.label ?? "Icon";
+type DropdownOption<T extends string | number> = {
+  value: T;
+  label: string;
+};
+
+function SidebarDropdown<T extends string | number>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<DropdownOption<T>>;
+  onChange: (value: T) => void;
+}) {
+  const current = options.find((option) => option.value === value);
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1.5 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none focus:ring-1 focus:ring-studio-accent">
+        <span className="font-medium">{current?.label ?? "Select"}</span>
+        <ChevronDown size={14} className="text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={6} className="z-50">
+          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+            {options.map((option) => {
+              const active = option.value === value;
+              return (
+                <Menu.Item
+                  key={String(option.value)}
+                  onClick={() => onChange(option.value)}
+                  className={[
+                    "text-xs px-3 py-1.5 cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white",
+                    active ? "bg-studio-hover text-white" : "text-studio-text",
+                  ].join(" ")}
+                >
+                  {option.label}
+                </Menu.Item>
+              );
+            })}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
 }
 
 function OrbitIconDropdown({
@@ -113,33 +176,11 @@ function OrbitIconDropdown({
   onChange: (value: OrbitIconKey) => void;
 }) {
   return (
-    <Menu.Root>
-      <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1.5 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none focus:ring-1 focus:ring-studio-accent">
-        <span className="font-medium">{orbitIconLabel(value)}</span>
-        <ChevronDown size={14} className="text-studio-muted" />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner side="bottom" align="start" sideOffset={6} className="z-50">
-          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-            {ORBIT_ICON_OPTIONS.map((option) => {
-              const active = option.key === value;
-              return (
-                <Menu.Item
-                  key={option.key}
-                  onClick={() => onChange(option.key)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white rounded-md mx-1"
-                >
-                  <span className="w-4 shrink-0">
-                    {active && <Check size={13} className="text-studio-accent" />}
-                  </span>
-                  <span className="flex-1">{option.label}</span>
-                </Menu.Item>
-              );
-            })}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+    <SidebarDropdown
+      value={value}
+      options={ORBIT_ICON_OPTIONS.map((option) => ({ value: option.key, label: option.label }))}
+      onChange={onChange}
+    />
   );
 }
 
@@ -290,6 +331,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const variant = b.variant ?? "bars";
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
       const setItems = (items: typeof b.items) => onChange({ ...b, items });
+      const editableItems = variant === "columns" ? b.items.slice(0, BAR_COLUMNS_MAX_ITEMS) : b.items;
+      const columnsAtLimit = variant === "columns" && b.items.length >= BAR_COLUMNS_MAX_ITEMS;
+      const setVariant = (nextVariant: NonNullable<typeof b.variant>) => {
+        set({
+          variant: nextVariant,
+          items: nextVariant === "columns" ? b.items.slice(0, BAR_COLUMNS_MAX_ITEMS) : b.items,
+        });
+      };
       return (
         <>
           <Field label="Shape">
@@ -297,7 +346,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               {(["bars", "split", "columns", "ranked"] as const).map((opt) => (
                 <button
                   key={opt}
-                  onClick={() => set({ variant: opt })}
+                  onClick={() => setVariant(opt)}
                   aria-pressed={variant === opt}
                   className={[
                     "flex-1 px-2 py-1 rounded-md text-[11px] font-medium capitalize transition-colors",
@@ -345,21 +394,23 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               </Field>
             </div>
           )}
-          {b.items.map((it, i) => (
-            <ItemCard key={i} idx={i} onRemove={() => setItems(b.items.filter((_, j) => j !== i))}>
+          {editableItems.map((it, i) => (
+            <ItemCard key={i} idx={i} onRemove={() => setItems(editableItems.filter((_, j) => j !== i))}>
               {variant === "columns" && (
                 <input
                   className={inputCls + " mb-1.5"}
                   placeholder="Heading inside (e.g. Lv.1)"
                   value={it.heading ?? ""}
-                  onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))}
+                  onChange={(e) =>
+                    setItems(editableItems.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))
+                  }
                 />
               )}
               <input
                 className={inputCls + " mb-1.5"}
                 placeholder="Label"
                 value={it.label}
-                onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                onChange={(e) => setItems(editableItems.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
               />
               <div className={(variant === "bars" ? "grid grid-cols-2 gap-1.5" : "") + " mb-1.5"}>
                 <input
@@ -367,7 +418,9 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                   type="number"
                   placeholder={variant === "bars" ? "Value A" : variant === "columns" ? "Height" : "Value"}
                   value={it.valueA}
-                  onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, valueA: num(e.target.value) } : x)))}
+                  onChange={(e) =>
+                    setItems(editableItems.map((x, j) => (j === i ? { ...x, valueA: num(e.target.value) } : x)))
+                  }
                 />
                 {variant === "bars" && (
                   <input
@@ -377,7 +430,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                     value={it.valueB ?? ""}
                     onChange={(e) =>
                       setItems(
-                        b.items.map((x, j) =>
+                        editableItems.map((x, j) =>
                           j === i ? { ...x, valueB: e.target.value === "" ? undefined : num(e.target.value) } : x,
                         ),
                       )
@@ -391,13 +444,13 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                     className={inputCls + " mb-1.5"}
                     placeholder="Chip (optional)"
                     value={it.tag ?? ""}
-                    onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, tag: e.target.value } : x)))}
+                    onChange={(e) => setItems(editableItems.map((x, j) => (j === i ? { ...x, tag: e.target.value } : x)))}
                   />
                   <input
                     className={inputCls + " mb-1.5"}
                     placeholder="Description (optional)"
                     value={it.desc ?? ""}
-                    onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
+                    onChange={(e) => setItems(editableItems.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
                   />
                 </>
               )}
@@ -405,14 +458,23 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                 <input
                   type="checkbox"
                   checked={!!it.highlight}
-                  onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, highlight: e.target.checked } : x)))}
+                  onChange={(e) =>
+                    setItems(editableItems.map((x, j) => (j === i ? { ...x, highlight: e.target.checked } : x)))
+                  }
                   className="sb-checkbox"
                 />
                 {variant === "split" ? "Highlight number" : variant === "columns" ? "Highlight column" : "Highlight row"}
               </label>
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { label: "Row", valueA: 50, valueB: 50 }])}>
+          <AddRow
+            onClick={() => {
+              if (columnsAtLimit) return;
+              setItems([...editableItems, { label: "Row", valueA: 50, valueB: 50 }]);
+            }}
+            disabled={columnsAtLimit}
+            title={columnsAtLimit ? `Columns can have up to ${BAR_COLUMNS_MAX_ITEMS} items.` : undefined}
+          >
             {variant === "split" ? "Add segment" : variant === "columns" ? "Add column" : "Add bar"}
           </AddRow>
         </>
@@ -421,10 +483,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
 
     case "step": {
       const b = block;
-      const setItems = (items: typeof b.items) => onChange({ ...b, items });
+      const productLimited = format === "product";
+      const editableItems = productLimited ? b.items.slice(0, STEP_MAX_ITEMS_PRODUCT) : b.items;
+      const stepsAtLimit = productLimited && b.items.length >= STEP_MAX_ITEMS_PRODUCT;
+      const setItems = (items: typeof b.items) =>
+        onChange({ ...b, items: productLimited ? items.slice(0, STEP_MAX_ITEMS_PRODUCT) : items });
       return (
         <>
-          {b.items.map((it, i) => (
+          {editableItems.map((it, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setItems(b.items.filter((_, j) => j !== i))}>
               <input
                 className={inputCls + " mb-1.5"}
@@ -448,7 +514,16 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               />
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { title: "Step", desc: "" }])}>Add step</AddRow>
+          <AddRow
+            onClick={() => {
+              if (stepsAtLimit) return;
+              setItems([...editableItems, { title: "Step", desc: "" }]);
+            }}
+            disabled={stepsAtLimit}
+            title={stepsAtLimit ? `Product feature steps can have up to ${STEP_MAX_ITEMS_PRODUCT} items.` : undefined}
+          >
+            Add step
+          </AddRow>
         </>
       );
     }
@@ -813,7 +888,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const addPoint = () =>
         onChange({
           ...b,
-          xLabels: [...b.xLabels, ""],
+          xLabels: [...b.xLabels, generatedTrendAxisLabel(undefined, b.xLabels.length)],
           seriesA: { ...b.seriesA, values: [...b.seriesA.values, 0] },
           seriesB: b.seriesB ? { ...b.seriesB, values: [...b.seriesB.values, 0] } : undefined,
         });
@@ -868,7 +943,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             <ItemCard key={i} idx={i} onRemove={() => removePoint(i)}>
               <input
                 className={inputCls + " mb-1.5"}
-                placeholder="X label (e.g. Wk 1)"
+                placeholder="Label, e.g. 2024, Q1, Week 3"
                 value={x}
                 onChange={(e) => setPoint(i, { x: e.target.value })}
               />
@@ -975,21 +1050,17 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             </label>
           )}
           <Field label="Accent series (lime)">
-            <select
-              className={inputCls}
+            <SidebarDropdown
               value={b.accentIndex ?? -1}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                set({ accentIndex: v < 0 ? undefined : v });
-              }}
-            >
-              <option value={-1}>None (all grayscale)</option>
-              {b.series.map((s, i) => (
-                <option key={i} value={i}>
-                  {s || `Series ${i + 1}`}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: -1, label: "None (all grayscale)" },
+                ...b.series.map((series, index) => ({
+                  value: index,
+                  label: series || `Series ${index + 1}`,
+                })),
+              ]}
+              onChange={(next) => set({ accentIndex: next < 0 ? undefined : next })}
+            />
           </Field>
 
           <div className={labelCls + " mt-1"}>Series</div>

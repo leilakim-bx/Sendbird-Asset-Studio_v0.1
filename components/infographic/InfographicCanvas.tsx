@@ -17,6 +17,9 @@ type Props = {
 };
 
 const PRODUCT = { width: 866, height: 660 };
+const PRODUCT_SAFE_Y = 60;
+const PRODUCT_FOOTNOTE_HEIGHT = 14 * 1.5;
+const BLOCK_GAP = 28;
 // Blog height is free, so keep the minimum modest — short content (e.g. a lone
 // stat with no title/footnote) shouldn't get padded out to a tall box.
 const BLOG = { width: 664, minHeight: 360 };
@@ -44,6 +47,19 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
   const showBlogHeader = !isProduct && content.showTitle !== false && !isStat;
   const showTitle = showBlogHeader && !!title;
   const showFootnote = !!renderedFootnote && !isStat && (isProduct || showBlogHeader);
+  const blockCount = Math.max(blocks.length, 1);
+  const productAvailableBlockHeight = isProduct
+    ? Math.max(
+        0,
+        (
+          PRODUCT.height -
+          PRODUCT_SAFE_Y * 2 -
+          (showTitle ? 26 * 1.1 + 32 : 0) -
+          (showFootnote ? PRODUCT_FOOTNOTE_HEIGHT + 24 : 0) -
+          Math.max(0, blocks.length - 1) * BLOCK_GAP
+        ) / blockCount,
+      )
+    : undefined;
 
   const rootStyle = {
     boxSizing: "border-box",
@@ -54,8 +70,8 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
     // Blog format trims vertical padding (free height) so short content sits tighter.
     paddingLeft: 56,
     paddingRight: 56,
-    paddingTop: isProduct ? 56 : 40,
-    paddingBottom: isProduct ? 56 : 40,
+    paddingTop: isProduct ? PRODUCT_SAFE_Y : 40,
+    paddingBottom: isProduct ? PRODUCT_SAFE_Y : 40,
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
@@ -100,13 +116,19 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          gap: 28,
+          gap: BLOCK_GAP,
           paddingTop: showTitle ? 32 : 0,
           paddingBottom: showFootnote ? 24 : 0,
         }}
       >
         {blocks.map((block) => (
-          <BlockRenderer key={block.id} block={block} scale={isProduct ? 1.15 : 1} />
+          <BlockRenderer
+            key={block.id}
+            block={block}
+            scale={isProduct ? 1.15 : 1}
+            maxHeight={productAvailableBlockHeight}
+            format={format}
+          />
         ))}
       </div>
 

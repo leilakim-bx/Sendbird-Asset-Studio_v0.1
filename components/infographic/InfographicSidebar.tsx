@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useRef, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
 import {
-  Check,
   Sparkles,
   Plus,
   Info,
   CircleAlert,
   ChevronDown,
+  X,
 } from "lucide-react";
-import { Menu } from "@base-ui/react/menu";
 import { useEditorStore } from "@/lib/store";
 import {
   INFOGRAPHIC_ACCENT_HEX,
@@ -21,10 +20,14 @@ import {
   type OrbitIconKey,
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
+import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
+import { useOnceFlag } from "@/lib/use-once-flag";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
+import { InfographicCanvas } from "./InfographicCanvas";
 
 const ACCENT_OPTIONS: InfographicAccent[] = ["lime", "blue", "red", "green"];
 
@@ -37,19 +40,242 @@ const SOURCE_TEMPLATE = "Article:\n[paste article URL or full article]\n\nImage 
 const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
 const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
-const TYPE_OPTIONS: { id: InfographicBlockType; label: string }[] = [
-  { id: "orbit", label: "Orbit diagram" },
-  { id: "card-grid", label: "Card grid" },
-  { id: "stat", label: "Big number" },
-  { id: "kpi-group", label: "Metrics" },
-  { id: "bar-group", label: "Bar chart" },
-  { id: "stacked-bar", label: "Multi-series bar" },
-  { id: "compare", label: "Comparison" },
-  { id: "step", label: "Steps" },
-  { id: "line-chart", label: "Trend" },
-  { id: "node-list", label: "Hub map" },
-  { id: "stack", label: "Layer diagram" },
+const TYPE_OPTIONS: { id: InfographicBlockType; label: string; description: string }[] = [
+  { id: "orbit", label: "Orbit diagram", description: "Cycle, channels, or connected nodes" },
+  { id: "card-grid", label: "Card grid", description: "Short grouped ideas or feature cards" },
+  { id: "stat", label: "Big number", description: "One primary metric or result" },
+  { id: "kpi-group", label: "Metrics", description: "Two to four quick performance numbers" },
+  { id: "bar-group", label: "Bar chart", description: "Ranked values, splits, or progress" },
+  { id: "stacked-bar", label: "Multi-series bar", description: "Composition across segments" },
+  { id: "compare", label: "Comparison", description: "Before and after, old and new" },
+  { id: "step", label: "Steps", description: "Flow, sequence, or process" },
+  { id: "line-chart", label: "Trend", description: "Change over time" },
+  { id: "node-list", label: "Hub map", description: "Central object with supporting items" },
+  { id: "stack", label: "Layer diagram", description: "Nested layers or capabilities" },
 ];
+
+const BLOCK_PREVIEW_CONTENT = {
+  stat: {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-stat",
+        type: "stat",
+        eyebrow: "Automation lift",
+        number: "83%",
+        highlightNumber: true,
+        label: "of repetitive QA checks can be handled before review.",
+      },
+    ],
+  },
+  "kpi-group": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-kpi",
+        type: "kpi-group",
+        items: [
+          { number: "42%", label: "Lower handoff rate" },
+          { number: "3.1x", label: "Faster triage" },
+          { number: "18k", label: "Resolved messages" },
+          { number: "91", label: "CSAT score" },
+        ],
+      },
+    ],
+  },
+  "card-grid": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-card-grid",
+        type: "card-grid",
+        cards: [
+          { badge: "01", title: "Detect", body: "Find risky conversations using sentiment and escalation signals." },
+          { badge: "02", title: "Prioritize", body: "Rank accounts by urgency, value, and recent support activity." },
+          { badge: "03", title: "Resolve", body: "Suggest next actions before a conversation needs manual review." },
+        ],
+      },
+    ],
+  },
+  "bar-group": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    footnote: "83% of consumers credit the brand behind a good AI experience.",
+    blocks: [
+      {
+        id: "preview-bar",
+        type: "bar-group",
+        variant: "ranked",
+        labelA: "",
+        labelB: "",
+        unit: "%",
+        items: [
+          { label: "Millennials", valueA: 63, highlight: true },
+          { label: "Gen Z", valueA: 56 },
+          { label: "Gen X", valueA: 47 },
+          { label: "Boomers", valueA: 35 },
+        ],
+      },
+    ],
+  },
+  "stacked-bar": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-stacked",
+        type: "stacked-bar",
+        series: ["Resolved", "Assisted", "Manual"],
+        unit: "%",
+        accentIndex: 0,
+        normalize: true,
+        rows: [
+          { label: "Billing", values: [52, 31, 17] },
+          { label: "Orders", values: [61, 24, 15] },
+          { label: "Access", values: [44, 38, 18] },
+        ],
+      },
+    ],
+  },
+  compare: {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-compare",
+        type: "compare",
+        layout: "cards",
+        columnA: "Before",
+        columnB: "After",
+        highlightB: true,
+        rows: [
+          { a: "Manual review queue", b: "Risk surfaced automatically" },
+          { a: "Context scattered", b: "History summarized in one view" },
+          { a: "Slow handoff", b: "Next action suggested instantly" },
+        ],
+      },
+    ],
+  },
+  step: {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-step",
+        type: "step",
+        items: [
+          { title: "Detect signal", desc: "Sentiment, handoff, and account context are checked." },
+          { title: "Rank urgency", desc: "High-risk conversations move to the top." },
+          { title: "Suggest action", desc: "The agent recommends the next best response." },
+        ],
+      },
+    ],
+  },
+  "line-chart": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-line",
+        type: "line-chart",
+        xLabels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        seriesA: { label: "Resolved by AI", values: [32, 44, 41, 58, 72, 76] },
+        seriesB: { label: "Manual review", values: [68, 61, 58, 50, 42, 35] },
+        fill: true,
+        yMax: 100,
+      },
+    ],
+  },
+  "node-list": {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-node-list",
+        type: "node-list",
+        hubTitle: "AI",
+        hubSub: "Coordinator",
+        items: [
+          { label: "Memory", desc: "Customer context and prior interactions", tag: "Data" },
+          { label: "Policy", desc: "Rules, limits, and approved actions", tag: "Guardrail" },
+          { label: "Action", desc: "Reply, route, or escalate with evidence", tag: "Workflow" },
+        ],
+      },
+    ],
+  },
+  stack: {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-stack",
+        type: "stack",
+        layers: [
+          {
+            title: "Agent decision",
+            highlight: true,
+            caption: "Chooses the best next step",
+            cells: [{ title: "Risk score", desc: "83% high-priority signal" }],
+          },
+          {
+            title: "Context layer",
+            caption: "Memory, account data, and policy rules",
+            cells: [{ title: "Customer context", desc: "Recent intent, sentiment, and history" }],
+          },
+          {
+            title: "Customer systems",
+            caption: "CRM, orders, billing, and support history",
+            cells: [{ title: "Next action", desc: "Route, reply, or escalate" }],
+          },
+        ],
+      },
+    ],
+  },
+  orbit: {
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-orbit",
+        type: "orbit",
+        variant: "cycle",
+        center: "delight",
+        nodes: [
+          { label: "Detect" },
+          { label: "Prioritize", highlight: true },
+          { label: "Suggest", highlight: true },
+          { label: "Resolve" },
+          { label: "Learn" },
+        ],
+      },
+    ],
+  },
+} satisfies Record<InfographicBlockType, InfographicContent>;
 
 const ORBIT_ICON_LABELS: Record<OrbitIconKey, string> = {
   mobile: "Mobile",
@@ -93,7 +319,7 @@ function SourceTipsTooltip() {
           Protected URLs cannot be read. If a link requires login, paste the article text or use a share link Studio can access.
         </span>
         <span className="mt-1 block">
-          Use template to request specific charts, stats, or sections.
+          Use Add image notes to request specific charts, stats, or sections.
         </span>
       </span>
     </span>
@@ -170,43 +396,176 @@ function blockTypeLabel(type: InfographicBlockType | undefined): string {
   return TYPE_OPTIONS.find((item) => item.id === type)?.label ?? "Image";
 }
 
-function TypeDropdown({
+function InfographicMiniThumb({
+  content,
+  className = "w-full",
+}: {
+  content: InfographicContent;
+  className?: string;
+}) {
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.2);
+  const previewWidth = content.format === "product" ? 866 : 664;
+  const previewHeight = content.format === "product" ? 660 : 360;
+
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node) return;
+
+    const updateScale = () => setScale(node.clientWidth / previewWidth);
+    updateScale();
+
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [previewWidth]);
+
+  return (
+    <div
+      ref={frameRef}
+      className={`relative overflow-hidden rounded-md bg-[#F7F5F0] ${className}`}
+      style={{ aspectRatio: `${previewWidth} / ${previewHeight}` }}
+      aria-hidden="true"
+    >
+      <div
+        className="pointer-events-none absolute left-0 top-0"
+        style={{
+          width: previewWidth,
+          height: previewHeight,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      >
+        <InfographicCanvas content={content} exportMode />
+      </div>
+    </div>
+  );
+}
+
+function BlockPreviewThumb({ type }: { type: InfographicBlockType }) {
+  return <InfographicMiniThumb content={BLOCK_PREVIEW_CONTENT[type]} />;
+}
+
+function BlockTypeCard({
+  option,
+  active,
+  onClick,
+}: {
+  option: (typeof TYPE_OPTIONS)[number];
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "rounded-xl border bg-studio-bg p-2 text-left transition-colors hover:border-studio-muted hover:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-studio-accent",
+        active ? "border-studio-accent" : "border-studio-border",
+      ].join(" ")}
+    >
+      <BlockPreviewThumb type={option.id} />
+      <span className="mt-2 flex items-center justify-between gap-2">
+        <span className="truncate text-[12px] font-semibold text-studio-text">{option.label}</span>
+        {active && <span className="shrink-0 rounded-[5px] bg-studio-accent px-1.5 py-0.5 text-[9px] font-semibold text-black">Selected</span>}
+      </span>
+      <span className="mt-1 block min-h-7 text-[10.5px] leading-snug text-studio-muted">{option.description}</span>
+    </button>
+  );
+}
+
+function BlockLibraryModal({
+  value,
+  onChange,
+  onClose,
+}: {
+  value: InfographicBlockType;
+  onChange: (type: InfographicBlockType) => void;
+  onClose: () => void;
+}) {
+  const current = TYPE_OPTIONS.find((item) => item.id === value);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6" role="dialog" aria-modal="true" aria-label="Choose infographic block">
+      <button type="button" className="absolute inset-0 bg-black/60" onClick={onClose} aria-label="Close block library" />
+      <div className="relative z-10 flex max-h-[86vh] w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-studio-border bg-studio-sidebar shadow-2xl">
+        <div className="flex items-center justify-between border-b border-studio-border px-4 py-3">
+          <div>
+            <h3 className="text-sm font-semibold text-studio-text">Block library</h3>
+            <p className="mt-0.5 text-[11px] text-studio-muted">Choose the visual structure that best matches this image.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-studio-muted transition-colors hover:bg-white/[0.06] hover:text-studio-text"
+            aria-label="Close block library"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {TYPE_OPTIONS.map((option) => (
+              <BlockTypeCard
+                key={option.id}
+                option={option}
+                active={option.id === value}
+                onClick={() => {
+                  if (option.id !== current?.id) onChange(option.id);
+                  onClose();
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BlockTypeSelector({
   value,
   onChange,
 }: {
   value: InfographicBlockType;
   onChange: (type: InfographicBlockType) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const current = TYPE_OPTIONS.find((item) => item.id === value);
 
   return (
-    <Menu.Root>
-      <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-studio-border bg-studio-sidebar px-2.5 py-1.5 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none focus:ring-1 focus:ring-studio-accent">
-        <span className="font-medium">{current?.label ?? "Select"}</span>
-        <ChevronDown size={14} className="text-studio-muted" />
-      </Menu.Trigger>
-      <Menu.Portal>
-        <Menu.Positioner side="bottom" align="start" sideOffset={6} className="z-50">
-          <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-top data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
-            {TYPE_OPTIONS.map((item) => {
-              const active = item.id === value;
-              return (
-                <Menu.Item
-                  key={item.id}
-                  onClick={() => onChange(item.id)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white rounded-md mx-1"
-                >
-                  <span className="w-4 shrink-0">
-                    {active && <Check size={13} className="text-studio-accent" />}
-                  </span>
-                  <span className="flex-1">{item.label}</span>
-                </Menu.Item>
-              );
-            })}
-          </Menu.Popup>
-        </Menu.Positioner>
-      </Menu.Portal>
-    </Menu.Root>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-xl border border-studio-border bg-studio-sidebar p-2 text-left transition-colors hover:border-studio-muted hover:bg-studio-hover focus:outline-none focus:ring-1 focus:ring-studio-accent"
+      >
+        <BlockPreviewThumb type={value} />
+        <span className="mt-2 flex items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block truncate text-[12px] font-semibold text-studio-text">{current?.label ?? "Select block"}</span>
+            <span className="mt-0.5 block text-[10.5px] leading-snug text-studio-muted">{current?.description ?? "Choose a visual block"}</span>
+          </span>
+          <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-medium text-studio-text">Change</span>
+        </span>
+      </button>
+      {open && (
+        <BlockLibraryModal
+          value={value}
+          onChange={onChange}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -397,12 +756,26 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
         })),
       };
     case "stacked-bar":
+      const stackedSeries = ["Resolved", "Assisted", "Manual"];
       return {
         id,
         type: "stacked-bar",
-        series: ["Value"],
+        series: stackedSeries,
         unit,
-        rows: rows.slice(0, 6).map((row) => ({ label: row.label, values: [row.value] })),
+        accentIndex: 0,
+        normalize: unit === "%",
+        rows: rows.slice(0, 6).map((row) => {
+          const primary = Math.max(0, row.value);
+          if (unit === "%" && primary <= 100) {
+            const remainder = Math.max(0, 100 - primary);
+            const assisted = Math.round(remainder * 0.7);
+            return { label: row.label, values: [primary, assisted, remainder - assisted] };
+          }
+          return {
+            label: row.label,
+            values: [primary, Math.round(primary * 0.6), Math.round(primary * 0.3)],
+          };
+        }),
       };
     case "compare":
       return {
@@ -431,7 +804,7 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
       return {
         id,
         type: "line-chart",
-        xLabels: rows.slice(0, 8).map((row) => row.label),
+        xLabels: rows.slice(0, 8).map((row, index) => generatedTrendAxisLabel(row.label, index)),
         seriesA: { label: title || "Value", values: rows.slice(0, 8).map((row) => row.value) },
         fill: true,
       };
@@ -455,7 +828,12 @@ function convertBlock(block: InfographicBlock, type: InfographicBlockType, title
           title: row.label,
           caption: row.desc || formatPortableNumber(row.value, row.valueText),
           highlight: row.highlight ?? index === 0,
-          cells: [],
+          cells: [
+            {
+              title: formatPortableNumber(row.value, row.valueText) || "Item",
+              desc: row.desc || row.label,
+            },
+          ],
         })),
       };
     case "orbit":
@@ -520,8 +898,8 @@ function SelectedImageEditor({
         <input className={inputCls} value={content.title ?? ""} onChange={(event) => setTitle(event.target.value)} />
       </SimpleField>
 
-      <SimpleField label="Type">
-        <TypeDropdown value={block.type} onChange={setType} />
+      <SimpleField label="Block">
+        <BlockTypeSelector value={block.type} onChange={setType} />
       </SimpleField>
 
       {usesDetailedBlockEditor(block.type) && (
@@ -731,7 +1109,7 @@ function SelectedImageEditor({
               <div className="grid grid-cols-[1fr_76px] gap-1.5">
                 <input
                   className={inputCls}
-                  placeholder="Label"
+                  placeholder="Label, e.g. 2024, Q1, Week 3"
                   value={label}
                   onChange={(event) =>
                     setBlock({
@@ -815,12 +1193,14 @@ export function InfographicSidebar({
   const [articleNotice, setArticleNotice] = useState<string | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [showSourceCoach, dismissSourceCoach] = useOnceFlag("coach-infographic-source-v1");
 
   if (!content) return null;
 
   async function handleSuggestImages() {
     const text = article.trim();
     if (!text || sourceLoading) return;
+    dismissSourceCoach();
     setSourceLoading(true);
     setArticleNotice(null);
     try {
@@ -834,6 +1214,7 @@ export function InfographicSidebar({
   }
 
   function handleUseTemplate() {
+    dismissSourceCoach();
     setArticle((current) => {
       const trimmed = current.trim();
       if (!trimmed) return SOURCE_TEMPLATE;
@@ -907,7 +1288,13 @@ export function InfographicSidebar({
         </div>
       </Section>
 
-      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
+      <div className="relative m-4 rounded-xl border border-studio-border bg-white/[0.02] p-3.5">
+        {showSourceCoach && (
+          <CoachmarkBubble
+            text="Paste an article to generate image ideas."
+            onDismiss={dismissSourceCoach}
+          />
+        )}
         <div className="flex items-center gap-1.5 mb-2.5">
           <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center" style={{ background: "#2E2E2E" }}>
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
@@ -917,7 +1304,11 @@ export function InfographicSidebar({
         </div>
         <textarea
           value={article}
-          onChange={(event) => setArticle(event.target.value)}
+          onFocus={dismissSourceCoach}
+          onChange={(event) => {
+            dismissSourceCoach();
+            setArticle(event.target.value);
+          }}
           placeholder="Paste article URL, full article, chart data, or image notes..."
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-[#555] min-h-[112px]"
@@ -944,11 +1335,12 @@ export function InfographicSidebar({
       {articleImages.length > 0 && (
         <Section title="Generated images">
           <div className="flex flex-col gap-1">
-            {articleImages.map((candidate, index) => {
+            {articleImages.map((candidate) => {
               const active = candidate.id === activeArticleImageId;
               const status = active ? "Editing" : candidate.status === "ready" ? "Ready" : "Draft";
               const displayTitle = active ? content.title?.trim() || candidate.title : candidate.title;
               const displayBlockType = active ? block?.type ?? candidate.blockType : candidate.blockType;
+              const displayContent = active ? content : candidate.content;
               return (
                 <button
                   key={candidate.id}
@@ -967,9 +1359,10 @@ export function InfographicSidebar({
                     className="sb-checkbox shrink-0"
                     aria-label={`Export ${candidate.title}`}
                   />
-                  <span className="flex h-9 w-12 shrink-0 items-center justify-center rounded-md bg-studio-hover text-[9px] font-semibold text-studio-muted">
-                    {index + 1}
-                  </span>
+                  <InfographicMiniThumb
+                    content={displayContent}
+                    className="w-20 shrink-0 border border-white/[0.06]"
+                  />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[11.5px] font-medium text-studio-text">
                       {displayTitle}
