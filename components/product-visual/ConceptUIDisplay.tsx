@@ -8,28 +8,37 @@ type Props = {
   maxHeight: number;
 };
 
-const SHADOW = "0 6px 18px rgba(0,0,0,0.06)";
-const INK = "#2C241C";
-const MUTED = "#77716A";
-const LINE = "#DEDAD4";
+const SHADOW = "0 4px 16px rgba(0,0,0,0.05)";
+const INK = "#1A1A1A";
+const MUTED = "#8A8A86";
+const LINE = "#E8E6E1";
 const PAPER = "#FFFFFF";
-const CREAM = "#F7F5F0";
-const ACTIVE = "#2A2118";
-const ACCENT = "#6D3CFF";
-const GREEN = "#00A878";
-const RED = "#FF5E69";
+const CREAM = "#EFEDE8";
+const SECTION = "#F7F5F1";
+const ACTIVE = "#1A1A1A";
+const ACCENT = "#3D9970";
+const GREEN = "#3D9970";
+const RED = "#B23A48";
+const WARNING = "#C0623B";
+const POSITIVE_BG = "#DCEFE3";
+const WARNING_BG = "#F7E3D6";
+const NEGATIVE_BG = "#F6DFE0";
+const CHIP_NEUTRAL = "#EDEBE6";
+const CHIP_IF = "#DCE6F5";
+const CHIP_ACCENT = "#FBE8C8";
+const MUTED_LINE = "#B5B3AE";
 
 function chipPalette(tone: ProductVisualTone | undefined): { background: string; color: string } {
-  if (tone === "good") return { background: "#DDF5EB", color: "#009B72" };
-  if (tone === "warn") return { background: "#FFE2E6", color: "#D94D5C" };
-  if (tone === "accent") return { background: "#DED7FF", color: "#4A28BF" };
-  return { background: "#EDE9E2", color: "#706A63" };
+  if (tone === "good") return { background: POSITIVE_BG, color: GREEN };
+  if (tone === "warn") return { background: WARNING_BG, color: WARNING };
+  if (tone === "accent") return { background: CHIP_ACCENT, color: INK };
+  return { background: CHIP_NEUTRAL, color: MUTED };
 }
 
 function toneColor(tone: ProductVisualTone | undefined): string {
   if (tone === "good") return GREEN;
   if (tone === "warn") return RED;
-  if (tone === "accent") return ACCENT;
+  if (tone === "accent") return WARNING;
   return MUTED;
 }
 
@@ -318,6 +327,10 @@ function ConversationScene({ concept, compact }: { concept: ProductVisualConcept
 }
 
 function EvaluationScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
+  if (isOversightConcept(concept)) {
+    return <OversightReviewScene compact={compact} />;
+  }
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 210px", gap: compact ? 10 : 14 }}>
 	      <div style={{ borderRadius: 10, background: PAPER, padding: compact ? 12 : 16 }}>
@@ -370,10 +383,273 @@ function isActionbookConcept(concept: ProductVisualConcept): boolean {
     .join(" ")
     .toLowerCase();
 
-  return text.includes("actionbook") || text.includes("action book");
+  return (
+    text.includes("actionbook") ||
+    text.includes("action book") ||
+    text.includes("refund") ||
+    text.includes("eligibility") ||
+    text.includes("conditional") ||
+    text.includes("condition")
+  );
 }
 
-function ActionbookSection({
+function isOversightConcept(concept: ProductVisualConcept): boolean {
+  const text = [
+    concept.prompt,
+    concept.title,
+    concept.subtitle,
+    concept.badge,
+    ...concept.chips.map((chip) => chip.label),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    text.includes("oversight") ||
+    text.includes("concierge") ||
+    text.includes("hallucination") ||
+    text.includes("policy") ||
+    text.includes("flagged") ||
+    text.includes("access")
+  );
+}
+
+type PillTone = "neutral" | "positive" | "warning" | "negative" | "dark";
+
+function Pill({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: PillTone;
+}) {
+  const styles: Record<PillTone, CSSProperties> = {
+    neutral: { background: CHIP_NEUTRAL, color: MUTED },
+    positive: { background: POSITIVE_BG, color: GREEN },
+    warning: { background: WARNING_BG, color: WARNING },
+    negative: { background: NEGATIVE_BG, color: RED },
+    dark: { background: ACTIVE, color: PAPER },
+  };
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        borderRadius: 999,
+        padding: "6px 12px",
+        fontSize: 12,
+        lineHeight: 1,
+        fontWeight: 650,
+        whiteSpace: "nowrap",
+        ...styles[tone],
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function GradeBadge({ grade, tone, compact }: { grade: string; tone: "positive" | "warning" | "negative"; compact: boolean }) {
+  const palette = {
+    positive: { background: POSITIVE_BG, color: GREEN },
+    warning: { background: WARNING_BG, color: WARNING },
+    negative: { background: NEGATIVE_BG, color: RED },
+  }[tone];
+
+  return (
+    <span
+      style={{
+        width: compact ? 34 : 44,
+        height: compact ? 34 : 44,
+        borderRadius: 10,
+        background: palette.background,
+        color: palette.color,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: compact ? 15 : 20,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {grade}
+    </span>
+  );
+}
+
+function ReviewRow({
+  grade,
+  gradeTone,
+  title,
+  meta,
+  status,
+  statusTone,
+  compact,
+}: {
+  grade: string;
+  gradeTone: "positive" | "warning" | "negative";
+  title: string;
+  meta: string;
+  status: string;
+  statusTone: PillTone;
+  compact: boolean;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: compact ? 58 : 74,
+        borderBottom: `1px solid ${LINE}`,
+        display: "grid",
+        gridTemplateColumns: "auto minmax(0, 1fr) auto",
+        alignItems: "center",
+        gap: compact ? 10 : 16,
+      }}
+    >
+      <GradeBadge grade={grade} tone={gradeTone} compact={compact} />
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            color: INK,
+            fontSize: compact ? 14 : 20,
+            lineHeight: 1.15,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ marginTop: 4, color: MUTED, fontSize: compact ? 11 : 15, lineHeight: 1.1, fontWeight: 500 }}>
+          {meta}
+        </div>
+      </div>
+      {!compact && <Pill tone={statusTone}>{status}</Pill>}
+    </div>
+  );
+}
+
+function OversightReviewScene({ compact }: { compact: boolean }) {
+  const rows = [
+    {
+      grade: "A",
+      gradeTone: "positive",
+      title: "Refund on lost package?",
+      meta: "CSAT 4.8 · 1m 12s",
+      status: "On policy",
+      statusTone: "positive",
+    },
+    {
+      grade: "C",
+      gradeTone: "warning",
+      title: "Cancel after shipment",
+      meta: "CSAT 2.1 · 4m 39s",
+      status: "Review",
+      statusTone: "warning",
+    },
+    {
+      grade: "F",
+      gradeTone: "negative",
+      title: "Account balance inquiry",
+      meta: "CSAT 1.0 · 0m 48s",
+      status: "Flagged",
+      statusTone: "negative",
+    },
+    {
+      grade: "A",
+      gradeTone: "positive",
+      title: "Loyalty points redemption",
+      meta: "CSAT 4.9 · 0m 52s",
+      status: "On policy",
+      statusTone: "positive",
+    },
+  ] as const;
+
+  return (
+    <div
+      style={{
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: compact ? "100%" : 610,
+          borderRadius: 20,
+          background: PAPER,
+          boxShadow: "0 14px 34px rgba(0,0,0,0.08)",
+          padding: compact ? 16 : 28,
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ color: INK, fontSize: compact ? 20 : 28, lineHeight: 1, fontWeight: 700 }}>
+          Oversight AI Concierge
+        </div>
+        <div
+          style={{
+            marginTop: compact ? 16 : 26,
+            display: "flex",
+            alignItems: "center",
+            gap: compact ? 14 : 24,
+            borderBottom: `1px solid ${LINE}`,
+          }}
+        >
+          {["Response review", "Hallucinations", "Access"].map((tab, index) => (
+            <span
+              key={tab}
+              style={{
+                color: INK,
+                fontSize: compact ? 12 : 15,
+                fontWeight: 650,
+                paddingBottom: compact ? 10 : 13,
+                borderBottom: index === 0 ? `3px solid ${INK}` : "3px solid transparent",
+                marginBottom: -1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {tab}
+            </span>
+          ))}
+        </div>
+        <div>
+          {rows.map((row) => (
+            <ReviewRow key={row.title} {...row} compact={compact} />
+          ))}
+        </div>
+        <div
+          style={{
+            marginTop: compact ? 14 : 18,
+            borderRadius: 16,
+            background: SECTION,
+            padding: compact ? "12px 14px" : "17px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+          }}
+        >
+          <div style={{ color: INK, fontSize: compact ? 14 : 20, lineHeight: 1, fontWeight: 500 }}>
+            <span style={{ color: GREEN, fontWeight: 700 }}>94%</span> on policy
+            {!compact && (
+              <>
+                <span style={{ display: "inline-block", width: 16 }} />
+                <span style={{ color: WARNING, fontWeight: 700 }}>12</span> flagged today
+              </>
+            )}
+          </div>
+          <Pill tone="dark">Kill switch</Pill>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionBox({
   title,
   badge,
   children,
@@ -385,20 +661,29 @@ function ActionbookSection({
   compact: boolean;
 }) {
   return (
-    <section style={{ display: "grid", gap: compact ? 6 : 8 }}>
+    <section
+      style={{
+        borderRadius: 12,
+        background: SECTION,
+        padding: compact ? 11 : 14,
+        display: "grid",
+        gap: compact ? 7 : 9,
+        minWidth: 0,
+      }}
+    >
       <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
-        <span style={{ fontSize: compact ? 12 : 15, color: "#111111", fontWeight: 780 }}>{title}</span>
+        <span style={{ fontSize: compact ? 11 : 14, color: INK, fontWeight: 700 }}>{title}</span>
         {badge && (
           <span
             style={{
               borderRadius: 6,
-              background: "#F0EDE8",
+              background: CHIP_NEUTRAL,
               color: MUTED,
               padding: compact ? "3px 6px" : "5px 8px",
               fontSize: compact ? 8 : 10,
               lineHeight: 1,
-              fontWeight: 760,
-              letterSpacing: 0.4,
+              fontWeight: 600,
+              letterSpacing: 0,
               whiteSpace: "nowrap",
             }}
           >
@@ -411,96 +696,155 @@ function ActionbookSection({
   );
 }
 
-function TesterPreview({ compact }: { compact: boolean }) {
+function ConditionBlock({ compact }: { compact: boolean }) {
   return (
     <div
       style={{
-        width: compact ? "100%" : 190,
-        maxWidth: "100%",
-        borderRadius: compact ? 12 : 16,
-        background: PAPER,
-        boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
-        border: `1px solid ${LINE}`,
-        overflow: "hidden",
+        borderRadius: 12,
+        background: SECTION,
+        padding: compact ? 12 : 16,
+        display: "grid",
+        gap: compact ? 8 : 10,
+        minWidth: 0,
       }}
     >
       <div
         style={{
-          height: compact ? 34 : 42,
-          borderBottom: `1px solid ${LINE}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          padding: compact ? "0 9px" : "0 12px",
-          boxSizing: "border-box",
+          color: RED,
+          fontSize: compact ? 11 : 14,
+          lineHeight: 1.1,
+          textDecoration: "line-through",
+          textDecorationThickness: 2,
         }}
       >
-        <LogoMark size={compact ? 20 : 24} />
-        <span style={{ color: INK, fontSize: compact ? 10 : 13, fontWeight: 780 }}>Sendbird Airlines</span>
+        Process refund via process_refund
       </div>
-      <div style={{ padding: compact ? 10 : 13, display: "grid", gap: compact ? 7 : 9 }}>
-        <div style={{ textAlign: "center", color: MUTED, fontSize: compact ? 8 : 9 }}>December 22, 2024</div>
-        <div
+      <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 12, minWidth: 0 }}>
+        <span
           style={{
-            width: "70%",
-            borderRadius: 9,
-            background: CREAM,
-            padding: compact ? "7px 8px" : "8px 9px",
+            borderRadius: 6,
+            background: CHIP_IF,
+            border: "1px solid #BED1EB",
             color: INK,
-            fontSize: compact ? 9 : 10,
-            lineHeight: 1.28,
+            padding: compact ? "7px 8px" : "9px 11px",
+            fontSize: compact ? 10 : 14,
+            lineHeight: 1,
+            fontWeight: 500,
           }}
         >
-          I am sorry you missed your flight. Did you get to reschedule?
-        </div>
-        {["Yes, I already rescheduled", "Not yet, can you check for me?"].map((label) => (
-          <div
-            key={label}
-            style={{
-              justifySelf: "end",
-              border: `1px solid ${ACTIVE}`,
-              borderRadius: 999,
-              padding: compact ? "5px 7px" : "6px 9px",
-              color: INK,
-              fontSize: compact ? 8 : 9,
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {label}
-          </div>
-        ))}
-        <div style={{ marginTop: compact ? 4 : 8, color: MUTED, fontSize: compact ? 8 : 9 }}>
-          AI-generated with memory
-        </div>
-        <div
+          IF
+        </span>
+        <span
           style={{
-            marginTop: compact ? 12 : 22,
-            height: compact ? 22 : 28,
-            borderRadius: 999,
-            background: CREAM,
+            minWidth: 0,
+            color: INK,
+            fontSize: compact ? 11 : 15,
+            lineHeight: 1.25,
+            fontWeight: 560,
+            letterSpacing: 0.2,
+            whiteSpace: compact ? "normal" : "nowrap",
           }}
-        />
+        >
+          AMOUNT &gt; $1,000: VERIFY ELIGIBILITY FIRST
+        </span>
+      </div>
+      <div
+        style={{
+          marginLeft: compact ? 38 : 58,
+          borderLeft: `2px solid ${LINE}`,
+          paddingLeft: compact ? 10 : 14,
+          display: "grid",
+          gap: compact ? 4 : 6,
+          fontSize: compact ? 11 : 15,
+          lineHeight: 1.25,
+          fontWeight: 560,
+        }}
+      >
+        <span style={{ color: GREEN }}>Not eligible -&gt; escalate to supervisor</span>
+        <span style={{ color: GREEN }}>Eligible -&gt; process refund</span>
+        <span style={{ color: MUTED_LINE }}>Else: Auto-approve</span>
       </div>
     </div>
   );
 }
 
-function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
-  const bodyTextStyle: CSSProperties = {
+function OutlinePanel({ compact }: { compact: boolean }) {
+  const rows = [
+    { label: "When to use", depth: 0 },
+    { label: "Key Points", depth: 0 },
+    { label: "Global Actions", depth: 0, active: true },
+    { label: "Order_Identification", depth: 1, tag: true },
+    { label: "Intent Clarification", depth: 0 },
+    { label: "Jinja if", depth: 1 },
+    { label: "context.status == error", depth: 2 },
+    { label: "End conversation", depth: 3 },
+    { label: "Handoff", depth: 3 },
+  ];
+
+  return (
+    <aside
+      style={{
+        borderLeft: `1px solid ${LINE}`,
+        padding: compact ? "10px 0 10px 12px" : "14px 0 14px 18px",
+        display: "grid",
+        alignContent: "start",
+        gap: compact ? 7 : 10,
+        overflow: "hidden",
+      }}
+    >
+      {rows.map((row) => (
+        <div
+          key={`${row.depth}-${row.label}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            marginLeft: row.depth * (compact ? 10 : 14),
+            color: row.active ? INK : MUTED,
+            fontSize: compact ? 8 : 10,
+            lineHeight: 1,
+            fontWeight: row.active ? 650 : 500,
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              width: row.depth === 0 ? 8 : 5,
+              height: row.depth === 0 ? 8 : 5,
+              borderRadius: row.depth === 0 ? 999 : 2,
+              background: row.active ? CHIP_ACCENT : "transparent",
+              border: `1px solid ${row.active ? "#E5C778" : LINE}`,
+              flexShrink: 0,
+            }}
+          />
+          <span>{row.label}</span>
+          {row.tag && <span style={{ ...chipStyle("accent"), padding: "3px 5px", fontSize: 8 }}>H1</span>}
+        </div>
+      ))}
+    </aside>
+  );
+}
+
+function ActionbookEditorScene({ compact }: { compact: boolean }) {
+  const sectionTextStyle: CSSProperties = {
     color: INK,
-    fontSize: compact ? 10 : 13,
-    lineHeight: 1.42,
-    fontWeight: 520,
+    fontSize: compact ? 10 : 12,
+    lineHeight: 1.45,
+    fontWeight: 500,
   };
 
   return (
     <div
       style={{
+        width: "100%",
         height: "100%",
-        borderRadius: compact ? 10 : 14,
+        maxWidth: compact ? "100%" : 650,
+        maxHeight: "100%",
+        margin: "0 auto",
+        borderRadius: 20,
         background: PAPER,
         border: `1px solid ${LINE}`,
+        boxShadow: "0 14px 34px rgba(0,0,0,0.06)",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
@@ -510,7 +854,7 @@ function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualCon
         style={{
           minHeight: compact ? 40 : 54,
           borderBottom: `1px solid ${LINE}`,
-          padding: compact ? "0 12px" : "0 18px",
+          padding: compact ? "0 13px" : "0 18px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -521,18 +865,17 @@ function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualCon
         <div style={{ minWidth: 0 }}>
           <div
             style={{
-              color: "#111111",
-              fontSize: compact ? 13 : 18,
+              color: INK,
+              fontSize: compact ? 12 : 17,
               lineHeight: 1.1,
-              fontWeight: 820,
+              fontWeight: 650,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
             }}
           >
-            Workspace settings
+            {"<-"} Refund processing v2
           </div>
-          {!compact && <div style={{ marginTop: 3, color: MUTED, fontSize: 11 }}>{concept.subtitle}</div>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {!compact && (
@@ -540,27 +883,27 @@ function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualCon
               style={{
                 borderRadius: 8,
                 border: `1px solid ${LINE}`,
-                padding: "7px 13px",
+                padding: "7px 12px",
                 color: INK,
-                fontSize: 12,
-                fontWeight: 720,
+                fontSize: 11,
+                fontWeight: 600,
               }}
             >
-              Version history
+              Cancel
             </span>
           )}
           <span
             style={{
               borderRadius: 8,
-              background: ACCENT,
+              background: ACTIVE,
               color: PAPER,
               padding: compact ? "7px 10px" : "8px 14px",
-              fontSize: compact ? 10 : 12,
-              fontWeight: 760,
+              fontSize: compact ? 10 : 11,
+              fontWeight: 650,
               lineHeight: 1,
             }}
           >
-            Edit
+            Save
           </span>
         </div>
       </div>
@@ -569,99 +912,56 @@ function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualCon
           flex: 1,
           minHeight: 0,
           display: "grid",
-          gridTemplateColumns: compact ? "1fr" : "minmax(0, 1.06fr) minmax(170px, 0.9fr)",
+          gridTemplateColumns: compact ? "1fr" : "minmax(0, 1fr) 220px",
           overflow: "hidden",
         }}
       >
         <div
           style={{
             minWidth: 0,
-            padding: compact ? 12 : 18,
+            padding: compact ? 10 : 14,
             overflow: "hidden",
             display: "grid",
             alignContent: "start",
-            gap: compact ? 12 : 18,
+            gap: compact ? 8 : 10,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ color: "#111111", fontSize: compact ? 12 : 15, fontWeight: 820 }}>
-                Actionbook structure
-              </div>
-              {!compact && <div style={{ marginTop: 3, color: MUTED, fontSize: 11 }}>Cancel membership</div>}
-            </div>
-            <span style={chipStyle("accent")}>{concept.badge}</span>
-          </div>
+          <SectionBox title="When to use" compact={compact}>
+            <span style={{ ...chipStyle("neutral"), justifySelf: "start", padding: compact ? "5px 8px" : "6px 9px" }}>
+              Always
+            </span>
+          </SectionBox>
 
-          <ActionbookSection title="Key Points" badge="NO ACTION NEEDED" compact={compact}>
-            <div style={bodyTextStyle}>
-              Behavioral rules that apply at all times, written in plain language with inline variables and anchor
-              links.
-            </div>
-          </ActionbookSection>
+          <SectionBox title="Key points" badge="System Prompt" compact={compact}>
+            <div style={sectionTextStyle}>If refund &gt; $500 -&gt; supervisor approval required</div>
+          </SectionBox>
 
-          <ActionbookSection title="Global Actions" badge="WHENEVER" compact={compact}>
-            <div style={bodyTextStyle}>
-              Actions that fire whenever a trigger occurs, regardless of which intent is active.
+          <SectionBox title="Global Actions" compact={compact}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+              <span style={{ ...chipStyle("accent"), padding: compact ? "5px 7px" : "6px 8px" }}>
+                Order_Identification
+              </span>
+              <span
+                style={{
+                  color: INK,
+                  fontSize: compact ? 10 : 12,
+                  lineHeight: 1.35,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                Always apply STT correction guide...
+              </span>
             </div>
-            <div
-              style={{
-                borderRadius: 8,
-                border: "1px solid #B9D4FF",
-                background: "#FBFDFF",
-                padding: compact ? 9 : 12,
-                display: "grid",
-                gap: compact ? 6 : 8,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <span
-                  style={{
-                    borderRadius: 5,
-                    background: "#EAF3FF",
-                    border: "1px solid #B9D4FF",
-                    color: INK,
-                    padding: compact ? "4px 7px" : "6px 9px",
-                    fontSize: compact ? 9 : 11,
-                    fontWeight: 800,
-                    lineHeight: 1,
-                  }}
-                >
-                  IF
-                </span>
-                <span style={{ color: INK, fontSize: compact ? 10 : 13, fontWeight: 720 }}>
-                  CONTEXT_STATUS == ERROR
-                </span>
-              </div>
-              <div style={{ color: INK, fontSize: compact ? 9 : 12, lineHeight: 1.4 }}>
-                1. Say the order lookup fallback. Then call #order-lookup.
-              </div>
-            </div>
-          </ActionbookSection>
+          </SectionBox>
 
-          <ActionbookSection title="Intent Clarification" compact={compact}>
-            <div style={bodyTextStyle}>
-              Topic-specific handling blocks keep nested conditions readable and easy to update.
-            </div>
-          </ActionbookSection>
+          <SectionBox title="Intent Clarification" compact={compact}>
+            <ConditionBlock compact={compact} />
+          </SectionBox>
         </div>
 
-        {!compact && (
-          <div
-            style={{
-              minWidth: 0,
-              background: "#E3E1DE",
-              borderLeft: `1px solid ${LINE}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 18,
-              boxSizing: "border-box",
-            }}
-          >
-            <TesterPreview compact={compact} />
-          </div>
-        )}
+        {!compact && <OutlinePanel compact={compact} />}
       </div>
     </div>
   );
@@ -669,7 +969,7 @@ function ActionbookEditorScene({ concept, compact }: { concept: ProductVisualCon
 
 function SettingsScene({ concept, compact }: { concept: ProductVisualConcept; compact: boolean }) {
   if (isActionbookConcept(concept)) {
-    return <ActionbookEditorScene concept={concept} compact={compact} />;
+    return <ActionbookEditorScene compact={compact} />;
   }
 
   return (

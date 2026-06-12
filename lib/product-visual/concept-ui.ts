@@ -14,6 +14,12 @@ function isActionbookEditorPrompt(text: string): boolean {
   return hasAny(text, [
     "actionbook",
     "action book",
+    "refund",
+    "eligibility",
+    "conditional",
+    "condition",
+    "else",
+    "jinja",
     "rule",
     "rules",
     "editor",
@@ -34,6 +40,10 @@ function shortFeatureLabel(prompt: string): string {
 
 export function detectProductVisualConceptKind(prompt: string): ProductVisualConceptKind {
   const text = cleanPrompt(prompt).toLowerCase();
+  if (isActionbookEditorPrompt(text)) {
+    return "settings";
+  }
+
   if (
     hasAny(text, [
       "deploy",
@@ -76,7 +86,14 @@ export function detectProductVisualConceptKind(prompt: string): ProductVisualCon
       "sentiment",
       "safeguard",
       "hallucination",
+      "hallucinations",
       "resolution",
+      "oversight",
+      "concierge",
+      "policy",
+      "flagged",
+      "review",
+      "access",
     ])
   ) {
     return "evaluation";
@@ -109,6 +126,11 @@ export function detectProductVisualConceptKind(prompt: string): ProductVisualCon
       "suggested reply",
       "actionbook",
       "action book",
+      "refund",
+      "eligibility",
+      "conditional",
+      "condition",
+      "jinja",
       "rule",
       "rules",
       "editor",
