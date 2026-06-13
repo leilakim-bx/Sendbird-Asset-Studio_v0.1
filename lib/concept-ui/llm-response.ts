@@ -101,9 +101,11 @@ function normalizeArchetypeName(value: unknown): SceneSpec["archetype"] | null {
   if (normalized === "builder") return "builder";
   if (normalized === "table") return "table";
   if (normalized === "modal") return "modal";
+  if (normalized === "workspace") return "workspace";
 
   if (/(conversation|chat|ticket|support|inbox|message|messenger)/.test(normalized)) return "inbox";
   if (/(dashboard|metric|analytics|monitor|quality|scorecard|report|kpi)/.test(normalized)) return "dashboard";
+  if (/(workspace|editor|tester|test-agent|agent-panel|preview-panel)/.test(normalized)) return "workspace";
   if (/(builder|workflow|automation|canvas|actionbook|rule|flow)/.test(normalized)) return "builder";
   if (/(table|grid|list|record|queue|log|review|management)/.test(normalized)) return "table";
   if (/(modal|dialog|form|confirm|confirmation|settings|result|reveal)/.test(normalized)) return "modal";

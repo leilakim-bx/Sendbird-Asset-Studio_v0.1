@@ -6,7 +6,7 @@
 
 Next.js App Router 기반의 클라이언트 중심 에디터다.  
 UI 상태는 Zustand에 두고, 저장/초안은 localStorage에 persist한다.  
-생성/업로드/Pexels 연동은 Next.js API route로 감싼다. 보안 정책상 외부 네트워크 호출은 Pexels 검색과 Pexels 이미지 CDN으로 제한한다.
+생성/업로드/Pexels 연동은 Next.js API route로 감싼다. 보안 정책상 외부 네트워크 호출은 Pexels 검색, Pexels 이미지 CDN, 승인된 Vercel Blob 작업 백업으로 제한한다.
 
 ```text
 app/
@@ -24,6 +24,9 @@ components/
 
 lib/
   store.ts                         Zustand store + persist migration
+  work-data-schema.ts              saved work schema version + migration entry points
+  work-preservation.ts             automatic snapshots + backup file helpers
+  work-remote-backup.ts            best-effort Vercel Blob snapshot sync client
   template-registry.ts             템플릿 등록/기본값
   types/*                          에셋별 데이터 모델
   export.ts                        공통 PNG/SVG export
@@ -43,6 +46,7 @@ lib/
 | `/api/product-image` | Pexels 이미지 검색 |
 | `/api/proxy-image` | Pexels 이미지 same-origin 프록시 |
 | `/api/upload-background` | 배경 이미지 로컬 업로드 |
+| `/api/work-backups` | Settings 복원을 위한 Vercel Blob 작업 스냅샷 저장/조회 |
 
 ## 3. 템플릿 분기
 
@@ -61,13 +65,16 @@ lib/
 | 상태 | 위치 | 설명 |
 |---|---|---|
 | 실시간 편집 상태 | `useEditorStore` | 현재 캔버스/사이드바 값 |
-| 저장 에셋 | `savedAssets` persist | My files에 표시되는 완성본 snapshot |
+| 저장 에셋 | `savedAssets` persist | My files에 표시되는 완성본 snapshot. localStorage 보호를 위해 최근 24개까지만 유지 |
 | 초안 | `drafts.chat`, `drafts.infographic` persist | 새로고침/크래시 복구 |
 | 복원 대상 | `pendingAssetRestore` transient | My files에서 에디터로 넘기는 일회성 값 |
-| Product Visual | transient + saved asset | autosave 없음, Save 시 snapshot 저장 |
+| 자동 작업 스냅샷 | `asset-studio-work-backups-v1` localStorage + optional Vercel Blob | template 작업 단위별 최근 5개 보존. 메인 UI 노출 없음 |
+| Product Visual | transient + saved asset + 자동 작업 스냅샷 | draft autosave 없음, Save 시 snapshot 저장 |
 
-persist 키는 `sendbird-editor-v1`, 현재 version은 `2`다.  
-마이그레이션은 구 메시지 포맷 변환과 retired template 제거를 처리한다.
+persist 키는 `sendbird-editor-v1`, 현재 version은 `4`다.
+마이그레이션은 구 메시지 포맷 변환, retired template 제거, persisted 컬렉션 상한 정리, saved work `schemaVersion` 부여를 처리한다.
+
+저장되는 작업 데이터는 모두 `schemaVersion: 1`을 가진다. 현재 마이그레이션 레이어는 `lib/work-data-schema.ts`에 있으며 v1은 변환이 없지만, 이후 구조 변경 시 `vN -> vN+1` 변환 함수를 추가하는 구조다.
 
 ## 5. 저장/복원 흐름
 
@@ -75,13 +82,25 @@ persist 키는 `sendbird-editor-v1`, 현재 version은 `2`다.
 Save 클릭
   -> off-screen canvas thumbnail capture
   -> SavedAsset 생성
-  -> localStorage savedAssets prepend
+  -> localStorage savedAssets prepend (최근 24개까지만 유지)
 
 My files에서 열기
   -> pendingAssetRestore 설정
   -> /editor/{templateId} 이동
   -> Shell mount 시 pending snapshot 복원
   -> pendingAssetRestore clear
+
+작업 중 변경
+  -> Shell별 `useWorkAutosnapshot` debounce
+  -> 작업 단위별 최근 5개 스냅샷 저장
+  -> `BLOB_READ_WRITE_TOKEN`이 있으면 같은 스냅샷을 Blob에도 best-effort 저장
+  -> UI 노출 없음
+
+Settings 메뉴
+  -> Restore previous version: localStorage와 Blob 스냅샷 목록에서 선택 복원
+  -> Save backup file: 현재 작업을 백업 파일로 다운로드
+  -> Load backup: 백업 파일을 읽고 schemaVersion 확인/마이그레이션 후 복원
+  -> 복원 직전 현재 상태도 자동 스냅샷으로 보존
 ```
 
 `SavedAsset`은 템플릿별 snapshot을 선택적으로 가진다.
@@ -115,6 +134,7 @@ My files에서 열기
 |---|---|---|---|
 | `/api/generate-scenario` | `{ prompt }` | `{ messages }` | `validateScenario` |
 | `/api/analyze-article` | `{ article }` | `{ suggestions }` | `validateSuggestions` |
+| `/api/work-backups` | `{ clientId, snapshot }` or query | `{ saved }` / `{ snapshots }` | `schemaVersion` migration |
 
 공통 규칙:
 
@@ -128,8 +148,13 @@ My files에서 열기
 | Route | 허용 타입 | 제한 | 저장소 |
 |---|---|---|---|
 | `/api/upload-background` | jpg, png, webp, gif | 10MB | `public/background` |
+| `/api/work-backups` | work snapshot payload | 3.5MB | Vercel Blob private objects |
 
 Product Visual 스크린샷은 서버 업로드 없이 브라우저에서 data URL로 읽어 localStorage snapshot에 저장한다.
+Reference Rebuild는 현재 marketer-facing UI에서 archived 상태다. 기존 타입/코드 경로는 향후 품질 개선 후 재활성화할 수 있게 남기되, 서버/저장소 업로드 없이 세션 중 object URL만 사용하는 원칙을 유지한다.
+커스텀 배경은 localStorage 보호를 위해 최근 20개까지만 유지한다.
+
+Vercel Blob 작업 백업은 localStorage 자동 스냅샷의 보조 안전망이다. 클라이언트는 브라우저별 `asset-studio-work-backup-client-v1` id를 만들고, 서버 route는 `work-backups/{clientId}/{kind}/{templateId}/` 아래 최근 5개만 유지한다. Blob 토큰이 없거나 스냅샷이 3.5MB를 넘으면 클라우드 동기화만 건너뛰며, 메인 작업 흐름과 로컬 백업은 실패시키지 않는다.
 
 ## 8. 외부 서비스
 
@@ -137,23 +162,26 @@ Product Visual 스크린샷은 서버 업로드 없이 브라우저에서 data U
 |---|---|---|
 | Pexels | product card 이미지 검색 | 선택, 미설정 시 해당 기능 제한 |
 | Vercel | 배포/접근 보호 | 운영 권장 |
+| Vercel Blob | 작업 스냅샷 보조 백업 | 선택, 미설정 시 localStorage만 사용 |
 
-Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 object storage 업로드는 사용하지 않는다.
+Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 승인되지 않은 외부 object storage 업로드는 사용하지 않는다.
 
 ## 9. 데이터 모델 핵심
 
 | 모델 | 파일 | 핵심 필드 |
 |---|---|---|
 | `ChatMessage` | `lib/store.ts` | `role`, `sender`, `block` |
-| `InfographicContent` | `lib/types/infographic.ts` | `format`, `bg`, `accent`, `blocks` |
-| `ProductVisualContent` | `lib/types/product-visual.ts` | `format`, `layout`, `bg`, `screenshot`, `concept` |
-| `SavedAsset` | `lib/store.ts` | `id`, `templateId`, `previewDataUrl`, snapshot fields |
+| `ChatDraft` | `lib/store.ts` | `schemaVersion`, `messages`, `backgroundId`, `layout`, `exportSize` |
+| `InfographicContent` | `lib/types/infographic.ts` | `schemaVersion`, `format`, `bg`, `accent`, `blocks` |
+| `ProductVisualContent` | `lib/types/product-visual.ts` | `schemaVersion`, `format`, `layout`, `bg`, `sourceMode`, `screenshot`, `concept`, `reference`, `conceptScene` |
+| `SavedAsset` | `lib/store.ts` | `schemaVersion`, `id`, `templateId`, `previewDataUrl`, snapshot fields |
 
 ## 10. 에디터별 설계
 
 ### Chat UI
 
 - `EditorShell`이 상태 복원, autosave, 저장, export를 관리한다.
+- Settings 메뉴에서 restore/backup file 기능을 제공하되, main editing flow에는 노출하지 않는다.
 - `FormPanel`이 메시지/배경/레이아웃 편집을 담당한다.
 - `FeatureMockup`이 실제 export 캔버스를 렌더링한다.
 - `itinerary` 블록은 bot sender header를 유지하고, 선택적 `intro`, 선택적 group `label`, row-level `badge`/`badgeTone`을 지원해 일정뿐 아니라 항공편 대안, 예약 옵션 카드로도 재사용한다.
@@ -163,28 +191,38 @@ Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 obje
 ### Infographic
 
 - `InfographicShell`이 product/blog export canvas를 둘 다 관리한다.
+- Settings 메뉴에서 restore/backup file 기능을 제공하되, source/create flow와 분리한다.
 - `InfographicSidebar`가 블록 편집과 source 기반 추천 UI를 담당한다.
+- Infographic 첫 진입 template seed는 title 없는 Orbit diagram으로 시작한다.
 - 붙여넣은 기사/데이터/이미지 노트는 `/api/source-content`에서 정규화 후 후보 생성에 사용한다.
 - rule-based 후보를 선택해 여러 이미지를 한 번에 export할 수 있다.
+- 블록별 입력 상한은 `lib/infographic-block-limits.ts`가 source of truth다. 사이드바는 Add 버튼/입력 길이를 이 값으로 제한하고, 각 block renderer도 같은 값으로 slice해 저장 데이터가 과해도 export 프레임이 깨지지 않게 한다.
 
 ### Product Visual
 
 - `ProductVisualShell`은 저장/export와 preview scaling을 담당한다.
-- `ProductVisualSidebar`는 포맷, 배경, 스크린샷, crop/highlight, concept mode를 편집한다.
+- Product Visual은 draft autosave 대신 자동 작업 스냅샷과 Settings backup file 기능을 사용한다.
+- `ProductVisualSidebar`는 포맷, 배경, 스크린샷, crop/highlight, Concept UI를 편집한다. Reference Rebuild mode는 archived 상태로 UI에 노출하지 않는다.
 - 포맷별 크기/레이아웃 제약은 `FORMAT_SIZES`, `FORMAT_LAYOUTS`에 둔다.
+- Product Feature 포맷은 Concept UI source만 허용하며 Screenshot upload/source는 비활성화한다.
 - `concept` 모드는 현재 deterministic UI builder로 제품 UI 느낌의 가상 화면을 만든다.
-- Product Visual 첫 진입 안내는 Concept UI 설명 입력 위의 `CoachmarkBubble`로 표시하고, 사용자가 설명 입력 또는 AI chat prompt 복사를 시작하면 dismiss한다.
+- `reference` 모드는 archived 상태다. 기존 저장본이 `reference`를 가지고 있어도 런타임에서는 Concept UI scene처럼 렌더한다.
+- Concept UI scene spec은 Dashboard/Workspace/Builder/Modal 안에 optional reusable blocks를 받을 수 있다. `logicBlocks`, `instructionSections`, `reviewQueues`, `toolCallLists`는 if/else, policy, approval, tool/function call 단서에 따라 새 source/structure 선택지를 만들지 않고 삽입된다.
+- Product Visual 첫 진입은 저장 데이터에 샘플을 seed하지 않고, 왼쪽 preview에 Concept UI 샘플 대시보드만 placeholder로 보여준다.
 - 외부 AI chat으로 만든 Concept UI 답변은 서버 API 없이 클라이언트에서 JSON을 추출/검증한다. Studio SceneSpec과 다른 구조라도 archetype 의도가 명확하면 가장 가까운 지원 layout sample로 변환하고, table cell의 `kind`처럼 누락이 잦은 필드는 column 정보로 보정한다. 의도 자체를 알 수 없는 구조만 에러로 처리한다.
+- SceneSpec JSON 직접 import/export는 일반 Concept UI 플로우와 분리해 `Developer tools` 섹션에 둔다.
 
 ## 11. 환경 변수
 
 | 변수 | 설명 |
 |---|---|
 | `PEXELS_API_KEY` | Pexels 이미지 검색 |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 작업 스냅샷 저장/조회. Vercel Storage 연결 시 자동 주입 |
 
 ## 12. 운영 전환 체크리스트
 
 - `PEXELS_API_KEY` 설정 후 product image search 검증
+- Vercel Blob Store 연결 후 `BLOB_READ_WRITE_TOKEN`이 Production/Preview/Development에 주입됐는지 확인
 - Vercel protection 또는 인증 정책 적용
 - localStorage 저장 한계 테스트: 큰 screenshot, 다수 saved asset
 - 대표 템플릿별 PNG export QA: Desktop, Mobile, Blog, Release Thumbnail
@@ -197,7 +235,10 @@ Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 obje
 | 생성 validator | `validateScenario`, `validateSuggestions`가 malformed 응답을 drop하는지 확인 |
 | 저장/복원 | Save -> My files -> reopen 시 snapshot이 동일하게 복원되는지 확인 |
 | Autosave | Chat UI/Infographic에서 새로고침 후 draft가 복구되는지 확인 |
+| 작업 보존 | 자동 스냅샷 최근 5개 유지, Settings restore, backup file 저장 -> 불러오기 round-trip 확인 |
+| Blob 백업 | 토큰 없음 fallback, 3.5MB 초과 skip, local+remote 복원 목록 병합 확인 |
 | Export | 각 템플릿 대표 포맷 PNG가 지정 크기/@2x로 생성되는지 확인 |
+| Infographic limits | 블록별 item/text 상한이 에디터와 renderer 양쪽에서 적용되는지 확인 |
 | 업로드 | 배경 허용 타입/10MB 제한과 Product Visual 로컬 screenshot 처리 확인 |
 | 소스 입력 | URL-only 거부, 텍스트 붙여넣기 케이스 확인 |
 
@@ -216,7 +257,8 @@ Pexels 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 외부 obje
 | 생성 schema 검증 실패 | 사용 가능한 결과가 없으면 에러 표시 | validator에서 malformed item drop |
 | 이미지 업로드 실패 | 파일 타입/크기/업로드 실패 이유 표시 | 배경은 local filesystem, 스크린샷은 브라우저 local 처리 |
 | Pexels 이미지 CORS | export가 중단되지 않게 처리 | Pexels-only proxy 또는 export 전 data URL inline |
-| localStorage quota 초과 | 저장 실패 메시지 표시 | 큰 data URL 저장 최소화, 승인된 내부 저장소 검토 |
+| localStorage quota 초과 | 저장 실패 메시지 표시 | 큰 data URL 저장 최소화, Blob 보조 백업 병행 |
+| Blob 백업 실패 | 메인 작업 흐름에는 노출하지 않음 | 자동 스냅샷은 localStorage에 남기고 remote sync만 skip |
 | URL-only source 입력 | 텍스트 붙여넣기 안내 | 서버에서 URL fetch 금지 |
 | Export 실패 | 다운로드 실패 메시지 표시 | object URL cleanup, canvas ref null guard |
 

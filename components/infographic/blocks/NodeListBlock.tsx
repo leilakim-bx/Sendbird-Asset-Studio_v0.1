@@ -4,6 +4,7 @@ import {
   INFOGRAPHIC_INK_MUTED,
   INFOGRAPHIC_SERIF,
 } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = {
@@ -21,6 +22,7 @@ const ARROW = brand.color.inkMuted;
  * Each card shows a title with an inline tag chip and an optional description.
  */
 export function NodeListBlock({ block, scale = 1, format }: Props) {
+  const items = block.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.nodeListItems);
   const isBlog = format === "blog";
   const fs = (n: number) => Math.round(n * scale);
   const hubSize = Math.round((isBlog ? 88 : 120) * scale);
@@ -87,7 +89,7 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
       {/* Node cards — fixed-ish width (shrinks on the narrow blog canvas) so the
           whole hub → list group reads as a centered composition. */}
       <div style={{ flexShrink: 1, width: listWidth, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
-        {block.items.map((it, i) => (
+        {items.map((it, i) => (
           <div
             key={i}
             style={{

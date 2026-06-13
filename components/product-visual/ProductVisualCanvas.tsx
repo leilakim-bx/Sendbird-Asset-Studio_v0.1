@@ -4,19 +4,21 @@ import {
   FORMAT_MIN_HEIGHT,
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
+  PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED,
   isImageBgFormat,
   PRODUCT_VISUAL_SANS,
 } from "@/lib/types/product-visual";
-import { buildProductVisualConcept } from "@/lib/product-visual/concept-ui";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   CONCEPT_UI_CANVAS_HEIGHT,
   CONCEPT_UI_CANVAS_WIDTH,
 } from "@/lib/concept-ui/scene-tokens";
 import type { SceneSpec } from "@/lib/concept-ui/scene-spec";
-import { ConceptUIDisplay } from "./ConceptUIDisplay";
 import { ScreenshotDisplay } from "./ScreenshotDisplay";
 import { brand, brandPx } from "@/lib/tokens/brand";
+import dashboardStarterSpec from "@/lib/concept-ui/samples/dashboard-ai-actions.en.json";
+
+const CONCEPT_STARTER_SPEC = dashboardStarterSpec as SceneSpec;
 
 type Props = {
   content: ProductVisualContent;
@@ -123,7 +125,6 @@ function ConceptSceneDisplay({
  */
 export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const { format, bg, bgImage } = content;
-  const sourceMode = content.sourceMode ?? "screenshot";
 
   const size = FORMAT_SIZES[format];
   const W = size.w;
@@ -131,6 +132,11 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
   const minH = FORMAT_MIN_HEIGHT[format];
 
   const imageBg = isImageBgFormat(format);
+  const rawSourceMode = content.sourceMode ?? (imageBg ? "concept" : "screenshot");
+  const activeRawSourceMode =
+    rawSourceMode === "reference" && PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? "concept" : rawSourceMode;
+  const sourceMode = imageBg && activeRawSourceMode === "screenshot" ? "concept" : activeRawSourceMode;
+  const sceneSourceMode = sourceMode === "concept" || sourceMode === "reference";
   const conceptRenderedScreenshot =
     sourceMode === "concept" && content.conceptScene && content.screenshot
       ? screenshotForFormat(content)
@@ -139,11 +145,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
     sourceMode === "screenshot"
       ? screenshotForFormat(content)
       : conceptRenderedScreenshot;
-  const displayedConcept =
-    sourceMode === "concept" && !content.conceptScene
-      ? (content.concept ?? buildProductVisualConcept(content.title))
-      : undefined;
-  const displayedConceptScene = sourceMode === "concept" ? content.conceptScene : undefined;
+  const displayedConceptScene = sceneSourceMode ? content.conceptScene : undefined;
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
@@ -209,8 +211,8 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
           boxSizing: "border-box",
         }}
       >
-        {sourceMode === "concept" ? (
-          conceptRenderedScreenshot ? (
+        {sceneSourceMode ? (
+          sourceMode === "concept" && conceptRenderedScreenshot ? (
             <ScreenshotDisplay
               screenshot={conceptRenderedScreenshot}
               maxWidth={innerW}
@@ -225,8 +227,8 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
               maxHeight={contentH}
             />
           ) : (
-            <ConceptUIDisplay
-              concept={displayedConcept}
+            <ConceptSceneDisplay
+              spec={CONCEPT_STARTER_SPEC}
               maxWidth={innerW}
               maxHeight={contentH}
             />

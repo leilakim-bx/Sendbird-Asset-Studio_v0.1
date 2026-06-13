@@ -1,4 +1,5 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "stack" }>; scale?: number };
@@ -29,7 +30,12 @@ const CONNECTOR = brand.color.infographic.connector;
  */
 export function StackBlock({ block, scale = 1 }: Props) {
   const fs = (n: number) => Math.round(n * scale);
-  const layers = block.layers ?? [];
+  const layers = (block.layers ?? [])
+    .slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers)
+    .map((layer) => ({
+      ...layer,
+      cells: layer.cells?.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackCellsPerLayer),
+    }));
   const showConnectors = block.connectors !== false;
 
   return (

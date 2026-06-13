@@ -1,5 +1,6 @@
 import type { InfographicBlock } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_ACCENT_HEX } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { compactTrendAxisLabel, shouldShowTrendAxisLabel } from "@/lib/infographic-labels";
 import { brand } from "@/lib/tokens/brand";
 
@@ -29,7 +30,15 @@ function niceMax(v: number): number {
  * resolves it (presentation attributes don't always carry CSS variables).
  */
 export function LineChartBlock({ block }: Props) {
-  const { xLabels, seriesA, seriesB } = block;
+  const pointCount = Math.min(
+    INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints,
+    Math.max(block.xLabels.length, block.seriesA.values.length, block.seriesB?.values.length ?? 0),
+  );
+  const xLabels = block.xLabels.slice(0, pointCount);
+  const seriesA = { ...block.seriesA, values: block.seriesA.values.slice(0, pointCount) };
+  const seriesB = block.seriesB
+    ? { ...block.seriesB, values: block.seriesB.values.slice(0, pointCount) }
+    : undefined;
   const showFill = block.fill !== false;
 
   const allVals = [...seriesA.values, ...(seriesB?.values ?? [])].filter((v) => Number.isFinite(v));

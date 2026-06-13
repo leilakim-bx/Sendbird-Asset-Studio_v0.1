@@ -155,7 +155,8 @@ export function TableScene({ spec }: Props) {
             borderRadius: 24,
             border: `1px solid ${t.color.border}`,
             background: t.color.app,
-            overflow: "hidden",
+            overflow: "visible",
+            position: "relative",
           }}
         >
           <div

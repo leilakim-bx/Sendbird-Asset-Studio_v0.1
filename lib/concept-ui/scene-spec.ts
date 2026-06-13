@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type ConceptUiArchetype = "inbox" | "dashboard" | "builder" | "table" | "modal";
+export type ConceptUiArchetype = "inbox" | "dashboard" | "builder" | "table" | "modal" | "workspace";
 
 const slotId = z.string().trim().min(1).max(48);
 const shortText = z.string().trim().min(1).max(24);
@@ -8,6 +8,8 @@ const mediumText = z.string().trim().min(1).max(40);
 const titleText = z.string().trim().min(1).max(56);
 const bodyText = z.string().trim().min(1).max(160);
 const longBodyText = z.string().trim().min(1).max(220);
+const conditionText = z.string().trim().min(1).max(72);
+const blockToneSchema = z.enum(["neutral", "good", "warn", "ai"]);
 
 const aiCalloutSchema = z
   .object({
@@ -30,6 +32,95 @@ const modifiersSchema = z
   })
   .strict()
   .default({});
+
+const logicOutcomeSchema = z
+  .object({
+    label: shortText,
+    action: bodyText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const logicBlockSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    conditionLabel: shortText.default("IF"),
+    condition: conditionText,
+    description: bodyText.optional(),
+    outcomes: z.array(logicOutcomeSchema).min(2).max(3),
+  })
+  .strict();
+
+const logicBlocksSchema = z.array(logicBlockSchema).min(1).max(2).optional();
+
+const instructionSectionSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    eyebrow: shortText.optional(),
+    body: bodyText,
+    items: z
+      .array(
+        z
+          .object({
+            label: shortText,
+            text: bodyText,
+            tone: blockToneSchema.default("neutral"),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(4),
+    tags: z.array(shortText).min(1).max(3).optional(),
+  })
+  .strict();
+
+const reviewQueueSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    items: z
+      .array(
+        z
+          .object({
+            label: mediumText,
+            detail: bodyText,
+            status: shortText,
+            tone: blockToneSchema.default("neutral"),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(4),
+  })
+  .strict();
+
+const toolCallListSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText.optional(),
+    calls: z
+      .array(
+        z
+          .object({
+            name: shortText,
+            detail: bodyText,
+            status: shortText,
+            tone: blockToneSchema.default("neutral"),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(4),
+  })
+  .strict();
+
+const instructionSectionsSchema = z.array(instructionSectionSchema).min(1).max(2).optional();
+const reviewQueuesSchema = z.array(reviewQueueSchema).min(1).max(2).optional();
+const toolCallListsSchema = z.array(toolCallListSchema).min(1).max(2).optional();
 
 const inboxConversationSchema = z
   .object({
@@ -169,6 +260,10 @@ const dashboardSceneSpecSchema = z
             rows: z.array(tableRowSchema).min(3).max(6),
           })
           .strict(),
+        logicBlocks: logicBlocksSchema,
+        instructionSections: instructionSectionsSchema,
+        reviewQueues: reviewQueuesSchema,
+        toolCallLists: toolCallListsSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -261,6 +356,10 @@ const builderSceneSpecSchema = z
               .max(2),
           })
           .strict(),
+        logicBlocks: logicBlocksSchema,
+        instructionSections: instructionSectionsSchema,
+        reviewQueues: reviewQueuesSchema,
+        toolCallLists: toolCallListsSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -397,6 +496,64 @@ const modalSceneSpecSchema = z
               .max(2),
           })
           .strict(),
+        logicBlocks: logicBlocksSchema,
+        instructionSections: instructionSectionsSchema,
+        reviewQueues: reviewQueuesSchema,
+        toolCallLists: toolCallListsSchema,
+      })
+      .strict(),
+    modifiers: modifiersSchema,
+  })
+  .strict();
+
+const workspaceMessageSchema = z
+  .object({
+    author: z.enum(["user", "ai"]),
+    text: bodyText,
+  })
+  .strict();
+
+const workspaceSceneSpecSchema = z
+  .object({
+    archetype: z.literal("workspace"),
+    theme: z.literal("light"),
+    content: z
+      .object({
+        productName: mediumText,
+        title: titleText,
+        subtitle: bodyText,
+        filters: z.array(shortText).min(1).max(4),
+        editor: z
+          .object({
+            slotId,
+            eyebrow: shortText,
+            title: mediumText,
+            body: longBodyText,
+            keyPoints: z.array(bodyText).min(2).max(5),
+            tags: z.array(shortText).min(1).max(4),
+          })
+          .strict(),
+        preview: z
+          .object({
+            slotId,
+            title: mediumText,
+            emptyLabel: shortText,
+            cards: z.array(mediumText).min(2).max(4),
+          })
+          .strict(),
+        tester: z
+          .object({
+            slotId,
+            agentName: mediumText,
+            status: shortText,
+            messages: z.array(workspaceMessageSchema).min(1).max(4),
+            replies: z.array(mediumText).min(2).max(4),
+          })
+          .strict(),
+        logicBlocks: logicBlocksSchema,
+        instructionSections: instructionSectionsSchema,
+        reviewQueues: reviewQueuesSchema,
+        toolCallLists: toolCallListsSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -409,6 +566,7 @@ export const sceneSpecSchema = z.discriminatedUnion("archetype", [
   builderSceneSpecSchema,
   tableSceneSpecSchema,
   modalSceneSpecSchema,
+  workspaceSceneSpecSchema,
 ]);
 
 export type InboxSceneSpec = z.infer<typeof inboxSceneSpecSchema>;
@@ -416,7 +574,12 @@ export type DashboardSceneSpec = z.infer<typeof dashboardSceneSpecSchema>;
 export type BuilderSceneSpec = z.infer<typeof builderSceneSpecSchema>;
 export type TableSceneSpec = z.infer<typeof tableSceneSpecSchema>;
 export type ModalSceneSpec = z.infer<typeof modalSceneSpecSchema>;
+export type WorkspaceSceneSpec = z.infer<typeof workspaceSceneSpecSchema>;
 export type SceneSpec = z.infer<typeof sceneSpecSchema>;
+export type LogicBlockSpec = z.infer<typeof logicBlockSchema>;
+export type InstructionSectionSpec = z.infer<typeof instructionSectionSchema>;
+export type ReviewQueueSpec = z.infer<typeof reviewQueueSchema>;
+export type ToolCallListSpec = z.infer<typeof toolCallListSchema>;
 
 export function parseSceneSpec(input: unknown): SceneSpec {
   return sceneSpecSchema.parse(input);

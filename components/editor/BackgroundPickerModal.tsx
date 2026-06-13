@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TriangleAlert, ImageIcon } from "lucide-react";
+import { TriangleAlert, ImageIcon, Star } from "lucide-react";
 import { BACKGROUNDS, type Background, type BackgroundGroup } from "@/lib/backgrounds";
 
 const TABS: { key: "all" | BackgroundGroup; label: string }[] = [
@@ -9,6 +9,7 @@ const TABS: { key: "all" | BackgroundGroup; label: string }[] = [
   { key: "general",  label: "General" },
   { key: "brand",    label: "Brand themes" },
   { key: "industry", label: "Industry" },
+  { key: "everyday", label: "Everyday" },
 ];
 
 type Props = {
@@ -143,11 +144,17 @@ export function BackgroundPickerModal({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
+                {bg.usageBadge ? (
+                  <span className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-studio-border bg-studio-sidebar/90 px-1.5 py-1 text-[9px] font-semibold leading-none text-studio-text shadow-sm backdrop-blur-sm">
+                    <Star size={9} className="shrink-0" fill="currentColor" aria-hidden />
+                    <span className="truncate">{bg.usageBadge}</span>
+                  </span>
+                ) : null}
                 <span className="absolute bottom-0 inset-x-0 text-[10px] text-white font-medium px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent truncate text-left">
                   {bg.label}
                 </span>
                 {currentId === bg.id && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-studio-accent-fg font-bold leading-none">
+                  <span className="absolute top-1.5 left-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-studio-accent-fg font-bold leading-none">
                     ✓
                   </span>
                 )}

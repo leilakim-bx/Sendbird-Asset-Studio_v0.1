@@ -3,6 +3,7 @@
 import { Bot, CheckCircle2, GitBranch, PlayCircle, Zap } from "lucide-react";
 import type { BuilderSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
+import { hasReusableBlocks, ReusableBlockStack } from "../blocks/ReusableBlockCards";
 import { Card, DelightMark, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
@@ -42,12 +43,20 @@ function edgePath(
   return `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ey}, ${ex} ${ey}`;
 }
 
+function nodePopover(node: BuilderSceneSpec["content"]["canvas"]["nodes"][number]) {
+  const pos = nodePosition(node);
+  if (pos.left > STAGE_W - NODE_W - 260) return "left";
+  if (pos.top < 165) return "bottom";
+  return "top";
+}
+
 export function BuilderScene({ spec }: Props) {
   const { content } = spec;
   const callout = spec.modifiers.aiCallout;
   const cursor = spec.modifiers.cursor;
   const nodesById = new Map(content.canvas.nodes.map((node) => [node.id, node]));
   const selected = nodesById.get(content.selectedNode.nodeId) ?? content.canvas.nodes[0];
+  const hasBlocks = hasReusableBlocks(content);
 
   return (
     <Card
@@ -198,7 +207,7 @@ export function BuilderScene({ spec }: Props) {
                   id={node.slotId}
                   callout={callout}
                   cursor={cursor}
-                  popover="top"
+                  popover={nodePopover(node)}
                   style={{
                     position: "absolute",
                     left: pos.left,
@@ -269,26 +278,38 @@ export function BuilderScene({ spec }: Props) {
             </div>
           </div>
 
-          <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 13 }}>
-            {content.selectedNode.fields.map((field, index) => (
-              <div
-                key={`${index}-${field.label}`}
-                style={{
-                  borderRadius: 17,
-                  background: t.color.surface,
-                  border: `1px solid ${t.color.border}`,
-                  padding: 15,
-                }}
-              >
-                <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.faint }}>
-                  {field.label}
-                </EllipsisText>
-                <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 15, lineHeight: 1.35, color: t.color.text }}>
-                  {field.value}
-                </EllipsisText>
-              </div>
-            ))}
-          </div>
+          {hasBlocks ? (
+            <ReusableBlockStack
+              {...content}
+              callout={callout}
+              cursor={cursor}
+              compact
+              max={1}
+              popover="inline"
+              style={{ marginTop: 20, boxShadow: t.shadow.none }}
+            />
+          ) : (
+            <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 13 }}>
+              {content.selectedNode.fields.map((field, index) => (
+                <div
+                  key={`${index}-${field.label}`}
+                  style={{
+                    borderRadius: 17,
+                    background: t.color.surface,
+                    border: `1px solid ${t.color.border}`,
+                    padding: 15,
+                  }}
+                >
+                  <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.faint }}>
+                    {field.label}
+                  </EllipsisText>
+                  <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 15, lineHeight: 1.35, color: t.color.text }}>
+                    {field.value}
+                  </EllipsisText>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div style={{ marginTop: 22, display: "flex", gap: 10 }}>
             {content.selectedNode.actions.map((action, index) => (

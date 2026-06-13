@@ -1,25 +1,34 @@
 "use client";
 
-import { Bot, CheckCircle2, Layers3, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, Sparkles } from "lucide-react";
 import type { ModalSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
+import { hasReusableBlocks, ReusableBlockStack } from "../blocks/ReusableBlockCards";
 import { Card, EllipsisText, Pill, Slot } from "../primitives";
 
 type Props = {
   spec: ModalSceneSpec;
 };
 
-function backgroundLabel(type: ModalSceneSpec["content"]["background"]["type"]): string {
-  if (type === "builder") return "Workflow canvas";
-  if (type === "dashboard") return "Metric dashboard";
-  if (type === "table") return "Data grid";
-  return "Inbox workspace";
+function productEyebrow(value: string): string {
+  if (/pre[-\s]?filled/i.test(value)) return "Ready to review";
+  return value;
+}
+
+function productCallout(callout: ModalSceneSpec["modifiers"]["aiCallout"]) {
+  if (!callout) return undefined;
+  return {
+    ...callout,
+    label: /pre[-\s]?filled/i.test(callout.label) ? "Generated draft" : callout.label,
+  };
 }
 
 export function ModalScene({ spec }: Props) {
   const { content } = spec;
-  const callout = spec.modifiers.aiCallout;
+  const callout = productCallout(spec.modifiers.aiCallout);
   const cursor = spec.modifiers.cursor;
+  const hasBlocks = hasReusableBlocks(content);
+  const calloutOnModal = callout?.targetSlotId === content.modal.slotId;
 
   return (
     <div
@@ -27,11 +36,9 @@ export function ModalScene({ spec }: Props) {
         position: "relative",
         width: 1370,
         height: 790,
-        borderRadius: t.radius.lg,
+        borderRadius: t.radius.md,
         overflow: "hidden",
-        background: t.color.surface,
-        border: `1px solid ${t.color.border}`,
-        boxShadow: t.shadow.card,
+        background: t.color.page,
       }}
     >
       <div
@@ -39,64 +46,52 @@ export function ModalScene({ spec }: Props) {
         style={{
           position: "absolute",
           inset: 0,
-          padding: 34,
-          filter: "blur(4px)",
-          opacity: 0.22,
-          transform: "scale(1.02)",
+          overflow: "hidden",
+          background: t.color.surface,
         }}
       >
         <div
           style={{
-            height: 72,
-            borderRadius: 20,
-            background: t.color.app,
-            border: `1px solid ${t.color.border}`,
-            display: "flex",
-            alignItems: "center",
-            padding: "0 24px",
-            gap: 12,
+            position: "absolute",
+            inset: 58,
+            filter: "blur(7px)",
+            opacity: 0.12,
+            transform: "scale(1.02)",
           }}
         >
-          <Layers3 size={22} color={t.color.text} />
-          <EllipsisText style={{ fontSize: 23, fontWeight: 800, color: t.color.text }}>
-            {content.background.title}
-          </EllipsisText>
-          <Pill tone="neutral" style={{ marginLeft: "auto" }}>{backgroundLabel(content.background.type)}</Pill>
-        </div>
-        <div
-          style={{
-            marginTop: 24,
-            display: "grid",
-            gridTemplateColumns: content.background.type === "dashboard" ? "repeat(2, 1fr)" : "1fr 1fr 1fr",
-            gap: 18,
-          }}
-        >
-          {content.background.items.map((item, index) => (
+          <div
+            style={{
+              height: 54,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "0 10px",
+            }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: t.radius.sm, background: t.color.border }} />
+            <div style={{ width: 240, height: 18, borderRadius: t.radius.sm, background: t.color.border }} />
+            <div style={{ marginLeft: "auto", width: 120, height: 30, borderRadius: t.radius.sm, background: t.color.border }} />
+          </div>
+          <div style={{ marginTop: 42, display: "grid", gridTemplateColumns: "260px 1fr", gap: 36, minHeight: 0 }}>
             <div
-              key={`${index}-${item}`}
               style={{
-                minHeight: content.background.type === "dashboard" ? 170 : 230,
-                borderRadius: 24,
-                background: t.color.app,
-                border: `1px solid ${t.color.border}`,
-                padding: 24,
+                minHeight: 540,
+                padding: 10,
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
               }}
             >
-              <div
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
-                  background: index === 0 ? t.color.aiSoft : t.color.surface,
-                }}
-              />
-              <EllipsisText lines={2} style={{ marginTop: 18, fontSize: 22, fontWeight: 800, color: t.color.text }}>
-                {item}
-              </EllipsisText>
-              <div style={{ marginTop: 20, height: 12, width: "70%", borderRadius: 999, background: t.color.border }} />
-              <div style={{ marginTop: 12, height: 12, width: "48%", borderRadius: 999, background: t.color.border }} />
+              {content.background.items.slice(0, 5).map((item, index) => (
+                <div key={`${index}-${item}`} style={{ height: 54, borderRadius: t.radius.md, background: index === 0 ? t.color.aiSoft : t.color.app }} />
+              ))}
             </div>
-          ))}
+            <div style={{ padding: 10, display: "grid", gridTemplateRows: "repeat(4, 86px)", gap: 18 }}>
+              {content.background.items.slice(0, 4).map((item, index) => (
+                <div key={`${index}-${item}`} style={{ borderRadius: t.radius.md, background: t.color.app }} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -122,7 +117,7 @@ export function ModalScene({ spec }: Props) {
         <Card
           primaryPanel
           style={{
-            width: 820,
+            width: calloutOnModal ? 980 : 820,
             minHeight: 520,
             borderRadius: 30,
             boxShadow: t.shadow.modal,
@@ -133,11 +128,11 @@ export function ModalScene({ spec }: Props) {
             id={content.modal.slotId}
             callout={callout}
             cursor={cursor}
-            popover="right"
-            style={{ padding: 34, borderRadius: 30 }}
+            popover={calloutOnModal ? "inside-right" : "right"}
+            style={{ padding: 34, paddingRight: calloutOnModal ? 360 : 34, borderRadius: 30 }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18 }}>
-              <Pill tone={content.modal.kind === "ai-result" ? "ai" : "neutral"}>{content.modal.eyebrow}</Pill>
+              <Pill tone={content.modal.kind === "ai-result" ? "ai" : "neutral"}>{productEyebrow(content.modal.eyebrow)}</Pill>
               <div
                 style={{
                   width: 40,
@@ -160,34 +155,45 @@ export function ModalScene({ spec }: Props) {
               {content.modal.description}
             </EllipsisText>
 
-            <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 13 }}>
-              {content.modal.fields.map((field) => (
-                <Slot
-                  key={field.slotId}
-                  id={field.slotId}
-                  callout={callout}
-                  cursor={cursor}
-                  popover="left"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "145px 1fr",
-                    gap: 18,
-                    alignItems: "center",
-                    borderRadius: 16,
-                    background: t.color.surface,
-                    border: `1px solid ${t.color.border}`,
-                    padding: "15px 18px",
-                  }}
-                >
-                  <EllipsisText style={{ fontSize: 14, fontWeight: 800, color: t.color.faint }}>
-                    {field.label}
-                  </EllipsisText>
-                  <EllipsisText style={{ fontSize: 17, fontWeight: 800, color: t.color.text }}>
-                    {field.value}
-                  </EllipsisText>
-                </Slot>
-              ))}
-            </div>
+            {hasBlocks ? (
+              <ReusableBlockStack
+                {...content}
+                callout={callout}
+                cursor={cursor}
+                compact
+                max={1}
+                style={{ marginTop: 24, boxShadow: t.shadow.none }}
+              />
+            ) : (
+              <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 13 }}>
+                {content.modal.fields.map((field) => (
+                  <Slot
+                    key={field.slotId}
+                    id={field.slotId}
+                    callout={callout}
+                    cursor={cursor}
+                    popover="left"
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "145px 1fr",
+                      gap: 18,
+                      alignItems: "center",
+                      borderRadius: 16,
+                      background: t.color.surface,
+                      border: `1px solid ${t.color.border}`,
+                      padding: "15px 18px",
+                    }}
+                  >
+                    <EllipsisText style={{ fontSize: 14, fontWeight: 800, color: t.color.faint }}>
+                      {field.label}
+                    </EllipsisText>
+                    <EllipsisText style={{ fontSize: 17, fontWeight: 800, color: t.color.text }}>
+                      {field.value}
+                    </EllipsisText>
+                  </Slot>
+                ))}
+              </div>
+            )}
 
             <div style={{ marginTop: 30, display: "flex", justifyContent: "flex-end", gap: 12 }}>
               {content.modal.actions.map((action, index) => (

@@ -70,7 +70,7 @@ Chat 템플릿의 한 메시지는 `role`(user|bot) + `block`. 블록 6종:
 ## 4. 디자인 언어 (기존 Chat 템플릿 = 참고 기준)
 - 배경 이미지(라이프스타일/자연/브랜드/산업 사진) 위에 **글래스모피즘 카드**(반투명 흰색 + blur + 라운드 + 부드러운 그림자)를 얹는 비주얼.
 - 카드 안 텍스트는 검정 계열(#111), 보조 텍스트 회색(#8C867E), 강조 라임색 포인트.
-- 배경 라이브러리는 탭으로 분류: General(자연물) / Brand themes / Industry(Retail·B2B·Healthcare·On-demand·Financial services·Travel).
+- 배경 라이브러리는 탭으로 분류: General(자연물) / Brand themes / Industry(Retail·B2B·Healthcare·On-demand·Financial services·Travel) / Everyday(일상 속 인물·디바이스).
 
 ### 에디터 UI 테마 토큰 (다크 툴 UI — 이건 "에디터 껍데기" 색이고, export 결과물 색이 아님)
 ```

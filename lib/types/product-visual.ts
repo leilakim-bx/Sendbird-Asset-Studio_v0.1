@@ -6,6 +6,7 @@
 
 import type { SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { brand } from "@/lib/tokens/brand";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 
 export type ProductVisualFormat =
   | "feature-desktop"
@@ -26,7 +27,13 @@ export type ProductVisualBg =
   | "warmgray"
   | "dark";
 
-export type ProductVisualSourceMode = "screenshot" | "concept";
+export type ProductVisualSourceMode = "screenshot" | "concept" | "reference";
+
+/**
+ * Reference Rebuild is archived for now: the code path stays available for
+ * later quality work, but the marketer-facing Product Visual UI hides it.
+ */
+export const PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED = true;
 
 export type ProductVisualScreenshot = {
   /** Browser-local data URL for uploaded screenshots, or a built-in preview URL. */
@@ -83,7 +90,24 @@ export type ProductVisualConcept = {
   }[];
 };
 
+export type ProductVisualReferenceLayout =
+  | "auto"
+  | "workspace"
+  | "dashboard"
+  | "builder"
+  | "inbox"
+  | "table"
+  | "modal";
+
+export type ProductVisualReferenceRebuild = {
+  /** User-written description of what to rebuild from the temporary reference image. */
+  brief: string;
+  /** Optional structure override. The original reference image is not persisted. */
+  layout: ProductVisualReferenceLayout;
+};
+
 export type ProductVisualContent = {
+  schemaVersion: number;
   format: ProductVisualFormat;
   layout: ProductVisualLayout;
   bg: ProductVisualBg;
@@ -95,11 +119,19 @@ export type ProductVisualContent = {
   bgImage?: string;
   screenshot?: ProductVisualScreenshot;
   concept?: ProductVisualConcept;
+  reference?: ProductVisualReferenceRebuild;
   /** New deterministic Concept UI renderer spec. Used for starter/sample scenes. */
   conceptScene?: SceneSpec;
   title: string;
   subtitle?: string;
 };
+
+export function withProductVisualSchema(content: Omit<ProductVisualContent, "schemaVersion">): ProductVisualContent {
+  return {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
+    ...content,
+  };
+}
 
 /** Allowed layouts per format. `defaultContent` must satisfy this matrix. */
 export const FORMAT_LAYOUTS: Record<ProductVisualFormat, ProductVisualLayout[]> = {
@@ -180,6 +212,7 @@ export const PRODUCT_VISUAL_INK_MUTED = brand.color.productVisual.inkMuted;
  *  left undefined: the marketer uploads their own. */
 export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualContent, "screenshot">> = {
   "feature-desktop": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "feature-desktop",
     layout: "center",
     bg: "warmgray",
@@ -188,6 +221,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     subtitle: "Compare versions, roll back instantly, and ship with confidence.",
   },
   "feature-mobile": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "feature-mobile",
     layout: "text-top-fill",
     bg: "white",
@@ -196,6 +230,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     subtitle: "Create polished assets on the go.",
   },
   "release-thumbnail": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "release-thumbnail",
     layout: "side-by-side",
     bg: "warmgray",
@@ -203,6 +238,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     subtitle: "Manage all your AI agents in one workspace.",
   },
   "release-insert": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "release-insert",
     layout: "center",
     bg: "white",
@@ -210,6 +246,7 @@ export const FORMAT_DEFAULTS: Record<ProductVisualFormat, Omit<ProductVisualCont
     subtitle: "Track resolution, sentiment, and CSAT in real time.",
   },
   "blog": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "blog",
     layout: "center",
     bg: "stone",

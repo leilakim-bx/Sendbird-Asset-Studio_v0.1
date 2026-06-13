@@ -300,7 +300,7 @@ const modalCreateTicket = parseSceneSpec({
     modal: {
       slotId: "modal-ticket",
       kind: "form",
-      eyebrow: "AI pre-filled",
+      eyebrow: "Ready to review",
       title: "Convert to customer ticket",
       description: "Review the generated summary before creating the ticket in your helpdesk.",
       fields: [
@@ -317,8 +317,8 @@ const modalCreateTicket = parseSceneSpec({
   modifiers: {
     aiCallout: {
       targetSlotId: "modal-ticket",
-      label: "Pre-filled",
-      description: "AI extracts the subject, type, and priority from the conversation.",
+      label: "Generated draft",
+      description: "Pulls the subject, type, and priority from the conversation.",
     },
   },
 });
@@ -399,10 +399,59 @@ const modalAiResult = parseSceneSpec({
   },
 });
 
+const workspaceActionbookSettings = parseSceneSpec({
+  archetype: "workspace",
+  theme: "light",
+  content: {
+    productName: "delight.ai Workspace",
+    title: "Workspace settings",
+    subtitle: "Edit actionbooks, preview behavior, and test an AI agent in one workspace.",
+    filters: ["Messenger", "All countries", "Draft"],
+    editor: {
+      slotId: "workspace-editor",
+      eyebrow: "When to use",
+      title: "Cancel membership",
+      body: "Use this actionbook when a user asks to cancel their subscription or plan. Do not use it when the customer mentions a free plan.",
+      keyPoints: [
+        "Always apply the correction guide before processing each customer message.",
+        "If any function call fails, apologize and route the customer to a teammate.",
+        "Keep replies concise and confirm the customer intent before taking action.",
+      ],
+      tags: ["No action needed", "Policy checked"],
+    },
+    preview: {
+      slotId: "workspace-preview",
+      title: "Preview",
+      emptyLabel: "Preview",
+      cards: ["Trigger matched: cancel membership", "Policy check ready", "Tool action available"],
+    },
+    tester: {
+      slotId: "workspace-tester",
+      agentName: "AI agent",
+      status: "AI Agent-01",
+      messages: [
+        {
+          author: "ai",
+          text: "Welcome back, Johnny. I can help check your cancellation request and confirm the next step.",
+        },
+      ],
+      replies: ["Yes, continue.", "Can you check my refund?", "I need help with something else."],
+    },
+  },
+  modifiers: {
+    aiCallout: {
+      targetSlotId: "workspace-tester",
+      label: "Live test",
+      description: "The tester lets teams validate the actionbook before publishing it.",
+    },
+  },
+});
+
 export const conceptUiSamples: ConceptUiSample[] = [
   { id: "inbox-support-ticket", label: "Inbox - Support ticket", language: "en", spec: parseSceneSpec(inboxSupportTicket) },
   { id: "inbox-customer-context-ko", label: "Inbox - Customer context KR", language: "ko", spec: parseSceneSpec(inboxContextKo) },
   { id: "inbox-agent-action", label: "Inbox - Agent action", language: "en", spec: parseSceneSpec(inboxAgentAction) },
+  { id: "workspace-actionbook-settings", label: "Workspace - Actionbook settings", language: "en", spec: workspaceActionbookSettings },
   { id: "dashboard-csat", label: "Dashboard - CX metrics", language: "en", spec: parseSceneSpec(dashboardCsat) },
   { id: "dashboard-deflection-ko", label: "Dashboard - Deflection KR", language: "ko", spec: parseSceneSpec(dashboardDeflectionKo) },
   { id: "dashboard-ai-actions", label: "Dashboard - AI actions", language: "en", spec: parseSceneSpec(dashboardActions) },

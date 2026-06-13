@@ -9,9 +9,12 @@ import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { useWorkAutosnapshot } from "@/lib/use-work-autosnapshot";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { exportImage, exportSvgImage, captureThumbnail, type ExportedImage } from "@/lib/export";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
+import { WorkPreservationMenu } from "@/components/editor/WorkPreservationMenu";
 import type { InfographicTemplate } from "@/lib/template-registry";
 import type { InfographicContent, InfographicFormat } from "@/lib/types/infographic";
 import {
@@ -108,6 +111,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
   const content = infographicContent ?? template.defaultContent;
   const format = content.format;
+  useWorkAutosnapshot("infographic", template.id, content, ready);
+
+  function handleRestoreInfographic(next: InfographicContent) {
+    setInfographicContent(next);
+  }
 
   const productRef = useRef<HTMLDivElement>(null);
   const blogRef = useRef<HTMLDivElement>(null);
@@ -145,6 +153,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       const appName = content.title?.trim() || "Infographic";
       const asset: SavedAsset = {
+        schemaVersion: WORK_DATA_SCHEMA_VERSION,
         id:             `asset-${now}`,
         templateId:     template.id,
         appName,
@@ -488,7 +497,13 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <WorkPreservationMenu
+            kind="infographic"
+            templateId={template.id}
+            currentData={content}
+            onRestore={handleRestoreInfographic}
+          />
           <button
             onClick={() => setGuideOpen(true)}
             title="Open guide"
@@ -705,6 +720,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
 
         {/* Right: editing sidebar */}
         <InfographicSidebar
+          content={content}
           articleImages={articleImages}
           activeArticleImageId={activeArticleImageId}
           onSuggestArticleImages={handleSuggestArticleImages}

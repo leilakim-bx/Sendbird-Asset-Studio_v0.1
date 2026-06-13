@@ -56,23 +56,27 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       {
         title: "Choose the right template",
-        desc: "Use Chat UI for conversation mockups, Infographic for article or data visuals, and Product Visual when you already have a product screenshot to polish.",
+        desc: "Use Chat UI for conversation screenshots, Infographic for data or diagram images, and Product Visual for product screenshots or generated Concept UI mocks.",
       },
       {
-        title: "Start with source material",
-        desc: "Begin from a scenario, a full article, or an uploaded dashboard screenshot. The editor gives you a clean first draft, then you only adjust the details.",
+        title: "Start from the fastest input",
+        desc: "Pick a scenario, paste article/source text, upload a screenshot, or describe a product feature. Asset Studio gives you a draft you can polish.",
       },
       {
-        title: "Polish in the right sidebar",
-        desc: "Most edits live in the right panel: format, background, layout, title, text, blocks, and image selection. Advanced controls are optional.",
+        title: "Edit from the right panel",
+        desc: "Use the sidebar to change format, source, background, copy, blocks, crop, and export options. Start at the top and move down.",
       },
       {
         title: "Save or export",
-        desc: "Save keeps the asset in this browser's Recent Assets/Open asset list. Export downloads a clean PNG, usually at @2x for website-ready output.",
+        desc: "Save keeps an editable version in this browser. Export PNG downloads the final image for the website, blog, release note, or social post.",
       },
       {
-        title: "Local files are personal",
-        desc: "Saved assets are stored locally per browser and per device. They are meant as each marketer's personal working files; use Export PNG for the final file to share or publish.",
+        title: "Saved work is local",
+        desc: "Saved assets stay in this browser on this device. Use Export PNG when you need the file to share, review, or publish.",
+      },
+      {
+        title: "Ask design for missing pieces",
+        desc: "If you need a background image or a block that is not available in Asset Studio, please ask the design team.",
       },
     ],
   },
@@ -83,19 +87,19 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       {
         title: "Pick a scenario",
-        desc: "Start from a scenario card, open the full scenario library with +, or write a short prompt in Create with AI to generate a draft conversation.",
+        desc: "Choose a ready-made scenario, open the full library with +, or paste copy from Claude into Create with AI to turn it into message blocks.",
       },
       {
         title: "Edit the conversation",
-        desc: "Use Messages to revise each bubble. Add text, activity logs, product cards, action buttons, checklists, status chips, or itinerary blocks when needed.",
+        desc: "Use Messages to revise each bubble. Add text, activity logs, product cards, buttons, checklists, status chips, or itinerary blocks when the story needs them.",
       },
       {
-        title: "Set the scene",
-        desc: "Choose one of the six visible backgrounds or open the background library with +. Use Split for people photos and Center for simple scenery.",
+        title: "Choose the background",
+        desc: "Pick a visible background or open the library with +. Use General, Brand themes, Industry, or Everyday depending on the story.",
       },
       {
-        title: "Finish the frame",
-        desc: "Adjust the user profile, app name, and export size. Export Desktop or Mobile from the top export menu, or Save to keep it in this browser's Recent Assets.",
+        title: "Finish and export",
+        desc: "Adjust the profile, app name, layout, and export size. Export Desktop or Mobile from the top menu, or Save if you want to keep editing later.",
       },
     ],
   },
@@ -105,28 +109,28 @@ const GUIDE_SECTIONS: GuideSection[] = [
     icon: BarChart3,
     steps: [
       {
-        title: "Choose a format first",
-        desc: "Use Product feature for product, capabilities, and industry pages. Use Blog/Perspective for article images with a 664px-wide flexible height.",
+        title: "Start with the default orbit",
+        desc: "Infographic opens with an Orbit diagram because it works well for loops, systems, and product concepts. Use it as-is or change the block type.",
       },
       {
-        title: "Create from article",
-        desc: "Paste the article text, chart data, or image notes and click Generate images from source. Asset Studio will suggest 2-5 infographic images from the pasted content.",
+        title: "Choose the image format",
+        desc: "Use Product for fixed-size feature images. Use Blog when the image should fit into an article with flexible height.",
       },
       {
-        title: "Keep sources pasted",
-        desc: "URL import is disabled by security policy. Copy readable text from protected pages or internal docs into the source field instead.",
+        title: "Change the block when needed",
+        desc: "Use the Block list to switch between Orbit diagram, Big number, cards, charts, comparisons, steps, and other layouts. The fields below update to match the block.",
       },
       {
-        title: "Review each suggested image",
-        desc: "Open Article images, click an image to edit it, and use the checkbox to decide which images should be exported.",
+        title: "Create from source text",
+        desc: "For blog or article work, paste the article text, chart data, or notes and click Generate images from source. Review the suggested images before exporting.",
       },
       {
-        title: "Keep advanced edits optional",
-        desc: "Use Advanced settings only when you need to change presets, colors, backgrounds, chart variants, or detailed block values.",
+        title: "Polish only what matters",
+        desc: "Edit the title, footnote, labels, numbers, and block details in the sidebar. Use Advanced settings only for less common styling controls.",
       },
       {
-        title: "Export the set",
-        desc: "Save keeps the editable infographic locally in this browser. Export the current image, selected images, or all article images as PNG files at @2x.",
+        title: "Export one or many",
+        desc: "Export the current image, selected article images, or all generated article images as PNG files. Save keeps the editable version in this browser.",
       },
     ],
   },
@@ -137,19 +141,27 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       {
         title: "Pick where the image will be used",
-        desc: "Choose Product Feature, Product Release, or Blog from Format. Release thumbnail is fixed at 667×316; insert, blog, and mobile formats use flexible height.",
+        desc: "Choose the Format first: thumbnail, insert, blog, product feature, or mobile. This controls the preview size and export size.",
       },
       {
         title: "Choose Screenshot or Concept UI",
-        desc: "Screenshot starts from a real product capture. Concept UI creates a clean mock UI from a feature description when no finished screenshot exists yet.",
+        desc: "Use Concept UI for Product Feature formats. Use Screenshot for real product captures in release, insert, and blog formats.",
       },
       {
-        title: "If using Screenshot, upload and crop",
-        desc: "Upload a PNG, JPG, or WebP, then use Select key area to choose the feature area. Crop is best for thumbnails; Highlight is only for formats that support it.",
+        title: "For Screenshot, crop the key area",
+        desc: "Upload a PNG, JPG, or WebP, then select the important area. Crop works best for thumbnails; Highlight is only available in supported formats.",
       },
       {
-        title: "If using Concept UI, generate the scene",
-        desc: "Describe the feature, copy the prompt into Claude or Gemini, paste the AI reply back, then choose Hero crop for manual cropping or Floating panel for the main panel.",
+        title: "For Concept UI, use AI chat",
+        desc: "Describe the feature, copy the prompt for Claude or Gemini, paste the reply back into Asset Studio, then render the mock UI.",
+      },
+      {
+        title: "Choose the frame",
+        desc: "Use Hero crop when you want to choose the visible area yourself. Use Floating panel when the main product panel should sit cleanly on the background.",
+      },
+      {
+        title: "Use Settings only for recovery",
+        desc: "Open Settings when you need to restore a previous version, save a backup file, or load a backup. For normal editing and exporting, you can ignore it.",
       },
       {
         title: "Save or export",

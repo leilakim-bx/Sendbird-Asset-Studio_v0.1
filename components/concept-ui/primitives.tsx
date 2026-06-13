@@ -6,6 +6,7 @@ import { avatarPalette, conceptSceneTokens as t } from "@/lib/concept-ui/scene-t
 
 type AiCallout = NonNullable<SceneSpec["modifiers"]["aiCallout"]>;
 type CursorModifier = NonNullable<SceneSpec["modifiers"]["cursor"]>;
+export type SlotPopover = "right" | "left" | "top" | "bottom" | "inside-right" | "inline";
 
 export function truncate(value: string, max = 80): string {
   if (value.length <= max) return value;
@@ -184,7 +185,7 @@ export function Slot({
   highlighted?: boolean;
   children: ReactNode;
   style?: CSSProperties;
-  popover?: "right" | "left" | "top";
+  popover?: SlotPopover;
 }) {
   const active = callout?.targetSlotId === id;
   const cursorActive = cursor?.targetSlotId === id;
@@ -235,10 +236,17 @@ function CursorOverlay() {
   );
 }
 
-function AiPopover({ callout, popover }: { callout: AiCallout; popover: "right" | "left" | "top" }) {
+function AiPopover({ callout, popover }: { callout: AiCallout; popover: SlotPopover }) {
+  const inline = popover === "inline";
   const placement: CSSProperties =
     popover === "left"
       ? { right: "calc(100% + 18px)", top: 18 }
+      : popover === "inside-right"
+        ? { right: 20, top: 20 }
+      : popover === "bottom"
+        ? { left: 22, top: "calc(100% + 18px)" }
+      : popover === "inline"
+        ? {}
       : popover === "top"
         ? { left: 22, bottom: "calc(100% + 18px)" }
         : { left: "calc(100% + 18px)", top: 18 };
@@ -246,14 +254,16 @@ function AiPopover({ callout, popover }: { callout: AiCallout; popover: "right" 
   return (
     <div
       style={{
-        position: "absolute",
+        position: inline ? "relative" : "absolute",
         zIndex: 20,
-        width: 330,
-        borderRadius: 20,
+        width: inline ? "auto" : popover === "inside-right" ? 300 : 330,
+        maxWidth: "100%",
+        marginTop: inline ? 12 : undefined,
+        borderRadius: inline ? 16 : 20,
         border: `1px solid ${t.color.borderStrong}`,
         background: t.color.app,
-        boxShadow: t.shadow.float,
-        padding: 18,
+        boxShadow: inline ? t.shadow.none : t.shadow.float,
+        padding: inline ? 14 : 18,
         ...placement,
       }}
     >
@@ -263,27 +273,28 @@ function AiPopover({ callout, popover }: { callout: AiCallout; popover: "right" 
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 28,
-            height: 22,
+            width: inline ? 22 : 28,
+            height: inline ? 18 : 22,
             borderRadius: 7,
             background: t.color.ink,
             color: t.color.inverse,
-            fontSize: 13,
+            fontSize: inline ? 10 : 13,
             fontWeight: 800,
             letterSpacing: 0,
+            flex: "0 0 auto",
           }}
         >
           AI
         </span>
-        <EllipsisText style={{ fontSize: 24, fontWeight: 800, color: t.color.text }}>
+        <EllipsisText style={{ minWidth: 0, fontSize: inline ? 16 : 24, fontWeight: 800, color: t.color.text }}>
           {callout.label}
         </EllipsisText>
       </div>
       <EllipsisText
         lines={3}
         style={{
-          marginTop: 10,
-          fontSize: 20,
+          marginTop: inline ? 8 : 10,
+          fontSize: inline ? 13 : 20,
           lineHeight: 1.35,
           color: t.color.muted,
         }}

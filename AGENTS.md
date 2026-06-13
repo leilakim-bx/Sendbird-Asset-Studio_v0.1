@@ -19,6 +19,10 @@ Keep implementation and documentation aligned. If a change alters product scope,
 data flow, export behavior, storage, AI routes, or visual rules, update the
 relevant document in the same task.
 
+If a change alters any saved work data structure, it must also increment the
+work data `schemaVersion` and add the matching migration function in the same
+task.
+
 ## Token Boundaries
 
 - Generated asset render paths (Chat mockup, Infographic canvas/blocks,

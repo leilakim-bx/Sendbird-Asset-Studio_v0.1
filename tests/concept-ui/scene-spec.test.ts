@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
 import { longestStringFixtures } from "@/lib/concept-ui/longest-fixtures";
 import { conceptUiSamples } from "@/lib/concept-ui/samples";
 import { parseSceneSpec, sceneSpecSchema } from "@/lib/concept-ui/scene-spec";
 
 describe("SceneSpec", () => {
-  it("bundles 15 concept UI samples across five archetypes", () => {
-    expect(conceptUiSamples).toHaveLength(15);
+  it("bundles 16 concept UI samples across six archetypes", () => {
+    expect(conceptUiSamples).toHaveLength(16);
     expect(new Set(conceptUiSamples.map((sample) => sample.spec.archetype))).toEqual(
-      new Set(["inbox", "dashboard", "builder", "table", "modal"]),
+      new Set(["inbox", "dashboard", "builder", "table", "modal", "workspace"]),
     );
   });
 
@@ -18,10 +19,79 @@ describe("SceneSpec", () => {
   });
 
   it("parses max-length Korean fixtures for every archetype", () => {
-    expect(longestStringFixtures).toHaveLength(5);
+    expect(longestStringFixtures).toHaveLength(6);
     for (const fixture of longestStringFixtures) {
       expect(() => parseSceneSpec(fixture.spec)).not.toThrow();
     }
+  });
+
+  it("recovers malformed workspace replies to the workspace kit", () => {
+    const result = parseLlmSceneSpecResponse(JSON.stringify({
+      layout: "workspace settings",
+      content: {
+        title: "Workspace settings",
+      },
+    }));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.spec.archetype).toBe("workspace");
+    }
+  });
+
+  it("parses reusable blocks inside supported scene kits", () => {
+    const spec = structuredClone(conceptUiSamples.find((sample) => sample.spec.archetype === "dashboard")!.spec);
+    if (spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    spec.content.logicBlocks = [
+      {
+        slotId: "logic-error-path",
+        title: "Error path",
+        conditionLabel: "IF",
+        condition: "context_status == error",
+        description: "Show condition on top and branch outcomes below.",
+        outcomes: [
+          { label: "When true", action: "Ask for missing context before running lookup.", tone: "warn" },
+          { label: "Otherwise", action: "Continue with normal intent clarification.", tone: "good" },
+        ],
+      },
+    ];
+    spec.content.instructionSections = [
+      {
+        slotId: "instruction-policy",
+        title: "Agent guidance",
+        eyebrow: "Guide",
+        body: "Plain-language guidance keeps variables and anchors readable in product UI.",
+        items: [
+          { label: "When to use", text: "Apply only when the matching intent is active.", tone: "neutral" },
+          { label: "Variables", text: "Expose template variables as editable UI tokens.", tone: "ai" },
+        ],
+        tags: ["Editable"],
+      },
+    ];
+    spec.content.reviewQueues = [
+      {
+        slotId: "review-queue",
+        title: "Human review",
+        summary: "Review rows show why an action needs approval.",
+        items: [
+          { label: "Policy risk", detail: "Needs lead review before sending.", status: "Review", tone: "warn" },
+          { label: "Safe path", detail: "Low-risk actions can continue.", status: "Ready", tone: "good" },
+        ],
+      },
+    ];
+    spec.content.toolCallLists = [
+      {
+        slotId: "tool-calls",
+        title: "Tool calls",
+        summary: "Function calls are visible as readable steps.",
+        calls: [
+          { name: "order_lookup", detail: "Fetch the current order state.", status: "Ready", tone: "ai" },
+          { name: "route_result", detail: "Route the result to the next branch.", status: "Next", tone: "good" },
+        ],
+      },
+    ];
+
+    expect(() => parseSceneSpec(spec)).not.toThrow();
   });
 
   it("keeps builder sample node bodies from overlapping", () => {

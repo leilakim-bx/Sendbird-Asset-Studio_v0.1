@@ -42,15 +42,15 @@ export function BlockRenderer({
     case "bar-group":
       return <BarGroupBlock block={block} scale={scale} maxHeight={maxHeight} />;
     case "stacked-bar":
-      return <StackedBarBlock block={block} scale={scale} maxHeight={maxHeight} />;
+      return <StackedBarBlock block={block} scale={scale} maxHeight={maxHeight} format={format} />;
     case "step":
-      return <StepBlock block={block} scale={scale} />;
+      return <StepBlock block={block} scale={scale} format={format} />;
     case "stack":
       return <StackBlock block={block} scale={scale} />;
     case "node-list":
       return <NodeListBlock block={block} scale={scale} format={format} />;
     case "compare":
-      return <CompareBlock block={block} scale={scale} />;
+      return <CompareBlock block={block} scale={scale} format={format} />;
     case "line-chart":
       return <LineChartBlock block={block} />;
     case "orbit":

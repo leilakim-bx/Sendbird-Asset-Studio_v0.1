@@ -158,6 +158,28 @@ function longestModal(): SceneSpec {
   return parseSceneSpec(spec);
 }
 
+function longestWorkspace(): SceneSpec {
+  const spec = firstSample("workspace");
+  if (spec.archetype !== "workspace") throw new Error("Expected workspace");
+  fillCommon(spec);
+  spec.content.filters = spec.content.filters.map(() => ko(24));
+  spec.content.editor.eyebrow = ko(24);
+  spec.content.editor.title = ko(40);
+  spec.content.editor.body = ko(220);
+  spec.content.editor.keyPoints = spec.content.editor.keyPoints.map(() => ko(160));
+  spec.content.editor.tags = spec.content.editor.tags.map(() => ko(24));
+  spec.content.preview.title = ko(40);
+  spec.content.preview.emptyLabel = ko(24);
+  spec.content.preview.cards = spec.content.preview.cards.map(() => ko(40));
+  spec.content.tester.agentName = ko(40);
+  spec.content.tester.status = ko(24);
+  spec.content.tester.messages.forEach((message) => {
+    message.text = ko(160);
+  });
+  spec.content.tester.replies = spec.content.tester.replies.map(() => ko(40));
+  return parseSceneSpec(spec);
+}
+
 export const longestStringFixtures: { id: string; label: string; spec: SceneSpec }[] = conceptUiArchetypes.map((archetype) => {
   const specByArchetype = {
     inbox: longestInbox,
@@ -165,6 +187,7 @@ export const longestStringFixtures: { id: string; label: string; spec: SceneSpec
     builder: longestBuilder,
     table: longestTable,
     modal: longestModal,
+    workspace: longestWorkspace,
   } satisfies Record<ConceptUiArchetype, () => SceneSpec>;
   return {
     id: `${archetype}-longest-ko`,

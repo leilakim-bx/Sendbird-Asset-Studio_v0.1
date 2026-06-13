@@ -7,12 +7,14 @@ import { DashboardScene } from "./archetypes/DashboardScene";
 import { InboxScene } from "./archetypes/InboxScene";
 import { ModalScene } from "./archetypes/ModalScene";
 import { TableScene } from "./archetypes/TableScene";
+import { WorkspaceScene } from "./archetypes/WorkspaceScene";
 
 function renderScene(spec: SceneSpec) {
   if (spec.archetype === "inbox") return <InboxScene spec={spec} />;
   if (spec.archetype === "dashboard") return <DashboardScene spec={spec} />;
   if (spec.archetype === "builder") return <BuilderScene spec={spec} />;
   if (spec.archetype === "table") return <TableScene spec={spec} />;
+  if (spec.archetype === "workspace") return <WorkspaceScene spec={spec} />;
   return <ModalScene spec={spec} />;
 }
 

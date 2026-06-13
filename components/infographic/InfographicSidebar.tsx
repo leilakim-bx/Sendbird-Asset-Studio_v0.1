@@ -25,6 +25,7 @@ import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor"
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
 import { useOnceFlag } from "@/lib/use-once-flag";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { Section } from "./sidebar/Section";
 import { BlockEditor } from "./sidebar/BlockEditor";
 import { InfographicCanvas } from "./InfographicCanvas";
@@ -60,6 +61,7 @@ const TYPE_OPTIONS: { id: BlockLibraryId; label: string; description: string }[]
 
 const BLOCK_PREVIEW_CONTENT = {
   stat: {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -76,6 +78,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "kpi-group": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -94,6 +97,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "single-card": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -112,6 +116,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "card-grid": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -129,6 +134,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "bar-group": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -152,6 +158,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "column-chart": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -189,6 +196,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "stacked-bar": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -210,6 +218,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   compare: {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -231,6 +240,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   step: {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -248,6 +258,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "line-chart": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -265,6 +276,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   "node-list": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -284,6 +296,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   stack: {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -314,6 +327,7 @@ const BLOCK_PREVIEW_CONTENT = {
     ],
   },
   orbit: {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
     bg: "warmgray",
     accent: "lime",
@@ -520,8 +534,8 @@ function InfographicMiniThumb({
   );
 }
 
-function BlockPreviewThumb({ type }: { type: BlockLibraryId }) {
-  return <InfographicMiniThumb content={BLOCK_PREVIEW_CONTENT[type]} />;
+function BlockPreviewThumb({ type, className }: { type: BlockLibraryId; className?: string }) {
+  return <InfographicMiniThumb content={BLOCK_PREVIEW_CONTENT[type]} className={className} />;
 }
 
 function BlockTypeCard({
@@ -617,24 +631,53 @@ function BlockTypeSelector({
   onChange: (type: BlockLibraryId) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const current = TYPE_OPTIONS.find((item) => item.id === value);
+  const currentIndex = Math.max(0, TYPE_OPTIONS.findIndex((item) => item.id === value));
+  const visibleOptions = Array.from({ length: 3 }, (_, index) => TYPE_OPTIONS[(currentIndex + index) % TYPE_OPTIONS.length]);
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full rounded-xl border border-studio-border bg-studio-sidebar p-2 text-left transition-colors hover:border-studio-muted hover:bg-studio-hover focus:outline-none focus:ring-1 focus:ring-studio-accent"
-      >
-        <BlockPreviewThumb type={value} />
-        <span className="mt-2 flex items-center justify-between gap-3">
-          <span className="min-w-0">
-            <span className="block truncate text-[12px] font-semibold text-studio-text">{current?.label ?? "Select block"}</span>
-            <span className="mt-0.5 block text-[10.5px] leading-snug text-studio-muted">{current?.description ?? "Choose a visual block"}</span>
-          </span>
-          <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-medium text-studio-text">Change</span>
-        </span>
-      </button>
+      <div className="space-y-2 rounded-xl border border-studio-border bg-studio-sidebar p-2">
+        {visibleOptions.map((option) => {
+          const active = option.id === value;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => {
+                if (!active) onChange(option.id);
+              }}
+              aria-pressed={active}
+              className={[
+                "flex w-full items-center gap-2 rounded-lg border p-1.5 text-left transition-colors focus:outline-none focus:ring-1 focus:ring-studio-accent",
+                active
+                  ? "border-studio-accent bg-white/[0.04]"
+                  : "border-studio-border bg-studio-bg hover:border-studio-muted hover:bg-white/[0.04]",
+              ].join(" ")}
+            >
+              <BlockPreviewThumb type={option.id} className="w-[92px] shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate text-[12px] font-semibold text-studio-text">{option.label}</span>
+                  {active ? (
+                    <span className="shrink-0 rounded-[5px] bg-studio-accent px-1.5 py-0.5 text-[9px] font-semibold text-black">
+                      Selected
+                    </span>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 line-clamp-2 block text-[10.5px] leading-snug text-studio-muted">{option.description}</span>
+              </span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-studio-border px-3 py-2 text-[11px] font-medium text-studio-muted transition-colors hover:border-studio-accent hover:text-studio-accent focus:outline-none focus:ring-1 focus:ring-studio-accent"
+        >
+          <Plus size={12} />
+          Browse all blocks
+        </button>
+      </div>
       {open && (
         <BlockLibraryModal
           value={value}
@@ -852,6 +895,12 @@ function makeColumnChartBlock(id: string, rows?: PortableRow[]): Extract<Infogra
   };
 }
 
+function previewBlockFor(libraryId: BlockLibraryId, id: string): InfographicBlock | undefined {
+  const [previewBlock] = BLOCK_PREVIEW_CONTENT[libraryId].blocks;
+  if (!previewBlock) return undefined;
+  return { ...structuredClone(previewBlock), id };
+}
+
 function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?: string): InfographicBlock {
   const type = libraryBlockType(libraryId);
 
@@ -891,6 +940,10 @@ function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?
   const rows = portableRows(block);
   const unit = inferSharedUnit(rows);
   const id = createBlock(type).id;
+
+  if (libraryId === "orbit") {
+    return previewBlockFor(libraryId, id) ?? createBlock(type);
+  }
 
   switch (type) {
     case "stat": {
@@ -1351,12 +1404,14 @@ const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
 
 export function InfographicSidebar({
+  content: fallbackContent,
   articleImages,
   activeArticleImageId,
   onSuggestArticleImages,
   onSelectArticleImage,
   onToggleArticleImage,
 }: {
+  content: InfographicContent;
   articleImages: ArticleImageCandidate[];
   activeArticleImageId: string | null;
   onSuggestArticleImages: (source: string) => Promise<{ count: number; notice: string }>;
@@ -1364,7 +1419,7 @@ export function InfographicSidebar({
   onToggleArticleImage: (id: string) => void;
 }) {
   const {
-    infographicContent: content,
+    infographicContent: storeContent,
     setInfographicContent,
     setInfographicFormat,
     setInfographicAccent,
@@ -1372,6 +1427,7 @@ export function InfographicSidebar({
     setInfographicFootnote,
     setInfographicShowTitle,
   } = useEditorStore();
+  const content = storeContent ?? fallbackContent;
 
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -1382,8 +1438,6 @@ export function InfographicSidebar({
   const [sourceLoading, setSourceLoading] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [showSourceCoach, dismissSourceCoach] = useOnceFlag("coach-infographic-source-v1");
-
-  if (!content) return null;
 
   async function handleSuggestImages() {
     const text = article.trim();

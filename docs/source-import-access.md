@@ -6,7 +6,7 @@ Asset Studio can generate infographic image candidates from pasted article text,
 
 The studio does not import arbitrary URLs. Server-side fetching of public articles, protected pages, or shared links is disabled by security policy.
 
-Allowed external network usage is limited to Pexels image search and Pexels image CDN loading.
+Allowed external network usage is limited to Pexels image search, Pexels image CDN loading, and approved Vercel Blob work backups.
 
 ## Recommended Source Inputs
 

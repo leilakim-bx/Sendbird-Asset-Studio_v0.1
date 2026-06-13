@@ -1,4 +1,5 @@
 import { brand } from "@/lib/tokens/brand";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 
 // ── Infographic data model ────────────────────────────────
 // Content model for the "infographic" template. Flat/branded visual
@@ -171,6 +172,7 @@ export type InfographicBg = "sky" | "stone" | "warmgray";
 export type InfographicAccent = "lime" | "blue" | "red" | "green";
 
 export type InfographicContent = {
+  schemaVersion: number;
   format: InfographicFormat;
   bg: InfographicBg;
   accent: InfographicAccent;
@@ -181,6 +183,13 @@ export type InfographicContent = {
   showTitle?: boolean;
   blocks: InfographicBlock[];
 };
+
+export function withInfographicSchema(content: Omit<InfographicContent, "schemaVersion">): InfographicContent {
+  return {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
+    ...content,
+  };
+}
 
 // ── Palette maps (used by the renderer in a later step) ───
 

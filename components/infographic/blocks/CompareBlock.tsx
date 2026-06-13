@@ -1,8 +1,13 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
+import { compareMaxRows } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
-type Props = { block: Extract<InfographicBlock, { type: "compare" }>; scale?: number };
+type Props = {
+  block: Extract<InfographicBlock, { type: "compare" }>;
+  scale?: number;
+  format?: InfographicFormat;
+};
 
 const CARD_BG = brand.color.infographic.paper;
 const HAIRLINE = brand.color.infographic.grid;
@@ -16,8 +21,9 @@ const CHIP_BG = brand.color.infographic.chip;
  * table with row labels. Column B can be highlighted (black) as the "new/better"
  * side. Column names sit in rounded chips.
  */
-export function CompareBlock({ block, scale = 1 }: Props) {
-  const { columnA, columnB, rows, highlightB } = block;
+export function CompareBlock({ block, scale = 1, format }: Props) {
+  const { columnA, columnB, highlightB } = block;
+  const rows = block.rows.slice(0, compareMaxRows(format ?? "blog"));
   const layout = block.layout ?? "cards";
   const fs = (n: number) => Math.round(n * scale);
 

@@ -3,7 +3,13 @@
 import type { ReactNode } from "react";
 import { ChevronDown, Plus, X, Lightbulb } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
-import { BAR_COLUMNS_MAX_ITEMS, STEP_MAX_ITEMS_PRODUCT } from "@/lib/infographic-block-limits";
+import {
+  INFOGRAPHIC_BLOCK_LIMITS,
+  cardGridBodyMaxChars,
+  compareMaxRows,
+  stackedBarMaxRows,
+  stepMaxItems,
+} from "@/lib/infographic-block-limits";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
 import type { InfographicBlock, InfographicFormat, OrbitIconKey } from "@/lib/types/infographic";
 
@@ -87,15 +93,6 @@ type EditorProps = {
   format: InfographicFormat;
 };
 
-/** Max compare rows in the fixed-height Product format (Blog has free height). */
-const MAX_COMPARE_ROWS_PRODUCT = 6;
-
-/** Hub title sits on one (nowrap) line under the logo — cap it so a long title
- *  never spills past the hub column / canvas edge. ~"AI is brand equity". */
-const MAX_HUB_TITLE = 18;
-
-const MAX_CARD_GRID_CARDS = 4;
-const MAX_ORBIT_LABEL = 20;
 const ORBIT_ICON_OPTIONS: Array<{ key: OrbitIconKey; label: string }> = [
   { key: "mobile", label: "Mobile" },
   { key: "chat", label: "Chat" },
@@ -239,7 +236,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               />
             </ItemCard>
           ))}
-          {b.items.length < 4 && (
+          {b.items.length < INFOGRAPHIC_BLOCK_LIMITS.kpiItems && (
             <AddRow onClick={() => setItems([...b.items, { number: "00", label: "Label" }])}>Add KPI</AddRow>
           )}
         </>
@@ -248,14 +245,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
 
     case "card-grid": {
       const b = block;
-      const rawCards = b.cards.slice(0, MAX_CARD_GRID_CARDS);
+      const rawCards = b.cards.slice(0, INFOGRAPHIC_BLOCK_LIMITS.cardGridCards);
       const badgesEnabled = rawCards.some((card) => !!card.badge?.trim());
       const cards = rawCards.map((card, i) => ({
         ...card,
         badge: badgesEnabled ? card.badge?.trim() || `Panel ${i + 1}` : "",
       }));
-      const bodyMaxLength = cards.length === 1 ? 320 : 170;
-      const setCards = (next: typeof b.cards) => onChange({ ...b, cards: next.slice(0, MAX_CARD_GRID_CARDS) });
+      const bodyMaxLength = cardGridBodyMaxChars(cards.length);
+      const setCards = (next: typeof b.cards) => onChange({ ...b, cards: next.slice(0, INFOGRAPHIC_BLOCK_LIMITS.cardGridCards) });
       const setBadgesEnabled = (enabled: boolean) =>
         setCards(
           cards.map((card, i) => ({
@@ -283,7 +280,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               <input
                 className={inputCls + " mb-1.5"}
                 placeholder="Title"
-                maxLength={48}
+                maxLength={INFOGRAPHIC_BLOCK_LIMITS.cardGridTitleChars}
                 value={card.title}
                 onChange={(e) =>
                   setCards(cards.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))
@@ -302,7 +299,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                 <input
                   className={inputCls + " mt-1.5"}
                   placeholder="Badge"
-                  maxLength={18}
+                  maxLength={INFOGRAPHIC_BLOCK_LIMITS.cardGridBadgeChars}
                   value={card.badge ?? ""}
                   onChange={(e) =>
                     setCards(cards.map((x, j) => (j === i ? { ...x, badge: e.target.value } : x)))
@@ -311,7 +308,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               )}
             </ItemCard>
           ))}
-          {cards.length < MAX_CARD_GRID_CARDS && (
+          {cards.length < INFOGRAPHIC_BLOCK_LIMITS.cardGridCards && (
             <AddRow
               onClick={() =>
                 setCards([
@@ -336,12 +333,12 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const variant = b.variant ?? "bars";
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
       const setItems = (items: typeof b.items) => onChange({ ...b, items });
-      const editableItems = variant === "columns" ? b.items.slice(0, BAR_COLUMNS_MAX_ITEMS) : b.items;
-      const columnsAtLimit = variant === "columns" && b.items.length >= BAR_COLUMNS_MAX_ITEMS;
+      const editableItems = variant === "columns" ? b.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.barColumnsItems) : b.items;
+      const columnsAtLimit = variant === "columns" && b.items.length >= INFOGRAPHIC_BLOCK_LIMITS.barColumnsItems;
       const setVariant = (nextVariant: NonNullable<typeof b.variant>) => {
         set({
           variant: nextVariant,
-          items: nextVariant === "columns" ? b.items.slice(0, BAR_COLUMNS_MAX_ITEMS) : b.items,
+          items: nextVariant === "columns" ? b.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.barColumnsItems) : b.items,
         });
       };
       return (
@@ -478,7 +475,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               setItems([...editableItems, { label: "Row", valueA: 50, valueB: 50 }]);
             }}
             disabled={columnsAtLimit}
-            title={columnsAtLimit ? `Columns can have up to ${BAR_COLUMNS_MAX_ITEMS} items.` : undefined}
+            title={columnsAtLimit ? `Columns can have up to ${INFOGRAPHIC_BLOCK_LIMITS.barColumnsItems} items.` : undefined}
           >
             {variant === "split" ? "Add segment" : variant === "columns" ? "Add column" : "Add bar"}
           </AddRow>
@@ -488,11 +485,11 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
 
     case "step": {
       const b = block;
-      const productLimited = format === "product";
-      const editableItems = productLimited ? b.items.slice(0, STEP_MAX_ITEMS_PRODUCT) : b.items;
-      const stepsAtLimit = productLimited && b.items.length >= STEP_MAX_ITEMS_PRODUCT;
+      const maxSteps = stepMaxItems(format);
+      const editableItems = b.items.slice(0, maxSteps);
+      const stepsAtLimit = b.items.length >= maxSteps;
       const setItems = (items: typeof b.items) =>
-        onChange({ ...b, items: productLimited ? items.slice(0, STEP_MAX_ITEMS_PRODUCT) : items });
+        onChange({ ...b, items: items.slice(0, maxSteps) });
       return (
         <>
           {editableItems.map((it, i) => (
@@ -525,7 +522,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               setItems([...editableItems, { title: "Step", desc: "" }]);
             }}
             disabled={stepsAtLimit}
-            title={stepsAtLimit ? `Product feature steps can have up to ${STEP_MAX_ITEMS_PRODUCT} items.` : undefined}
+            title={stepsAtLimit ? `${format === "product" ? "Product feature" : "Blog"} steps can have up to ${maxSteps} items.` : undefined}
           >
             Add step
           </AddRow>
@@ -535,9 +532,9 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
 
     case "stack": {
       const b = block;
-      const layers = b.layers ?? [];
+      const layers = (b.layers ?? []).slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers);
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
-      const setLayers = (next: typeof layers) => onChange({ ...b, layers: next });
+      const setLayers = (next: typeof layers) => onChange({ ...b, layers: next.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers) });
       const patchLayer = (i: number, patch: Partial<(typeof layers)[number]>) =>
         setLayers(layers.map((x, k) => (k === i ? { ...x, ...patch } : x)));
       const patchCell = (i: number, j: number, patch: { title?: string; desc?: string }) =>
@@ -549,7 +546,8 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       return (
         <>
           {layers.map((layer, i) => {
-            const cells = layer.cells ?? [];
+            const cells = (layer.cells ?? []).slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackCellsPerLayer);
+            const cellsAtLimit = cells.length >= INFOGRAPHIC_BLOCK_LIMITS.stackCellsPerLayer;
             return (
               <ItemCard key={i} idx={i} onRemove={() => setLayers(layers.filter((_, k) => k !== i))}>
                 <input
@@ -602,11 +600,30 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                     />
                   </div>
                 ))}
-                <AddRow onClick={() => patchLayer(i, { cells: [...cells, { title: "Item" }] })}>Add cell</AddRow>
+                <AddRow
+                  onClick={() => {
+                    if (cellsAtLimit) return;
+                    patchLayer(i, { cells: [...cells, { title: "Item" }] });
+                  }}
+                  disabled={cellsAtLimit}
+                  title={cellsAtLimit ? `Layers can have up to ${INFOGRAPHIC_BLOCK_LIMITS.stackCellsPerLayer} cells.` : undefined}
+                >
+                  Add cell
+                </AddRow>
               </ItemCard>
             );
           })}
-          <AddRow onClick={() => setLayers([...layers, { title: "Layer", cells: [] }])}>Add layer</AddRow>
+          <AddRow
+            onClick={() => setLayers([...layers, { title: "Layer", cells: [] }])}
+            disabled={layers.length >= INFOGRAPHIC_BLOCK_LIMITS.stackLayers}
+            title={
+              layers.length >= INFOGRAPHIC_BLOCK_LIMITS.stackLayers
+                ? `Layer diagrams can have up to ${INFOGRAPHIC_BLOCK_LIMITS.stackLayers} layers.`
+                : undefined
+            }
+          >
+            Add layer
+          </AddRow>
           <label className="flex items-center gap-2 mt-2.5 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
             <input
               type="checkbox"
@@ -631,45 +648,56 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
     case "node-list": {
       const b = block;
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
-      const setItems = (items: typeof b.items) => onChange({ ...b, items });
+      const items = b.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.nodeListItems);
+      const setItems = (next: typeof b.items) => onChange({ ...b, items: next.slice(0, INFOGRAPHIC_BLOCK_LIMITS.nodeListItems) });
       return (
         <>
-          <Field label={`Hub title (max ${MAX_HUB_TITLE})`}>
+          <Field label={`Hub title (max ${INFOGRAPHIC_BLOCK_LIMITS.hubTitleChars})`}>
             <input
               className={inputCls}
               value={b.hubTitle}
-              maxLength={MAX_HUB_TITLE}
+              maxLength={INFOGRAPHIC_BLOCK_LIMITS.hubTitleChars}
               onChange={(e) => set({ hubTitle: e.target.value })}
             />
           </Field>
           <Field label="Hub subtitle">
             <input className={inputCls} value={b.hubSub ?? ""} onChange={(e) => set({ hubSub: e.target.value })} />
           </Field>
-          {b.items.map((it, i) => (
-            <ItemCard key={i} idx={i} onRemove={() => setItems(b.items.filter((_, j) => j !== i))}>
+          {items.map((it, i) => (
+            <ItemCard key={i} idx={i} onRemove={() => setItems(items.filter((_, j) => j !== i))}>
               <input
                 className={inputCls + " mb-1.5"}
                 placeholder="Label"
                 value={it.label}
-                onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
               />
               <input
                 className={inputCls + " mb-1.5"}
                 placeholder="Description"
                 value={it.desc ?? ""}
-                onChange={(e) => setItems(b.items.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
+                onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, desc: e.target.value } : x)))}
               />
               <input
                 className={inputCls}
                 placeholder="Tag (optional)"
                 value={it.tag ?? ""}
                 onChange={(e) =>
-                  setItems(b.items.map((x, j) => (j === i ? { ...x, tag: e.target.value || undefined } : x)))
+                  setItems(items.map((x, j) => (j === i ? { ...x, tag: e.target.value || undefined } : x)))
                 }
               />
             </ItemCard>
           ))}
-          <AddRow onClick={() => setItems([...b.items, { label: "Node" }])}>Add node</AddRow>
+          <AddRow
+            onClick={() => setItems([...items, { label: "Node" }])}
+            disabled={items.length >= INFOGRAPHIC_BLOCK_LIMITS.nodeListItems}
+            title={
+              items.length >= INFOGRAPHIC_BLOCK_LIMITS.nodeListItems
+                ? `Hub maps can have up to ${INFOGRAPHIC_BLOCK_LIMITS.nodeListItems} nodes.`
+                : undefined
+            }
+          >
+            Add node
+          </AddRow>
         </>
       );
     }
@@ -677,8 +705,11 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
     case "orbit": {
       const b = block;
       const variant = b.variant;
-      const nodes = b.nodes?.length ? b.nodes : DEFAULT_ORBIT_NODES;
-      const satellites = b.satellites?.length ? b.satellites : DEFAULT_ORBIT_SATELLITES;
+      const nodes = (b.nodes?.length ? b.nodes : DEFAULT_ORBIT_NODES).slice(0, INFOGRAPHIC_BLOCK_LIMITS.orbitNodes);
+      const satellites = (b.satellites?.length ? b.satellites : DEFAULT_ORBIT_SATELLITES).slice(
+        0,
+        INFOGRAPHIC_BLOCK_LIMITS.orbitSatellites,
+      );
       const setVariant = (next: typeof b.variant) => {
         if (next === "cycle") {
           onChange({ ...b, variant: "cycle", center: b.center || "delight", nodes });
@@ -718,7 +749,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                   <input
                     className={inputCls + " mb-1.5"}
                     placeholder="Step label"
-                    maxLength={MAX_ORBIT_LABEL}
+                    maxLength={INFOGRAPHIC_BLOCK_LIMITS.orbitLabelChars}
                     value={node.label}
                     onChange={(e) =>
                       setNodes(nodes.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))
@@ -737,7 +768,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                   </label>
                 </ItemCard>
               ))}
-              {nodes.length < 8 && (
+              {nodes.length < INFOGRAPHIC_BLOCK_LIMITS.orbitNodes && (
                 <AddRow onClick={() => setNodes([...nodes, { label: "Step" }])}>Add cycle node</AddRow>
               )}
             </>
@@ -763,7 +794,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                   />
                 </ItemCard>
               ))}
-              {satellites.length < 8 && (
+              {satellites.length < INFOGRAPHIC_BLOCK_LIMITS.orbitSatellites && (
                 <AddRow onClick={() => setSatellites([...satellites, { key: "site" }])}>Add satellite</AddRow>
               )}
             </>
@@ -776,7 +807,9 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const b = block;
       const layout = b.layout ?? "cards";
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
-      const setRows = (rows: typeof b.rows) => onChange({ ...b, rows });
+      const maxRows = compareMaxRows(format);
+      const rows = b.rows.slice(0, maxRows);
+      const setRows = (next: typeof b.rows) => onChange({ ...b, rows: next.slice(0, maxRows) });
       return (
         <>
           <Field label="Layout">
@@ -824,14 +857,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               Bullet points
             </label>
           )}
-          {b.rows.map((r, i) => (
-            <ItemCard key={i} idx={i} onRemove={() => setRows(b.rows.filter((_, j) => j !== i))}>
+          {rows.map((r, i) => (
+            <ItemCard key={i} idx={i} onRemove={() => setRows(rows.filter((_, j) => j !== i))}>
               {layout === "table" && (
                 <input
                   className={inputCls + " mb-1.5"}
                   placeholder="Row label"
                   value={r.label ?? ""}
-                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                  onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
                 />
               )}
               <div className="grid grid-cols-2 gap-1.5">
@@ -839,24 +872,23 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                   className={inputCls}
                   placeholder={b.columnA || "A"}
                   value={r.a}
-                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
+                  onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
                 />
                 <input
                   className={inputCls}
                   placeholder={b.columnB || "B"}
                   value={r.b}
-                  onChange={(e) => setRows(b.rows.map((x, j) => (j === i ? { ...x, b: e.target.value } : x)))}
+                  onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, b: e.target.value } : x)))}
                 />
               </div>
             </ItemCard>
           ))}
-          {format === "product" && b.rows.length >= MAX_COMPARE_ROWS_PRODUCT ? (
+          {rows.length >= maxRows ? (
             <p className="text-[11px] text-studio-muted leading-relaxed px-0.5">
-              Product format is a fixed height, so it fits up to {MAX_COMPARE_ROWS_PRODUCT} rows. Switch to
-              Blog/Perspective to add more.
+              {format === "product" ? "Product feature" : "Blog/Perspective"} fits up to {maxRows} comparison rows.
             </p>
           ) : (
-            <AddRow onClick={() => setRows([...b.rows, { label: "", a: "", b: "" }])}>Add row</AddRow>
+            <AddRow onClick={() => setRows([...rows, { label: "", a: "", b: "" }])}>Add row</AddRow>
           )}
         </>
       );
@@ -865,18 +897,22 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
     case "line-chart": {
       const b = block;
       const hasB = !!b.seriesB;
+      const pointCount = Math.min(b.xLabels.length, INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints);
+      const xLabels = b.xLabels.slice(0, pointCount);
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
       const setPoint = (i: number, patch: { x?: string; a?: number; bv?: number }) => {
-        const xLabels = patch.x !== undefined ? b.xLabels.map((v, j) => (j === i ? patch.x! : v)) : b.xLabels;
+        const nextLabels = patch.x !== undefined ? xLabels.map((v, j) => (j === i ? patch.x! : v)) : xLabels;
         const aVals =
-          patch.a !== undefined ? b.seriesA.values.map((v, j) => (j === i ? patch.a! : v)) : b.seriesA.values;
+          patch.a !== undefined
+            ? b.seriesA.values.slice(0, pointCount).map((v, j) => (j === i ? patch.a! : v))
+            : b.seriesA.values.slice(0, pointCount);
         const bVals =
           b.seriesB && patch.bv !== undefined
-            ? b.seriesB.values.map((v, j) => (j === i ? patch.bv! : v))
-            : b.seriesB?.values;
+            ? b.seriesB.values.slice(0, pointCount).map((v, j) => (j === i ? patch.bv! : v))
+            : b.seriesB?.values.slice(0, pointCount);
         onChange({
           ...b,
-          xLabels,
+          xLabels: nextLabels,
           seriesA: { ...b.seriesA, values: aVals },
           seriesB: b.seriesB && bVals ? { ...b.seriesB, values: bVals } : b.seriesB,
         });
@@ -884,24 +920,36 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const removePoint = (i: number) =>
         onChange({
           ...b,
-          xLabels: b.xLabels.filter((_, j) => j !== i),
-          seriesA: { ...b.seriesA, values: b.seriesA.values.filter((_, j) => j !== i) },
+          xLabels: xLabels.filter((_, j) => j !== i),
+          seriesA: { ...b.seriesA, values: b.seriesA.values.slice(0, pointCount).filter((_, j) => j !== i) },
           seriesB: b.seriesB
-            ? { ...b.seriesB, values: b.seriesB.values.filter((_, j) => j !== i) }
+            ? { ...b.seriesB, values: b.seriesB.values.slice(0, pointCount).filter((_, j) => j !== i) }
             : undefined,
         });
       const addPoint = () =>
         onChange({
           ...b,
-          xLabels: [...b.xLabels, generatedTrendAxisLabel(undefined, b.xLabels.length)],
-          seriesA: { ...b.seriesA, values: [...b.seriesA.values, 0] },
-          seriesB: b.seriesB ? { ...b.seriesB, values: [...b.seriesB.values, 0] } : undefined,
+          xLabels: [...xLabels, generatedTrendAxisLabel(undefined, xLabels.length)].slice(
+            0,
+            INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints,
+          ),
+          seriesA: {
+            ...b.seriesA,
+            values: [...b.seriesA.values.slice(0, pointCount), 0].slice(0, INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints),
+          },
+          seriesB: b.seriesB
+            ? {
+                ...b.seriesB,
+                values: [...b.seriesB.values.slice(0, pointCount), 0].slice(0, INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints),
+              }
+            : undefined,
         });
       const toggleB = (on: boolean) =>
         onChange({
           ...b,
-          seriesB: on ? { label: "Line B", values: b.xLabels.map(() => 0) } : undefined,
+          seriesB: on ? { label: "Line B", values: xLabels.map(() => 0) } : undefined,
         });
+      const pointsAtLimit = xLabels.length >= INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints;
       return (
         <>
           <div className="mb-3 flex items-start gap-2 rounded-md border border-studio-accent/30 bg-studio-accent/[0.08] px-2.5 py-2">
@@ -944,7 +992,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             />
             Area fill under line A
           </label>
-          {b.xLabels.map((x, i) => (
+          {xLabels.map((x, i) => (
             <ItemCard key={i} idx={i} onRemove={() => removePoint(i)}>
               <input
                 className={inputCls + " mb-1.5"}
@@ -972,24 +1020,48 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               </div>
             </ItemCard>
           ))}
-          <AddRow onClick={addPoint}>Add point</AddRow>
+          <AddRow
+            onClick={() => {
+              if (pointsAtLimit) return;
+              addPoint();
+            }}
+            disabled={pointsAtLimit}
+            title={pointsAtLimit ? `Trend charts can have up to ${INFOGRAPHIC_BLOCK_LIMITS.lineChartPoints} points.` : undefined}
+          >
+            Add point
+          </AddRow>
         </>
       );
     }
     case "stacked-bar": {
       const b = block;
-      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+      const maxRows = stackedBarMaxRows(format);
+      const series = b.series.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries);
+      const rows = b.rows.slice(0, maxRows).map((row) => ({ ...row, values: row.values.slice(0, series.length) }));
+      const set = (patch: Partial<typeof b>) =>
+        onChange({
+          ...b,
+          ...patch,
+          series: (patch.series ?? series).slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries),
+          rows: (patch.rows ?? rows).slice(0, maxRows).map((row) => ({
+            ...row,
+            values: row.values.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries),
+          })),
+        });
 
       const setSeriesLabel = (si: number, label: string) =>
-        set({ series: b.series.map((s, j) => (j === si ? label : s)) });
+        set({ series: series.map((s, j) => (j === si ? label : s)) });
       const addSeries = () =>
         onChange({
           ...b,
-          series: [...b.series, `Series ${String.fromCharCode(65 + b.series.length)}`],
-          rows: b.rows.map((r) => ({ ...r, values: [...r.values, 0] })),
+          series: [...series, `Series ${String.fromCharCode(65 + series.length)}`].slice(
+            0,
+            INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries,
+          ),
+          rows: rows.map((r) => ({ ...r, values: [...r.values, 0].slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries) })),
         });
       const removeSeries = (si: number) => {
-        if (b.series.length <= 1) return;
+        if (series.length <= 1) return;
         // Removing a series shifts later indices — keep accentIndex pointing at
         // the same series (clear it if it was the one removed).
         const accent =
@@ -1002,25 +1074,27 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                 : b.accentIndex;
         onChange({
           ...b,
-          series: b.series.filter((_, j) => j !== si),
-          rows: b.rows.map((r) => ({ ...r, values: r.values.filter((_, j) => j !== si) })),
+          series: series.filter((_, j) => j !== si),
+          rows: rows.map((r) => ({ ...r, values: r.values.filter((_, j) => j !== si) })),
           accentIndex: accent,
         });
       };
 
       const setRowLabel = (ri: number, label: string) =>
-        set({ rows: b.rows.map((r, j) => (j === ri ? { ...r, label } : r)) });
+        set({ rows: rows.map((r, j) => (j === ri ? { ...r, label } : r)) });
       const setValue = (ri: number, si: number, v: number) =>
         set({
-          rows: b.rows.map((r, j) =>
+          rows: rows.map((r, j) =>
             j === ri ? { ...r, values: r.values.map((x, k) => (k === si ? v : x)) } : r,
           ),
         });
       const addRow = () =>
-        set({ rows: [...b.rows, { label: `Row ${b.rows.length + 1}`, values: b.series.map(() => 0) }] });
-      const removeRow = (ri: number) => set({ rows: b.rows.filter((_, j) => j !== ri) });
+        set({ rows: [...rows, { label: `Row ${rows.length + 1}`, values: series.map(() => 0) }] });
+      const removeRow = (ri: number) => set({ rows: rows.filter((_, j) => j !== ri) });
 
       const layout = b.layout ?? "stacked";
+      const rowsAtLimit = rows.length >= maxRows;
+      const seriesAtLimit = series.length >= INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries;
       return (
         <>
           <Field label="Layout">
@@ -1059,9 +1133,9 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               value={b.accentIndex ?? -1}
               options={[
                 { value: -1, label: "None (all grayscale)" },
-                ...b.series.map((series, index) => ({
+                ...series.map((seriesName, index) => ({
                   value: index,
-                  label: series || `Series ${index + 1}`,
+                  label: seriesName || `Series ${index + 1}`,
                 })),
               ]}
               onChange={(next) => set({ accentIndex: next < 0 ? undefined : next })}
@@ -1069,7 +1143,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
           </Field>
 
           <div className={labelCls + " mt-1"}>Series</div>
-          {b.series.map((s, si) => (
+          {series.map((s, si) => (
             <div key={si} className="flex items-center gap-1.5 mb-1.5">
               <input
                 className={inputCls}
@@ -1078,7 +1152,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               />
               <button
                 onClick={() => removeSeries(si)}
-                disabled={b.series.length <= 1}
+                disabled={series.length <= 1}
                 title="Remove series"
                 className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-6 h-6 flex items-center justify-center transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
               >
@@ -1087,10 +1161,19 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             </div>
           ))}
           <div className="mb-3">
-            <AddRow onClick={addSeries}>Add series</AddRow>
+            <AddRow
+              onClick={() => {
+                if (seriesAtLimit) return;
+                addSeries();
+              }}
+              disabled={seriesAtLimit}
+              title={seriesAtLimit ? `Multi-series bars can have up to ${INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries} series.` : undefined}
+            >
+              Add series
+            </AddRow>
           </div>
 
-          {b.rows.map((row, ri) => (
+          {rows.map((row, ri) => (
             <ItemCard key={ri} idx={ri} onRemove={() => removeRow(ri)}>
               <input
                 className={inputCls + " mb-1.5"}
@@ -1098,7 +1181,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                 value={row.label}
                 onChange={(e) => setRowLabel(ri, e.target.value)}
               />
-              {b.series.map((sName, si) => (
+              {series.map((sName, si) => (
                 <div key={si} className="grid grid-cols-[1fr_76px] gap-1.5 items-center mb-1.5 last:mb-0">
                   <span className="text-[10px] text-studio-muted truncate">{sName || `Series ${si + 1}`}</span>
                   <input
@@ -1111,7 +1194,20 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               ))}
             </ItemCard>
           ))}
-          <AddRow onClick={addRow}>Add row</AddRow>
+          <AddRow
+            onClick={() => {
+              if (rowsAtLimit) return;
+              addRow();
+            }}
+            disabled={rowsAtLimit}
+            title={
+              rowsAtLimit
+                ? `${format === "product" ? "Product feature" : "Blog/Perspective"} multi-series bars can have up to ${maxRows} rows.`
+                : undefined
+            }
+          >
+            Add row
+          </AddRow>
         </>
       );
     }

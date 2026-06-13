@@ -1,7 +1,7 @@
 export type BackgroundCategory = "lifestyle" | "fashion" | "business" | "nature" | "custom";
 
-/** 라이브러리 탭 분류: general = 자연물/추상, brand = 브랜드 테마, industry = 사람/현장 */
-export type BackgroundGroup = "general" | "brand" | "industry";
+/** 라이브러리 탭 분류: general = 자연물/추상, brand = 브랜드 테마, industry = 사람/현장, everyday = 일상 속 인물/디바이스 */
+export type BackgroundGroup = "general" | "brand" | "industry" | "everyday";
 
 export type Background = {
   id: string;
@@ -10,6 +10,8 @@ export type Background = {
   category: BackgroundCategory;
   /** 라이브러리 탭 필터용. 커스텀 업로드는 미지정 → All 탭에서만 노출 */
   group?: BackgroundGroup;
+  /** 특정 브랜드/제품 전용 배경일 때 썸네일에 표시 */
+  usageBadge?: string;
 };
 
 export const BACKGROUNDS: Background[] = [
@@ -61,6 +63,7 @@ export const BACKGROUNDS: Background[] = [
     url: "/background/bg-300.png",
     category: "nature",
     group: "brand",
+    usageBadge: "Steward only",
   },
   {
     id: "bg-301",
@@ -68,6 +71,7 @@ export const BACKGROUNDS: Background[] = [
     url: "/background/bg-301.png",
     category: "nature",
     group: "brand",
+    usageBadge: "Voice only",
   },
   {
     id: "bg-302",
@@ -75,6 +79,7 @@ export const BACKGROUNDS: Background[] = [
     url: "/background/bg-302.png",
     category: "nature",
     group: "brand",
+    usageBadge: "Trust OS only",
   },
   {
     id: "bg-504",
@@ -117,6 +122,27 @@ export const BACKGROUNDS: Background[] = [
     url: "/background/bg-505.png",
     category: "lifestyle",
     group: "industry",
+  },
+  {
+    id: "bg-600",
+    label: "Everyday Chat",
+    url: "/background/bg-600.png",
+    category: "lifestyle",
+    group: "everyday",
+  },
+  {
+    id: "bg-601",
+    label: "Mobile Moment",
+    url: "/background/bg-601.png",
+    category: "lifestyle",
+    group: "everyday",
+  },
+  {
+    id: "bg-602",
+    label: "Workspace Moment",
+    url: "/background/bg-602.png",
+    category: "business",
+    group: "everyday",
   },
 ];
 

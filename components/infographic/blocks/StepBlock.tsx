@@ -1,18 +1,24 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
+import { stepMaxItems } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
-type Props = { block: Extract<InfographicBlock, { type: "step" }>; scale?: number };
+type Props = {
+  block: Extract<InfographicBlock, { type: "step" }>;
+  scale?: number;
+  format?: InfographicFormat;
+};
 
 /** Numbered process steps. Ports prototype .b-step (badge uses var(--ig-accent)). */
-export function StepBlock({ block, scale = 1 }: Props) {
+export function StepBlock({ block, scale = 1, format }: Props) {
+  const items = block.items.slice(0, stepMaxItems(format ?? "blog"));
   const fs = (n: number) => Math.round(n * scale);
   // All-or-nothing descriptions: show them only when every step has one, so the
   // cards never look uneven (some 2-line, some 1-line).
-  const allHaveDesc = block.items.length > 0 && block.items.every((it) => !!it.desc?.trim());
+  const allHaveDesc = items.length > 0 && items.every((it) => !!it.desc?.trim());
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {block.items.map((it, i) => (
+      {items.map((it, i) => (
         <div
           key={i}
           style={{

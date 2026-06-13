@@ -1,9 +1,8 @@
 import type { ChatMessage } from "./store";
 import type { InfographicContent } from "./types/infographic";
 import type { ProductVisualContent } from "./types/product-visual";
-import dashboardActions from "./concept-ui/samples/dashboard-ai-actions.en.json";
-import { parseSceneSpec } from "./concept-ui/scene-spec";
 import { getAvatarForName } from "./avatar";
+import { WORK_DATA_SCHEMA_VERSION } from "./work-data-schema";
 
 /** Wrap an external image URL through our same-origin proxy */
 function p(url: string) {
@@ -54,8 +53,6 @@ export type ProductVisualTemplate = TemplateBase & {
 
 /** Discriminated by `kind` — narrow before accessing variant-specific fields. */
 export type Template = ChatTemplate | InfographicTemplate | ProductVisualTemplate;
-
-const PRODUCT_VISUAL_DEFAULT_CONCEPT_SCENE = parseSceneSpec(dashboardActions);
 
 // ── Export Sizes ──────────────────────────────────────────
 
@@ -134,19 +131,26 @@ export const TEMPLATES: Template[] = [
       { id: "blog", label: "Blog (664×var)", width: 664, height: 0 }, // height 0 = variable
     ],
     defaultContent: {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
       format: "product",
       bg: "warmgray",
       accent: "lime",
-      title: "AI is brand equity now.",
-      footnote: "83% of consumers credit the brand behind a good AI experience.",
+      title: "",
+      footnote: "",
+      showTitle: false,
       blocks: [
         {
           id: "b1",
-          type: "stat",
-          eyebrow: "RETAIL",
-          number: "83%",
-          highlightNumber: true,
-          label: "link AI to brand trust",
+          type: "orbit",
+          variant: "cycle",
+          center: "delight",
+          nodes: [
+            { label: "Detect" },
+            { label: "Prioritize", highlight: true },
+            { label: "Suggest", highlight: true },
+            { label: "Resolve" },
+            { label: "Learn" },
+          ],
         },
       ],
     },
@@ -170,13 +174,13 @@ export const TEMPLATES: Template[] = [
     // Initial seed = release-thumbnail's per-format default (kept in sync with
     // FORMAT_DEFAULTS in types/product-visual so first-entry == switch-back).
     defaultContent: {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
       format: "release-thumbnail", // most-used format first
       layout: "side-by-side",      // satisfies FORMAT_LAYOUTS["release-thumbnail"]
       bg: "warmgray",
       sourceMode: "concept",
-      conceptScene: PRODUCT_VISUAL_DEFAULT_CONCEPT_SCENE,
-      title: "AI action oversight",
-      subtitle: "Review agent actions, policy checks, and human handoffs.",
+      title: "Product UI mock",
+      subtitle: "Describe a feature to generate a polished product visual.",
     },
   },
 ];

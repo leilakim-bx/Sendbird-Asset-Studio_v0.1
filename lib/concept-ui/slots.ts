@@ -5,9 +5,29 @@ export type ConceptSlot = {
   label: string;
 };
 
-export const conceptUiArchetypes: ConceptUiArchetype[] = ["inbox", "dashboard", "builder", "table", "modal"];
+export const conceptUiArchetypes: ConceptUiArchetype[] = ["inbox", "dashboard", "builder", "table", "modal", "workspace"];
+
+function reusableBlockSlots(spec: SceneSpec): ConceptSlot[] {
+  if (
+    spec.archetype === "dashboard" ||
+    spec.archetype === "builder" ||
+    spec.archetype === "modal" ||
+    spec.archetype === "workspace"
+  ) {
+    return [
+      ...(spec.content.logicBlocks?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.reviewQueues?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.toolCallLists?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.instructionSections?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+    ];
+  }
+  return [];
+}
 
 export function getPrimarySlotId(spec: SceneSpec): string {
+  const firstReusableBlock = reusableBlockSlots(spec)[0];
+  if (firstReusableBlock) return firstReusableBlock.id;
+  if (spec.archetype === "workspace") return spec.content.tester.slotId;
   if (spec.archetype === "modal") return spec.content.modal.slotId;
   if (spec.archetype === "builder") {
     return spec.content.canvas.nodes.find((node) => node.id === spec.content.selectedNode.nodeId)?.slotId
@@ -32,6 +52,7 @@ export function getAiCalloutTargetSlots(spec: SceneSpec): ConceptSlot[] {
 
   if (spec.archetype === "dashboard") {
     return [
+      ...reusableBlockSlots(spec),
       ...spec.content.kpis.map((item) => ({ id: item.slotId, label: item.label })),
       { id: spec.content.lineChart.slotId, label: spec.content.lineChart.title },
       { id: spec.content.barChart.slotId, label: spec.content.barChart.title },
@@ -41,7 +62,10 @@ export function getAiCalloutTargetSlots(spec: SceneSpec): ConceptSlot[] {
   }
 
   if (spec.archetype === "builder") {
-    return spec.content.canvas.nodes.map((node) => ({ id: node.slotId, label: node.title }));
+    return [
+      ...reusableBlockSlots(spec),
+      ...spec.content.canvas.nodes.map((node) => ({ id: node.slotId, label: node.title })),
+    ];
   }
 
   if (spec.archetype === "table") {
@@ -52,7 +76,17 @@ export function getAiCalloutTargetSlots(spec: SceneSpec): ConceptSlot[] {
     });
   }
 
+  if (spec.archetype === "workspace") {
+    return [
+      ...reusableBlockSlots(spec),
+      { id: spec.content.editor.slotId, label: spec.content.editor.title },
+      { id: spec.content.preview.slotId, label: spec.content.preview.title },
+      { id: spec.content.tester.slotId, label: spec.content.tester.agentName },
+    ];
+  }
+
   return [
+    ...reusableBlockSlots(spec),
     { id: spec.content.modal.slotId, label: spec.content.modal.title },
     ...spec.content.modal.fields.map((field) => ({ id: field.slotId, label: field.label })),
   ];

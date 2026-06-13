@@ -11,6 +11,24 @@ import type {
 } from "@/lib/types/infographic";
 import type { ProductVisualContent, ProductVisualFormat } from "@/lib/types/product-visual";
 import { FORMAT_DEFAULTS, isImageBgFormat } from "@/lib/types/product-visual";
+import {
+  WORK_DATA_SCHEMA_VERSION,
+  migrateWorkData,
+  withWorkDataSchema,
+} from "@/lib/work-data-schema";
+
+export const PERSISTED_COLLECTION_LIMITS = {
+  savedAssets:       24,
+  customBackgrounds: 20,
+} as const;
+
+function capSavedAssets(savedAssets: SavedAsset[]) {
+  return savedAssets.slice(0, PERSISTED_COLLECTION_LIMITS.savedAssets);
+}
+
+function capCustomBackgrounds(customBackgrounds: Background[]) {
+  return customBackgrounds.slice(-PERSISTED_COLLECTION_LIMITS.customBackgrounds);
+}
 
 // ── Block types (콘텐츠 페이로드) ─────────────────────────
 
@@ -140,6 +158,7 @@ export type MessagePatch = {
 // ── Saved Asset ───────────────────────────────────────────
 
 export type SavedAsset = {
+  schemaVersion: number;
   id: string;
   templateId: string;
   /** Display name shown in the library (derived from appName at save time) */
@@ -170,6 +189,7 @@ export type SavedAsset = {
 /** In-progress chat editor draft, autosaved to localStorage so a refresh/crash
  *  resumes work. Mirrors the live (non-persisted) chat fields. */
 export type ChatDraft = {
+  schemaVersion: number;
   messages: ChatMessage[];
   backgroundId: string;
   layout: "center" | "split";
@@ -184,6 +204,35 @@ export type ChatDraft = {
  *  yet (distinct from an empty-but-edited draft). product-visual intentionally
  *  out of scope (placeholder editor in STEP 1). */
 export type DraftState = { chat?: ChatDraft; infographic?: InfographicContent };
+
+function versionChatDraft(chat: ChatDraft): ChatDraft {
+  return migrateWorkData<ChatDraft>("chat", withWorkDataSchema(chat));
+}
+
+function versionInfographicContent(content: InfographicContent): InfographicContent {
+  return migrateWorkData<InfographicContent>("infographic", withWorkDataSchema(content));
+}
+
+function versionProductVisualContent(content: ProductVisualContent): ProductVisualContent {
+  return migrateWorkData<ProductVisualContent>("product-visual", withWorkDataSchema(content));
+}
+
+function versionDrafts(drafts: DraftState | undefined): DraftState {
+  if (!drafts) return {};
+  return {
+    ...(drafts.chat && { chat: versionChatDraft(drafts.chat) }),
+    ...(drafts.infographic && { infographic: versionInfographicContent(drafts.infographic) }),
+  };
+}
+
+function versionSavedAsset(asset: SavedAsset): SavedAsset {
+  return {
+    ...asset,
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
+    ...(asset.infographic && { infographic: versionInfographicContent(asset.infographic) }),
+    ...(asset.productVisual && { productVisual: versionProductVisualContent(asset.productVisual) }),
+  };
+}
 
 export type EditorState = {
   templateId: string;
@@ -329,6 +378,14 @@ type PersistedV1 = {
   drafts?: DraftState;
 };
 
+export function trimPersistedCollections(state: PersistedV1): PersistedV1 {
+  return {
+    ...state,
+    customBackgrounds: capCustomBackgrounds(state.customBackgrounds),
+    savedAssets:       capSavedAssets(state.savedAssets),
+  };
+}
+
 function migrateV0toV1(raw: unknown): PersistedV1 {
   const state = (raw ?? {}) as Record<string, unknown>;
 
@@ -377,12 +434,12 @@ function migrateV0toV1(raw: unknown): PersistedV1 {
     }
   }
 
-  return {
+  return trimPersistedCollections({
     customBackgrounds: Array.isArray(state.customBackgrounds)
       ? (state.customBackgrounds as Background[])
       : [],
     savedAssets,
-  };
+  });
 }
 
 // ── v1 → v2 마이그레이션 ──────────────────────────────────
@@ -411,13 +468,49 @@ function migrateV1toV2(raw: unknown): PersistedV1 {
     console.info(`[migrate v1→v2] Removed ${removed} retired Product UI asset(s).`);
   }
 
-  return {
+  return trimPersistedCollections({
     customBackgrounds: Array.isArray(state.customBackgrounds)
       ? (state.customBackgrounds as Background[])
       : [],
     savedAssets,
     ...(state.drafts !== undefined && { drafts: state.drafts as DraftState }),
-  };
+  });
+}
+
+// ── v2 → v3 마이그레이션 ──────────────────────────────────
+// Keep the browser-backed store bounded so older sessions with many data URL
+// previews/backgrounds do not keep carrying oversized localStorage payloads.
+
+function migrateV2toV3(raw: unknown): PersistedV1 {
+  const state = (raw ?? {}) as Record<string, unknown>;
+  return trimPersistedCollections({
+    customBackgrounds: Array.isArray(state.customBackgrounds)
+      ? (state.customBackgrounds as Background[])
+      : [],
+    savedAssets: Array.isArray(state.savedAssets)
+      ? (state.savedAssets as SavedAsset[])
+      : [],
+    ...(state.drafts !== undefined && { drafts: state.drafts as DraftState }),
+  });
+}
+
+// ── v3 → v4 마이그레이션 ──────────────────────────────────
+// Add schemaVersion to all saved work payloads. Current work schema is v1, so
+// old records are structurally unchanged aside from the explicit marker.
+
+function migrateV3toV4(raw: unknown): PersistedV1 {
+  const state = (raw ?? {}) as Record<string, unknown>;
+  const savedAssets = Array.isArray(state.savedAssets)
+    ? (state.savedAssets as SavedAsset[]).map(versionSavedAsset)
+    : [];
+
+  return trimPersistedCollections({
+    customBackgrounds: Array.isArray(state.customBackgrounds)
+      ? (state.customBackgrounds as Background[])
+      : [],
+    savedAssets,
+    drafts: versionDrafts(state.drafts as DraftState | undefined),
+  });
 }
 
 // ── Store ─────────────────────────────────────────────────
@@ -456,7 +549,7 @@ export const useEditorStore = create<EditorState>()(
 
       // Infographic content — transient session state, never persisted
       infographicContent:    null,
-      setInfographicContent: (infographicContent) => set({ infographicContent }),
+      setInfographicContent: (infographicContent) => set({ infographicContent: versionInfographicContent(infographicContent) }),
       setInfographicFormat:  (format) =>
         set((s) =>
           s.infographicContent
@@ -518,15 +611,19 @@ export const useEditorStore = create<EditorState>()(
 
       // Product Visual content — transient session state, never persisted
       productVisualContent:    null,
-      setProductVisualContent: (productVisualContent) => set({ productVisualContent }),
+      setProductVisualContent: (productVisualContent) => set({ productVisualContent: versionProductVisualContent(productVisualContent) }),
       setProductVisualFormat: (format) =>
         set((s) =>
           s.productVisualContent
             ? {
                 productVisualContent: {
                   ...FORMAT_DEFAULTS[format],
-                  sourceMode: s.productVisualContent.sourceMode,
+                  sourceMode:
+                    isImageBgFormat(format) && s.productVisualContent.sourceMode === "screenshot"
+                      ? "concept"
+                      : s.productVisualContent.sourceMode,
                   concept:    s.productVisualContent.concept,
+                  reference:  s.productVisualContent.reference,
                   conceptScene: s.productVisualContent.conceptScene,
                   // preserve the uploaded screenshot across format switches
                   screenshot:
@@ -540,9 +637,9 @@ export const useEditorStore = create<EditorState>()(
 
       // Autosave drafts — persisted (see partialize). Absent key = no draft yet.
       drafts: {},
-      saveChatDraft: (chat) => set((s) => ({ drafts: { ...s.drafts, chat } })),
+      saveChatDraft: (chat) => set((s) => ({ drafts: { ...s.drafts, chat: versionChatDraft(chat) } })),
       saveInfographicDraft: (infographic) =>
-        set((s) => ({ drafts: { ...s.drafts, infographic } })),
+        set((s) => ({ drafts: { ...s.drafts, infographic: versionInfographicContent(infographic) } })),
       clearDraft: (kind) =>
         set((s) => {
           const drafts = { ...s.drafts };
@@ -584,10 +681,12 @@ export const useEditorStore = create<EditorState>()(
       setMessages: (messages) => set({ messages, canvasIsFull: false }),
 
       addCustomBackground: (bg) =>
-        set((s) => ({ customBackgrounds: [...s.customBackgrounds, bg] })),
+        set((s) => ({
+          customBackgrounds: capCustomBackgrounds([...s.customBackgrounds, bg]),
+        })),
 
       saveAsset: (asset) =>
-        set((s) => ({ savedAssets: [asset, ...s.savedAssets] })),
+        set((s) => ({ savedAssets: capSavedAssets([versionSavedAsset(asset), ...s.savedAssets]) })),
 
       deleteSavedAsset: (id) =>
         set((s) => ({ savedAssets: s.savedAssets.filter((a) => a.id !== id) })),
@@ -610,18 +709,21 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name:    "sendbird-editor-v1",
-      version: 2,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        customBackgrounds: state.customBackgrounds,
-        savedAssets:       state.savedAssets,
-        drafts:            state.drafts,
-      }),
+      partialize: (state) =>
+        trimPersistedCollections({
+          customBackgrounds: state.customBackgrounds,
+          savedAssets:       state.savedAssets,
+          drafts:            state.drafts,
+        }),
       migrate: (persistedState, version) => {
         // Chained: a v0 blob threads through both steps; a v1 blob runs only v1→v2.
         let state: unknown = persistedState;
         if (version < 1) state = migrateV0toV1(state);
         if (version < 2) state = migrateV1toV2(state);
+        if (version < 3) state = migrateV2toV3(state);
+        if (version < 4) state = migrateV3toV4(state);
         return state as PersistedV1;
       },
       onRehydrateStorage: () => (state) => {

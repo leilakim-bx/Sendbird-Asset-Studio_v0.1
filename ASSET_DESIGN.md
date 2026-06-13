@@ -13,6 +13,12 @@ Infographic canvas/blocks, Product Visual canvas, Concept UI scene renderer는
 토큰에서 가져온다. Tool UI용 `lib/tokens/app.ts`는 에셋 렌더 경로에서
 import하지 않는다.
 
+## Infographic Render Safety
+
+- Infographic block renderer는 `lib/infographic-block-limits.ts`의 항목/텍스트 상한을 방어적으로 적용한다.
+- Product feature 포맷은 고정 866×660 export이므로 dense chart/list block은 안전 여백을 침범하지 않도록 item 수를 제한하거나 내부 spacing을 조밀하게 조정한다.
+- Blog/Perspective 포맷은 가변 높이를 허용하지만, block library preview와 실제 export가 같은 구조를 유지해야 한다.
+
 ## Canvas (Export 기준)
 
 | 뷰포트 | 크기 | 용도 |
@@ -215,13 +221,24 @@ fontSize: 13 × fs
 
 ## Product Visual Concept UI
 
+- Concept UI 생성 전에는 텍스트 empty state 대신 샘플 대시보드를 캔버스에 표시해 결과물 형태를 먼저 이해할 수 있게 한다.
+- Workspace scene은 editor, preview, AI tester의 3-column 구조를 기본으로 하는 Concept UI kit 패턴이다.
+- if/else, condition, branching, outcome 같은 로직 표현은 새 archetype을 계속 늘리지 않고, Dashboard/Workspace/Builder/Modal scene 안에 재사용 `logicBlocks`로 삽입한다.
+- policy/instruction, approval/review queue, tool/function call 같은 AI agent SaaS 패턴도 새 archetype 대신 `instructionSections`, `reviewQueues`, `toolCallLists` reusable block으로 받아낸다.
+- 공개 AI agent product에서 반복되는 knowledge/procedure, testing/QA/observability, data connector/action 패턴은 별도 preset으로 복제하지 않고 기존 reusable block의 provider 단서와 copy variant로만 흡수한다.
 - Hero crop으로 잘라낸 Concept UI 이미지는 외곽 corner radius를 유지한다.
 - Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 compact radius만 사용한다.
 - Floating panel export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
+- Concept UI builder scene은 첫 렌더 시 Floating panel을 기본 캡처로 사용해 canvas 전체가 얇은 hero crop처럼 보이지 않게 한다. 사용자가 이후 Hero crop을 직접 선택하는 것은 허용한다.
+- Concept UI builder scene의 우측 config panel 안 reusable block callout은 floating popover가 아니라 inline callout으로 렌더해 canvas node와 겹치거나 export 영역에서 잘리지 않게 한다.
 - Concept UI dashboard는 상단 header와 하단 body에 같은 compact radius를 적용해 모서리가 square로 보이지 않게 한다.
 - Concept UI primary scene header는 로고와 title만 표시하고 productName/subtitle은 숨긴다.
 - Concept UI primary scene header의 좌상단 브랜드 자리는 항상 delight mark를 사용하고 archetype별 로보트/테이블/워크플로우 아이콘으로 대체하지 않는다.
 - Concept UI inbox의 AI agent 메시지 라벨 앞에는 로보트 아이콘을 쓰지 않고 작은 검은 원 표시를 사용한다.
+- Concept UI modal은 배경 앱 화면을 테두리/둥근 shell 없이 흐린 full-bleed skeleton으로만 보여주고, 실제 카드/대시보드가 두 겹으로 보이지 않게 한다.
+- Concept UI modal의 AI callout은 modal export 영역 안쪽에 배치해 오른쪽이 잘리지 않게 한다.
+- Concept UI modal의 기본 copy에는 `AI pre-filled` 같은 데모용 문구를 쓰지 않고 `Ready to review`, `Generated draft`처럼 제품 UI에 가까운 문구를 사용한다.
 - Concept UI table은 AI가 넓은 column width를 반환해도 primary panel 안에 맞도록 column 폭을 비례 축소해 오른쪽 컬럼이 잘리지 않게 한다.
+- Concept UI table의 AI callout은 table row 위나 옆에 떠도 wrapper overflow에 잘리지 않게 표시한다.
 - Concept UI table의 highlighted row는 배경색만 바꾸고 row 자체에 radius를 주지 않는다.
 - Concept UI table typography는 dashboard보다 가볍게 유지한다. Title/primary cell은 700 이하, header/filter/person/date label은 600 중심으로 둔다.

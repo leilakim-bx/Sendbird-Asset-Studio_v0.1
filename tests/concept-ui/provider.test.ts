@@ -39,6 +39,14 @@ describe("ruleBasedSpecProvider", () => {
     expect(modal.kind === "resolved" && modal.archetype).toBe("modal");
   });
 
+  it("keeps dashboard shell hints while treating condition words as reusable blocks", () => {
+    const dashboard = mapDescriptionToArchetype("dashboard with if else logic and condition outcomes");
+    const logicOnly = mapDescriptionToArchetype("if else condition outcomes");
+
+    expect(dashboard.kind === "resolved" && dashboard.archetype).toBe("dashboard");
+    expect(logicOnly.kind === "resolved" && logicOnly.archetype).toBe("builder");
+  });
+
   it("generates a valid sample spec with the description as title", async () => {
     const result = await ruleBasedSpecProvider.generate({
       description: "AI agent automatically creates support tickets",
@@ -61,5 +69,47 @@ describe("ruleBasedSpecProvider", () => {
     if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
     expect(result.spec.content.productName).toMatch(/delight\.ai/i);
     expect(result.spec.content.kpis.map((kpi) => kpi.label)).not.toContain("자동 해결");
+  });
+
+  it("adds reusable logic blocks when a supported scene describes if else logic", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description: "Dashboard showing conditional blocks: if context_status == error, ask for missing context, else continue.",
+      uiTextLanguage: "en",
+      forcedArchetype: "dashboard",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.logicBlocks?.[0]?.condition).toBe("context_status == error");
+    expect(result.spec.content.logicBlocks?.[0]?.outcomes).toHaveLength(2);
+  });
+
+  it("adds instruction, review, and tool call blocks from brief cues", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description: "Workspace with policy instructions, human review approval, and function call order lookup.",
+      uiTextLanguage: "en",
+      forcedArchetype: "workspace",
+    });
+
+    expect(result.spec.archetype).toBe("workspace");
+    if (result.spec.archetype !== "workspace") throw new Error("Expected workspace spec");
+    expect(result.spec.content.instructionSections?.[0]?.title).toBe("Agent instructions");
+    expect(result.spec.content.reviewQueues?.[0]?.title).toBe("Human review queue");
+    expect(result.spec.content.toolCallLists?.[0]?.title).toBe("Tool call sequence");
+  });
+
+  it("folds common AI agent platform patterns into existing reusable blocks", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description:
+        "Dashboard with knowledge source training, procedure guardrails, QA observability alerts, and MCP data connector recommendations.",
+      uiTextLanguage: "en",
+      forcedArchetype: "dashboard",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.instructionSections?.[0]?.title).toBe("Knowledge and procedures");
+    expect(result.spec.content.reviewQueues?.[0]?.title).toBe("Quality monitor");
+    expect(result.spec.content.toolCallLists?.[0]?.title).toBe("Action sequence");
   });
 });

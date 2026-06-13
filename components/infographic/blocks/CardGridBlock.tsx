@@ -1,5 +1,6 @@
 import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = {
@@ -12,10 +13,9 @@ type Props = {
 const CARD_BG = brand.color.infographic.paper;
 const HAIRLINE = brand.color.infographic.grid;
 const BADGE_BG = brand.color.infographic.badge;
-const MAX_CARDS = 4;
 
 export function CardGridBlock({ block, scale = 1, maxHeight, format }: Props) {
-  const rawCards = block.cards.slice(0, MAX_CARDS);
+  const rawCards = block.cards.slice(0, INFOGRAPHIC_BLOCK_LIMITS.cardGridCards);
   const showBadges = rawCards.some((card) => !!card.badge?.trim());
   const cards = rawCards.map((card, i) => ({
     ...card,

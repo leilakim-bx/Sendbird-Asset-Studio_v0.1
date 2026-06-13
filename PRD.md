@@ -64,6 +64,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 편집 | 제목, 푸트노트, 배경, accent color, 블록 추가/수정/삭제 |
 | 생성 | 붙여넣은 텍스트/데이터를 규칙 기반으로 인포그래픽 후보 추천 |
 | 소스 입력 | 텍스트, 차트 데이터, 이미지 노트 붙여넣기 |
+| 안전장치 | 블록별 항목/텍스트 상한을 둬 Product/Blog 포맷에서 export 가능한 구성을 유지 |
 
 ### 6.3 Product Visual
 
@@ -71,7 +72,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 |---|---|
 | 목적 | 실제 제품 스크린샷을 릴리즈/블로그용 이미지로 정리 |
 | 포맷 | Feature Desktop, Feature Mobile, Release Thumbnail, Release Insert, Blog |
-| 입력 | 스크린샷 업로드 또는 Concept UI 설명 입력 |
+| 입력 | 스크린샷 업로드, Concept UI 설명 입력 |
 | 편집 | crop/highlight, 제목, 부제, 배경, 포맷별 레이아웃 |
 | Export | 포맷별 정확한 PNG 크기 또는 가변 높이 |
 
@@ -81,10 +82,11 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 |---|---|
 | 홈 | 템플릿 갤러리와 My files 표시 |
 | My files | 저장한 에셋 검색, 리스트/그리드 보기, 이름 변경, 삭제, 재편집 |
-| 저장 | 썸네일과 편집 상태를 브라우저 localStorage에 저장 |
+| 저장 | 썸네일과 편집 상태를 브라우저 localStorage에 저장. 용량 보호를 위해 최근 저장 에셋과 커스텀 배경은 상한을 둔다. |
 | Autosave | Chat UI, Infographic 작업 초안 자동 저장 |
+| 작업 보존 | 모든 저장 작업 데이터는 `schemaVersion`을 가지며, 변경 시 작업 단위별 최근 5개 자동 스냅샷을 보존한다. Vercel Blob이 연결된 배포에서는 같은 스냅샷을 클라우드에도 best-effort로 보존한다. 복원/백업 파일 기능은 Settings 안에만 둔다. |
 | Export | `html-to-image` 기반 @2x PNG 다운로드 |
-| 이미지 업로드 | 배경은 로컬 filesystem 저장, Product Visual 스크린샷은 브라우저 로컬 data URL 저장 |
+| 이미지 업로드 | 배경은 로컬 filesystem 저장, Product Visual 스크린샷은 브라우저 로컬 data URL 저장. 대용량 이미지의 Blob client upload 전환은 별도 단계로 둔다. |
 | 이탈 방지 | 저장하지 않은 변경사항이 있으면 홈 이동 전 확인 |
 
 ## 8. 생성/추천 요구사항
@@ -96,6 +98,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | Chat UI | 프롬프트를 로컬 프리셋 대화 블록 배열로 변환 |
 | Infographic | 붙여넣은 기사/텍스트/데이터에서 규칙 기반 시각화 후보 추천 |
 | 안전장치 | 로컬 생성 결과도 validator로 스키마 검증 |
+| 편집 제한 | 추천/수동 입력 결과가 블록 상한을 넘으면 에디터와 렌더러에서 같은 기준으로 제한 |
 | 실패 처리 | 사용 가능한 결과가 없으면 텍스트/데이터 보강 안내 |
 
 ## 9. 성공 기준
@@ -125,14 +128,15 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | P0 | 로컬 생성 route와 validator 검증 |
 | P0 | 업로드 이미지 크기/형식 검증 |
 | P1 | 배포 접근 제어 강화 |
-| P2 | Supabase/DB 기반 사용자별 에셋 저장 |
+| P2 | DB 기반 사용자별 에셋 목록/권한/협업 저장 |
 | P2 | Clerk 등 사용자 인증 도입 |
 
 ## 12. 리스크
 
 | 리스크 | 대응 |
 |---|---|
-| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, Phase 2에서 승인된 내부 저장소 검토 |
+| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, 저장 에셋/커스텀 배경 개수 제한, Vercel Blob 클라우드 스냅샷 병행. 3.5MB 초과 스냅샷은 클라우드 동기화를 건너뛰고 로컬 백업만 유지 |
+| 저장 데이터 구조 변경 | `schemaVersion` 증가와 마이그레이션 함수 추가를 필수 변경 절차로 둔다 |
 | 로컬 생성 품질 한계 | 프리셋/규칙 registry와 validator 유지 |
 | Pexels 이미지 CORS | Pexels-only same-origin proxy와 export 전 이미지 inline 처리 |
 | URL import 미지원 | 본문/데이터/이미지 노트 붙여넣기로 처리 |

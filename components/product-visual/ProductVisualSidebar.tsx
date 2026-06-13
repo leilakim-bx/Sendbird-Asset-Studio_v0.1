@@ -1,23 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink, Sparkles } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink, Sparkles, Info } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { ZodError } from "zod";
 import { useEditorStore } from "@/lib/store";
 import {
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
+  PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED,
   isImageBgFormat,
+  type ProductVisualContent,
   type ProductVisualFormat,
   type ProductVisualBg,
+  type ProductVisualReferenceLayout,
+  type ProductVisualSourceMode,
 } from "@/lib/types/product-visual";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/lib/product-visual/upload-image";
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
-import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   conceptSceneToProductScreenshot,
@@ -25,8 +28,7 @@ import {
   type FramingPreset,
 } from "@/lib/concept-ui/export-scene";
 import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
-import { useOnceFlag } from "@/lib/use-once-flag";
-import { parseSceneSpec, type SceneSpec } from "@/lib/concept-ui/scene-spec";
+import { parseSceneSpec, type ConceptUiArchetype, type SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
 import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
 
@@ -40,10 +42,20 @@ const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
 const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
-const SOURCE_OPTIONS = [
-  { id: "screenshot", label: "Screenshot" },
+const SOURCE_OPTIONS: { id: ProductVisualSourceMode; label: string }[] = [
   { id: "concept", label: "Concept UI" },
-] as const;
+  ...(PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? [] : [{ id: "reference" as const, label: "Rebuild" }]),
+  { id: "screenshot", label: "Screenshot" },
+];
+const REFERENCE_LAYOUT_OPTIONS: { id: ProductVisualReferenceLayout; label: string; archetype?: ConceptUiArchetype }[] = [
+  { id: "auto", label: "Auto" },
+  { id: "workspace", label: "Workspace", archetype: "workspace" },
+  { id: "dashboard", label: "Dashboard", archetype: "dashboard" },
+  { id: "builder", label: "Builder", archetype: "builder" },
+  { id: "inbox", label: "Inbox", archetype: "inbox" },
+  { id: "table", label: "Table", archetype: "table" },
+  { id: "modal", label: "Modal", archetype: "modal" },
+];
 const FRAMING_PRESETS: { id: FramingPreset; label: string; description: string }[] = [
   { id: "hero-crop", label: "Hero crop", description: "Manually crop the generated scene" },
   { id: "floating-panel", label: "Floating panel", description: "Panel only, transparent" },
@@ -57,7 +69,7 @@ function formatSpecError(error: unknown): string {
   if (error instanceof ZodError) {
     return error.issues.map((issue) => `${issue.path.join(".") || "spec"}: ${issue.message}`).join("\n");
   }
-  if (error instanceof SyntaxError) return "Invalid JSON syntax.";
+  if (error instanceof SyntaxError) return "Invalid spec syntax.";
   if (error instanceof Error) return error.message;
   return String(error);
 }
@@ -101,6 +113,24 @@ function IconTooltip({ label }: { label: string }) {
     </span>
   );
 }
+
+function SourceInfoTooltip() {
+  return (
+    <span className="group relative inline-flex items-center" tabIndex={0}>
+      <Info size={13} className="cursor-help text-studio-muted transition-colors hover:text-studio-text" />
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-60 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100">
+        When using screenshots, use real product data rather than placeholder or dummy text.
+      </span>
+    </span>
+  );
+}
+
+type ReferenceImage = {
+  url: string;
+  name: string;
+  naturalWidth: number;
+  naturalHeight: number;
+};
 
 function StepLabel({
   number,
@@ -157,19 +187,27 @@ const BG_OPTIONS: { id: ProductVisualBg; name: string }[] = [
   { id: "dark", name: "Dark" },
 ];
 
-export function ProductVisualSidebar() {
+export function ProductVisualSidebar({ content: fallbackContent }: { content: ProductVisualContent }) {
   const {
-    productVisualContent: content,
+    productVisualContent: storeContent,
     setProductVisualContent,
     setProductVisualFormat,
     customBackgrounds,
     addCustomBackground,
   } = useEditorStore();
+  const content = storeContent ?? fallbackContent;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [referenceImage, setReferenceImage] = useState<ReferenceImage | null>(null);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+  const [referenceUploading, setReferenceUploading] = useState(false);
+  const [referenceDragging, setReferenceDragging] = useState(false);
+  const [referenceBrief, setReferenceBrief] = useState("");
+  const [referenceLayout, setReferenceLayout] = useState<ProductVisualReferenceLayout>("auto");
   const [cropOpen, setCropOpen] = useState(false);
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_W);
@@ -179,6 +217,7 @@ export function ProductVisualSidebar() {
   const [conceptError, setConceptError] = useState<string | null>(null);
   const [conceptCaptureId, setConceptCaptureId] = useState(0);
   const [framingPreset, setFramingPreset] = useState<FramingPreset>("floating-panel");
+  const [conceptCapturePreset, setConceptCapturePreset] = useState<FramingPreset>("floating-panel");
   const [lastConceptSpec, setLastConceptSpec] = useState<SceneSpec | null>(null);
   const [specJsonDraft, setSpecJsonDraft] = useState("");
   const [specPasteError, setSpecPasteError] = useState<string | null>(null);
@@ -189,7 +228,7 @@ export function ProductVisualSidebar() {
   const [aiChatError, setAiChatError] = useState<string | null>(null);
   const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
   const [copyFeedbackTick, setCopyFeedbackTick] = useState(0);
-  const [showConceptCoach, dismissConceptCoach] = useOnceFlag("coach-product-visual-concept-v1");
+  const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
   const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -200,6 +239,12 @@ export function ProductVisualSidebar() {
       screenshot: { ...content.screenshot, displayMode: "crop" },
     });
   }, [content, setProductVisualContent]);
+
+  useEffect(() => {
+    return () => {
+      if (referenceImage) URL.revokeObjectURL(referenceImage.url);
+    };
+  }, [referenceImage]);
 
   useEffect(() => {
     if (!aiChatError?.startsWith("Copy is blocked") || !aiChatPromptDraft) return;
@@ -224,7 +269,7 @@ export function ProductVisualSidebar() {
     async function captureConceptScene() {
       try {
         console.info("[concept-ui] capture start", {
-          preset: framingPreset,
+          preset: conceptCapturePreset,
           archetype: scene.archetype,
         });
         if ("fonts" in document) {
@@ -236,23 +281,27 @@ export function ProductVisualSidebar() {
         await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
         const el = conceptCaptureRef.current;
         if (!el || cancelled) return;
-        console.info("[concept-ui] export start", { preset: framingPreset });
-        const exported = await exportConceptSceneElement(el, framingPreset);
+        console.info("[concept-ui] export start", { preset: conceptCapturePreset });
+        const exported = await exportConceptSceneElement(el, conceptCapturePreset);
         console.info("[concept-ui] export complete", {
-          preset: framingPreset,
+          preset: conceptCapturePreset,
           naturalWidth: exported.naturalWidth,
           naturalHeight: exported.naturalHeight,
         });
         if (cancelled) return;
         const latest = useEditorStore.getState().productVisualContent;
         if (!latest) return;
+        const latestSourceMode =
+          latest.sourceMode === "reference" && !PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED
+            ? "reference"
+            : "concept";
         setProductVisualContent({
           ...latest,
-          sourceMode: "concept",
+          sourceMode: latestSourceMode,
           conceptScene: scene,
           screenshot: conceptSceneToProductScreenshot(exported),
         });
-        if (framingPreset === "hero-crop") setCropOpen(true);
+        if (conceptCapturePreset === "hero-crop") setCropOpen(true);
         setConceptScene(null);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -266,27 +315,32 @@ export function ProductVisualSidebar() {
     return () => {
       cancelled = true;
     };
-  }, [conceptCaptureId, conceptGenerating, conceptScene, framingPreset, setProductVisualContent]);
-
-  if (!content) return null;
+  }, [conceptCaptureId, conceptCapturePreset, conceptGenerating, conceptScene, setProductVisualContent]);
 
   function update(patch: Partial<NonNullable<typeof content>>) {
-    if (!content) return;
     setProductVisualContent({ ...content, ...patch });
   }
 
-  function switchSourceMode(sourceMode: "screenshot" | "concept") {
+  function switchSourceMode(sourceMode: ProductVisualSourceMode) {
     if (!content) return;
+    if (sourceMode === "screenshot" && isImageBgFormat(content.format)) return;
+    if (sourceMode === "reference" && PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED) return;
     if (sourceMode === "concept") {
       setConceptPrompt((prompt) => prompt || content.concept?.prompt || content.title || "AI support workspace");
       update({ sourceMode });
+      return;
+    }
+    if (sourceMode === "reference") {
+      const brief = content.reference?.brief || content.title || "Workspace settings with an editor, preview, and AI agent tester";
+      setReferenceBrief((currentBrief) => currentBrief || brief);
+      setReferenceLayout(content.reference?.layout ?? "auto");
+      update({ sourceMode, reference: { brief, layout: content.reference?.layout ?? "auto" } });
       return;
     }
     update({ sourceMode });
   }
 
   function updateConceptPrompt(prompt: string) {
-    dismissConceptCoach();
     setConceptPrompt(prompt);
     setSpecNotice(null);
     setAiChatPromptCopied(false);
@@ -297,6 +351,9 @@ export function ProductVisualSidebar() {
   }
 
   function startConceptSpec(spec: SceneSpec, notice?: string) {
+    const initialPreset = spec.archetype === "builder" ? "floating-panel" : framingPreset;
+    setFramingPreset(initialPreset);
+    setConceptCapturePreset(initialPreset);
     setLastConceptSpec(spec);
     setSpecJsonDraft(prettySpec(spec));
     setSpecNotice(notice ?? null);
@@ -309,7 +366,6 @@ export function ProductVisualSidebar() {
   async function copyPromptForAiChat() {
     const prompt = effectiveConceptPrompt.trim();
     if (!prompt) return;
-    dismissConceptCoach();
     const text = buildAiChatPrompt({
       description: prompt,
       uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
@@ -346,8 +402,8 @@ export function ProductVisualSidebar() {
     }
 
     setAiChatError(null);
-    setAiChatNotice(result.notice ?? "AI reply imported.");
-    startConceptSpec(result.spec, result.notice ?? "AI reply imported.");
+    setAiChatNotice("AI reply imported.");
+    startConceptSpec(result.spec, result.notice ?? undefined);
   }
 
   async function copySpecJson() {
@@ -356,10 +412,10 @@ export function ProductVisualSidebar() {
     const text = prettySpec(spec);
     try {
       await navigator.clipboard.writeText(text);
-      setSpecNotice("Spec JSON copied.");
+      setSpecNotice("Scene spec copied.");
     } catch {
       setSpecJsonDraft(text);
-      setSpecNotice("Copy failed. JSON is shown below.");
+      setSpecNotice("Copy failed. Scene spec is shown below.");
     }
   }
 
@@ -385,6 +441,10 @@ export function ProductVisualSidebar() {
       }
       const latest = useEditorStore.getState().productVisualContent;
       if (!latest) return;
+      if (isImageBgFormat(latest.format)) {
+        setUploadError("Screenshot is not available for Product Feature formats. Use Concept UI instead.");
+        return;
+      }
       // New/replaced image → fresh screenshot (crop reset; natural dims captured).
       setProductVisualContent({
         ...latest,
@@ -401,13 +461,88 @@ export function ProductVisualSidebar() {
     }
   }
 
+  async function handleReferenceFile(file: File | undefined) {
+    if (!file || referenceUploading) return;
+    setReferenceError(null);
+    if (!UPLOAD_ACCEPT.split(",").includes(file.type)) {
+      setReferenceError("Unsupported format — use PNG, JPG, or WebP.");
+      return;
+    }
+    if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      setReferenceError(`Image is too large — keep it under ${MAX_UPLOAD_MB} MB.`);
+      return;
+    }
+
+    setReferenceUploading(true);
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = objectUrl;
+      await img.decode();
+      if (!img.naturalWidth || !img.naturalHeight) {
+        URL.revokeObjectURL(objectUrl);
+        setReferenceError("Could not read the image — please try again.");
+        return;
+      }
+      setReferenceImage({
+        url: objectUrl,
+        name: file.name,
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+      });
+      setReferenceBrief((brief) => brief || content.reference?.brief || "Workspace settings with an editor, preview, and AI agent tester");
+    } catch {
+      URL.revokeObjectURL(objectUrl);
+      setReferenceError("Could not read the image — please try again.");
+    } finally {
+      setReferenceUploading(false);
+    }
+  }
+
+  function clearReferenceImage() {
+    setReferenceImage(null);
+  }
+
+  async function rebuildFromReference() {
+    const brief = (referenceBrief || content.reference?.brief || content.title || "").trim()
+      || "Workspace settings with an editor, preview, and AI agent tester";
+    const layout = referenceLayout;
+    const forcedArchetype = REFERENCE_LAYOUT_OPTIONS.find((option) => option.id === layout)?.archetype;
+    setConceptError(null);
+    setSpecNotice(null);
+    setReferenceError(null);
+    try {
+      const result = await ruleBasedSpecProvider.generate({
+        description: brief,
+        uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
+        forcedArchetype,
+      });
+      const latest = useEditorStore.getState().productVisualContent;
+      if (!latest) return;
+      setProductVisualContent({
+        ...latest,
+        sourceMode: "reference",
+        reference: { brief, layout },
+        conceptScene: result.spec,
+      });
+      startConceptSpec(result.spec, result.notice ?? "Rebuilt with design system components.");
+    } catch (err) {
+      setReferenceError(err instanceof Error ? err.message : "Could not rebuild from reference.");
+    }
+  }
+
   // Product Feature formats use a full-bleed background image (same library as
   // the Chat editor); other formats use a solid/fixed color. No title/subtitle
   // or layout chrome on any format — just background + screenshot.
   const imageBg = isImageBgFormat(content.format);
   const cropOnly = imageBg;
-  const sourceMode = content.sourceMode ?? "screenshot";
+  const rawSourceMode = content.sourceMode ?? (imageBg ? "concept" : "screenshot");
+  const activeRawSourceMode =
+    rawSourceMode === "reference" && PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? "concept" : rawSourceMode;
+  const sourceMode = imageBg && activeRawSourceMode === "screenshot" ? "concept" : activeRawSourceMode;
+  const screenshotSourceDisabled = imageBg;
   const effectiveConceptPrompt = conceptPrompt || content.concept?.prompt || content.title || "";
+  const effectiveReferenceBrief = referenceBrief || content.reference?.brief || content.title || "";
   const analyzedChoice = ruleBasedSpecProvider.analyze({ description: effectiveConceptPrompt });
   const activeConceptSpec = lastConceptSpec ?? content.conceptScene ?? null;
   const showManualPrompt = aiChatError?.startsWith("Copy is blocked") && !!aiChatPromptDraft;
@@ -419,11 +554,13 @@ export function ProductVisualSidebar() {
   const bgList = [...BACKGROUNDS, ...customBackgrounds];
   const selectedBgId = bgList.find((b) => b.url === content.bgImage)?.id ?? "";
   const current = FORMAT_FLAT.find((f) => f.id === content.format);
+  const sceneSourceMode = sourceMode === "concept" || sourceMode === "reference";
 
-  function recaptureConceptSpec(spec: SceneSpec | null = activeConceptSpec) {
+  function recaptureConceptSpec(spec: SceneSpec | null = activeConceptSpec, preset: FramingPreset = framingPreset) {
     const nextSpec = spec ?? activeConceptSpec;
-    if (sourceMode !== "concept" || !nextSpec) return;
+    if (!sceneSourceMode || !nextSpec) return;
     setConceptError(null);
+    setConceptCapturePreset(preset);
     setConceptScene(nextSpec);
     setConceptGenerating(true);
     setConceptCaptureId((id) => id + 1);
@@ -431,7 +568,7 @@ export function ProductVisualSidebar() {
 
   function handleFramingPresetChange(preset: FramingPreset) {
     setFramingPreset(preset);
-    recaptureConceptSpec();
+    recaptureConceptSpec(undefined, preset);
   }
 
   function handleResizeStart(e: React.MouseEvent) {
@@ -564,19 +701,24 @@ export function ProductVisualSidebar() {
           </Section>
         )}
 
-        <Section title="Source">
+        <Section title="Source" info={<SourceInfoTooltip />}>
           <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
             {SOURCE_OPTIONS.map((item) => {
+              const disabled = item.id === "screenshot" && screenshotSourceDisabled;
               const active = sourceMode === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
+                  disabled={disabled}
                   onClick={() => switchSourceMode(item.id)}
                   aria-pressed={active}
+                  title={disabled ? "Screenshot is not available for Product Feature formats." : undefined}
                   className={[
                     "flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors",
-                    active
+                    disabled
+                      ? "cursor-not-allowed text-studio-muted/35"
+                      : active
                       ? "bg-studio-hover text-studio-text"
                       : "text-studio-muted hover:text-studio-text",
                   ].join(" ")}
@@ -682,15 +824,153 @@ export function ProductVisualSidebar() {
         </Section>
         )}
 
-        {sourceMode === "concept" && (
-          <div className="relative">
-            {showConceptCoach && (
-              <CoachmarkBubble
-                text="Describe a feature to create the mock."
-                onDismiss={dismissConceptCoach}
-              />
+        {sourceMode === "reference" && (
+          <Section title="Rebuild from reference">
+            <input
+              ref={referenceInputRef}
+              type="file"
+              accept={UPLOAD_ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                handleReferenceFile(e.target.files?.[0]);
+                if (referenceInputRef.current) referenceInputRef.current.value = "";
+              }}
+            />
+
+            {referenceImage ? (
+              <div className="flex flex-col gap-3">
+                <div className="group relative overflow-hidden rounded-lg border border-studio-border bg-studio-input">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={referenceImage.url} alt="Reference screenshot" className="h-28 w-full object-contain" />
+                  <button
+                    onClick={() => referenceInputRef.current?.click()}
+                    aria-label="Replace reference"
+                    disabled={referenceUploading}
+                    className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <span className="flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-medium text-white">
+                      <RefreshCw size={13} /> {referenceUploading ? "Uploading..." : "Replace"}
+                    </span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-studio-muted">
+                  <span className="min-w-0 flex-1 truncate">{referenceImage.name}</span>
+                  <span className="tabular-nums">{referenceImage.naturalWidth}×{referenceImage.naturalHeight}</span>
+                  <button
+                    type="button"
+                    onClick={clearReferenceImage}
+                    aria-label="Remove reference"
+                    className="flex size-7 items-center justify-center rounded-md text-studio-muted transition-colors hover:bg-white/[0.06] hover:text-red-400"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => referenceInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setReferenceDragging(true); }}
+                onDragLeave={() => setReferenceDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setReferenceDragging(false);
+                  handleReferenceFile(e.dataTransfer.files?.[0]);
+                }}
+                disabled={referenceUploading}
+                className={[
+                  "flex w-full flex-col items-center justify-center gap-2 rounded-lg border-[1.6px] border-dashed py-7 transition-colors",
+                  referenceUploading ? "cursor-wait opacity-60" : "",
+                  referenceDragging
+                    ? "border-studio-accent bg-studio-accent/[0.06] text-studio-text"
+                    : "border-studio-border text-studio-muted hover:border-studio-muted hover:text-studio-text",
+                ].join(" ")}
+              >
+                <Upload size={20} />
+                <span className="text-xs font-medium">{referenceUploading ? "Uploading..." : "Upload reference image"}</span>
+              </button>
             )}
-            <Section title="Concept UI">
+
+            <p className="mt-2 text-[11px] leading-snug text-studio-muted">
+              Reference images stay in this session only. Saved files keep the rebuilt scene, not the original image.
+            </p>
+
+            <div className="mt-4 space-y-2">
+              <StepLabel
+                number={1}
+                title="Describe the screen"
+                description="Use the reference as a guide, then rebuild with Delight.ai components."
+              />
+              <textarea
+                value={effectiveReferenceBrief}
+                onChange={(e) => {
+                  const brief = e.currentTarget.value;
+                  setReferenceBrief(brief);
+                  update({ sourceMode: "reference", reference: { brief, layout: referenceLayout } });
+                }}
+                placeholder="e.g. Workspace settings with editor, preview, and AI agent tester"
+                rows={4}
+                className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
+              />
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <StepLabel
+                number={2}
+                title="Structure"
+                description="Auto works for most references; switch only when the result is wrong."
+              />
+              <div className="grid grid-cols-2 gap-1.5">
+                {REFERENCE_LAYOUT_OPTIONS.map((option) => {
+                  const active = referenceLayout === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setReferenceLayout(option.id);
+                        update({
+                          sourceMode: "reference",
+                          reference: { brief: effectiveReferenceBrief, layout: option.id },
+                        });
+                      }}
+                      className={[
+                        "rounded-md border px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                        active
+                          ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
+                          : "border-studio-border text-studio-muted hover:bg-white/[0.04] hover:text-studio-text",
+                      ].join(" ")}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={rebuildFromReference}
+              disabled={conceptGenerating || (!referenceImage && !effectiveReferenceBrief.trim())}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2.5 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
+            >
+              {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {conceptGenerating ? "Rendering..." : "Rebuild with design system"}
+            </button>
+
+            {referenceError ? (
+              <p className="mt-2 text-[11px] leading-snug text-red-400">{referenceError}</p>
+            ) : conceptError ? (
+              <p className="mt-2 text-[11px] leading-snug text-red-400">{conceptError}</p>
+            ) : specNotice ? (
+              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{specNotice}</p>
+            ) : content.sourceMode === "reference" && content.conceptScene ? (
+              <p className="mt-2 text-[11px] leading-snug text-studio-muted">Rebuilt scene is ready in the preview.</p>
+            ) : null}
+          </Section>
+        )}
+
+        {sourceMode === "concept" && (<>
+          <Section title="Concept UI">
             <div className="space-y-3">
               <StepLabel
                 number={1}
@@ -700,7 +980,6 @@ export function ProductVisualSidebar() {
               <textarea
                 value={effectiveConceptPrompt}
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
-                onFocus={dismissConceptCoach}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}
                 className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
@@ -751,9 +1030,6 @@ export function ProductVisualSidebar() {
                   Copy prompt again
                 </button>
               </div>
-            ) : null}
-            {aiChatNotice ? (
-              <p className="mt-2 text-[11px] leading-snug text-studio-muted">{aiChatNotice}</p>
             ) : null}
             {(aiChatPromptCopied || aiChatPromptDraft) ? (
               <div className="mt-4 rounded-xl border border-studio-border bg-studio-input p-3">
@@ -806,8 +1082,12 @@ export function ProductVisualSidebar() {
                   disabled={!aiChatReplyDraft.trim() || conceptGenerating}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-40"
                 >
-                  {conceptGenerating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Render AI reply
+                  {conceptGenerating ? (
+                    <RefreshCw size={14} className="animate-spin" />
+                  ) : aiChatNotice ? (
+                    <Check size={14} />
+                  ) : null}
+                  {conceptGenerating ? "Rendering..." : aiChatNotice ? "AI reply imported" : "Render AI reply"}
                 </button>
               </div>
             ) : null}
@@ -849,19 +1129,36 @@ export function ProductVisualSidebar() {
                 })}
               </div>
             </div>
+          </Section>
 
-            <details className="mt-4 rounded-lg border border-studio-border bg-studio-input p-2">
-              <summary className="cursor-pointer text-[11px] font-semibold text-studio-muted hover:text-studio-text">
-                Advanced: import / export spec JSON
-              </summary>
-              <div className="mt-2 flex gap-1.5">
+          <Section
+            title="Developer tools"
+            action={
+              <button
+                type="button"
+                onClick={() => setDeveloperToolsOpen(!developerToolsOpen)}
+                className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+                aria-label="Toggle developer tools"
+              >
+                <ChevronDown size={15} className={developerToolsOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+              </button>
+            }
+          >
+            {!developerToolsOpen ? (
+              <p className="text-[11px] text-studio-muted leading-relaxed">
+                Scene spec import and export tools are hidden by default.
+              </p>
+            ) : (
+              <div>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Scene spec</div>
+                <div className="flex gap-1.5">
                 <button
                   type="button"
                   onClick={copySpecJson}
                   disabled={!activeConceptSpec}
                   className="rounded-md border border-studio-border px-2 py-1 text-[11px] font-semibold text-studio-muted hover:text-studio-text disabled:opacity-40"
                 >
-                  Copy spec JSON
+                  Copy scene spec
                 </button>
                 <button
                   type="button"
@@ -869,7 +1166,7 @@ export function ProductVisualSidebar() {
                   disabled={!specJsonDraft.trim()}
                   className="rounded-md bg-studio-accent px-2 py-1 text-[11px] font-semibold text-studio-accent-fg disabled:opacity-40"
                 >
-                  Paste spec JSON
+                  Paste scene spec
                 </button>
               </div>
               <textarea
@@ -878,7 +1175,7 @@ export function ProductVisualSidebar() {
                   setSpecJsonDraft(e.currentTarget.value);
                   setSpecPasteError(null);
                 }}
-                placeholder="Paste SceneSpec JSON"
+                placeholder="Paste SceneSpec"
                 spellCheck={false}
                 rows={5}
                 className="mt-2 w-full resize-none rounded-md border border-studio-border bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60"
@@ -886,10 +1183,10 @@ export function ProductVisualSidebar() {
               {specPasteError ? (
                 <p className="mt-1.5 whitespace-pre-wrap text-[10px] leading-relaxed text-red-400">{specPasteError}</p>
               ) : null}
-            </details>
-            </Section>
-          </div>
-        )}
+              </div>
+            )}
+          </Section>
+        </>)}
 
         {sourceMode === "screenshot" && content.screenshot?.url && (
           <Section title="Settings">
@@ -942,7 +1239,7 @@ export function ProductVisualSidebar() {
         <BackgroundPickerModal
           currentId={selectedBgId}
           customBackgrounds={customBackgrounds}
-          hiddenGroups={["industry"]}
+          hiddenGroups={["industry", "everyday"]}
           onSelect={(bg) => update({ bgImage: bg.url })}
           onUpload={(bg) => { addCustomBackground(bg); update({ bgImage: bg.url }); }}
           onClose={() => setBgModalOpen(false)}

@@ -1,10 +1,12 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS, stackedBarMaxRows } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = {
   block: Extract<InfographicBlock, { type: "stacked-bar" }>;
   scale?: number;
   maxHeight?: number;
+  format?: InfographicFormat;
 };
 
 /**
@@ -78,13 +80,19 @@ function Legend({
  * Palette is grayscale only; one series may be promoted to the accent (lime) via
  * `accentIndex`. A legend sits above the rows.
  */
-export function StackedBarBlock({ block, scale = 1, maxHeight }: Props) {
+export function StackedBarBlock({ block, scale = 1, maxHeight, format }: Props) {
   // Same data model (series × rows.values); `layout: "grouped"` renders the
   // series as separate parallel bars per row instead of stacking end-to-end.
-  if (block.layout === "grouped") return <GroupedBars block={block} scale={scale} maxHeight={maxHeight} />;
+  if (block.layout === "grouped") {
+    return <GroupedBars block={block} scale={scale} maxHeight={maxHeight} format={format} />;
+  }
 
   const u = block.unit ?? "";
-  const { series, rows, normalize, accentIndex } = block;
+  const series = block.series.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries);
+  const rows = block.rows
+    .slice(0, stackedBarMaxRows(format ?? "blog"))
+    .map((row) => ({ ...row, values: row.values.slice(0, series.length) }));
+  const { normalize, accentIndex } = block;
 
   const rowSums = rows.map((r) => r.values.reduce((s, v) => s + Math.max(0, v || 0), 0));
   const maxSum = Math.max(...rowSums, 1);
@@ -203,9 +211,13 @@ export function StackedBarBlock({ block, scale = 1, maxHeight }: Props) {
  * group-to-group. There is no axis, so each bar's value is printed at its right
  * end. `normalize` is meaningless here (bars aren't stacked) and is ignored.
  */
-function GroupedBars({ block, scale = 1, maxHeight }: Props) {
+function GroupedBars({ block, scale = 1, maxHeight, format }: Props) {
   const u = block.unit ?? "";
-  const { series, rows, accentIndex } = block;
+  const series = block.series.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackedBarSeries);
+  const rows = block.rows
+    .slice(0, stackedBarMaxRows(format ?? "blog"))
+    .map((row) => ({ ...row, values: row.values.slice(0, series.length) }));
+  const { accentIndex } = block;
 
   // Shared scale: the single largest value across all rows AND series fills the
   // track — NOT a per-row sum (that's the stacked path).

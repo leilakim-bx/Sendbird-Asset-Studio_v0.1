@@ -9,12 +9,15 @@ import { GuideModal } from "@/components/layout/Sidebar";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { useEditorStore } from "@/lib/store";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { useWorkAutosnapshot } from "@/lib/use-work-autosnapshot";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { DEFAULT_SCENARIO } from "@/lib/scenarios";
 import { FormPanel } from "./FormPanel";
+import { WorkPreservationMenu } from "./WorkPreservationMenu";
 import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { getBackground } from "@/lib/backgrounds";
 import { exportImage, captureThumbnail, type ExportedImage } from "@/lib/export";
-import type { SavedAsset } from "@/lib/store";
+import type { ChatDraft, SavedAsset } from "@/lib/store";
 import type { ChatTemplate } from "@/lib/template-registry";
 import { EXPORT_SIZES } from "@/lib/template-registry";
 
@@ -94,12 +97,27 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
   // Write-through autosave (debounced + flushed on teardown/tab-hide).
   const chatDraft = useMemo(
     () => ({
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
       messages, backgroundId, layout, exportSize, appName,
       userName, userAvatarUrl, activeScenarioId,
     }),
     [messages, backgroundId, layout, exportSize, appName, userName, userAvatarUrl, activeScenarioId],
   );
   useAutosaveDraft(chatDraft, saveChatDraft, ready);
+  useWorkAutosnapshot("chat", template.id, chatDraft, ready);
+
+  function handleRestoreChatDraft(next: ChatDraft) {
+    setMessages(next.messages);
+    setBackgroundId(next.backgroundId);
+    setLayout(next.layout);
+    setExportSize(next.exportSize);
+    setAppName(next.appName);
+    setActiveScenarioId(next.activeScenarioId);
+    useEditorStore.setState({
+      userName: next.userName,
+      userAvatarUrl: next.userAvatarUrl,
+    });
+  }
 
   // ── Unsaved-changes guard (logo → home) ─────────────────
   // "Dirty" = current draft differs from the last state saved to My files (or
@@ -266,6 +284,7 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
       const now = Date.now();
       const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       const asset: SavedAsset = {
+        schemaVersion: WORK_DATA_SCHEMA_VERSION,
         id:            `asset-${now}`,
         templateId:    template.id,
         appName,
@@ -326,7 +345,13 @@ export function EditorShell({ template }: { template: ChatTemplate }) {
         </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <WorkPreservationMenu
+            kind="chat"
+            templateId={template.id}
+            currentData={chatDraft}
+            onRestore={handleRestoreChatDraft}
+          />
           <button
             onClick={() => setGuideOpen(true)}
             title="Open guide"

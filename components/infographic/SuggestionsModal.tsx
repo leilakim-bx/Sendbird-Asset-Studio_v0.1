@@ -9,6 +9,7 @@ import {
   type InfographicContent,
 } from "@/lib/types/infographic";
 import { type Suggestion, suggestionToBlock } from "@/lib/ai/validate-suggestions";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { InfographicCanvas } from "./InfographicCanvas";
 
 const THUMB_W = 140;
@@ -48,6 +49,7 @@ export function SuggestionsModal({ open, suggestions, bg, accent, onClose, onCre
   const thumbs = useMemo<InfographicContent[]>(
     () =>
       suggestions.map((s) => ({
+        schemaVersion: WORK_DATA_SCHEMA_VERSION,
         format: "product",
         bg,
         accent,

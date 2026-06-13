@@ -8,9 +8,12 @@ import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { captureThumbnail, type ExportedImage } from "@/lib/export";
+import { useWorkAutosnapshot } from "@/lib/use-work-autosnapshot";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { exportProductVisual, productVisualFilename } from "@/lib/product-visual/export";
 import { ProductVisualCanvas } from "./ProductVisualCanvas";
 import { ProductVisualSidebar } from "./ProductVisualSidebar";
+import { WorkPreservationMenu } from "@/components/editor/WorkPreservationMenu";
 import type { ProductVisualTemplate } from "@/lib/template-registry";
 import { FORMAT_SIZES, FORMAT_MIN_HEIGHT } from "@/lib/types/product-visual";
 
@@ -46,6 +49,7 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
 
   const content = productVisualContent ?? template.defaultContent;
   const { format } = content;
+  useWorkAutosnapshot("product-visual", template.id, content, ready);
 
   // ── Unsaved-changes guard (logo → home) ─────────────────
   const router = useRouter();
@@ -144,6 +148,7 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
       const dateStr = new Date(now).toLocaleDateString("en-US", { month: "short", day: "numeric" });
       const appName = content.title?.trim() || "Product Visual";
       const asset: SavedAsset = {
+        schemaVersion: WORK_DATA_SCHEMA_VERSION,
         id:             `asset-${now}`,
         templateId:     template.id,
         appName,
@@ -182,7 +187,13 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
         </button>
         <span className="text-studio-border select-none">/</span>
         <span className="text-studio-text text-xs font-medium">{template.name}</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <WorkPreservationMenu
+            kind="product-visual"
+            templateId={template.id}
+            currentData={content}
+            onRestore={setProductVisualContent}
+          />
           <button
             onClick={() => setGuideOpen(true)}
             title="Open guide"
@@ -267,7 +278,7 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
         </div>
 
         {/* Right: editing sidebar */}
-        <ProductVisualSidebar />
+        <ProductVisualSidebar content={content} />
       </div>
 
       {leaveOpen && (

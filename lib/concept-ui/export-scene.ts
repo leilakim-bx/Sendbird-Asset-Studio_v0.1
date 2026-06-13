@@ -56,8 +56,8 @@ function measureRenderedBounds(element: HTMLElement): { width: number; height: n
   });
 
   return {
-    width: Math.ceil(width),
-    height: Math.ceil(height),
+    width: Math.min(CONCEPT_UI_CANVAS_WIDTH, Math.ceil(width)),
+    height: Math.min(CONCEPT_UI_CANVAS_HEIGHT, Math.ceil(height)),
   };
 }
 

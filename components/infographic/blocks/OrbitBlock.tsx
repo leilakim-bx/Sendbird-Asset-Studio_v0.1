@@ -18,6 +18,7 @@ import {
 } from "simple-icons";
 import type { InfographicBlock, OrbitIconKey } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = { block: Extract<InfographicBlock, { type: "orbit" }>; scale?: number };
@@ -105,7 +106,7 @@ function CenterMark({ scale }: { scale: number }) {
 }
 
 function CycleDiagram({ block, scale = 1 }: Props) {
-  const nodes = (block.nodes?.length ? block.nodes : DEFAULT_NODES).slice(0, 8);
+  const nodes = (block.nodes?.length ? block.nodes : DEFAULT_NODES).slice(0, INFOGRAPHIC_BLOCK_LIMITS.orbitNodes);
   const radius = nodes.length > 6 ? 160 : 152;
   const outerGuideRadius = 216;
   const innerGuideRadius = 92;
@@ -197,7 +198,7 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
   const rawSatellites = block.satellites?.length ? block.satellites : DEFAULT_SATELLITES;
   const satellites = rawSatellites
     .filter((satellite) => satellite.key in LUCIDE_ICONS || satellite.key in SIMPLE_ICONS)
-    .slice(0, 8);
+    .slice(0, INFOGRAPHIC_BLOCK_LIMITS.orbitSatellites);
   const radius = satellites.length > 6 ? 124 : 116;
   const outerGuideRadius = radius + 72;
   const iconSize = Math.round(24 * scale);

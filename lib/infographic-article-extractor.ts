@@ -8,6 +8,7 @@ import {
 } from "@/lib/types/infographic";
 import { newBlockId } from "@/lib/infographic-presets";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
+import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 
 export type ArticleImageStatus = "draft" | "ready";
 
@@ -74,6 +75,7 @@ export function extractInfographicCandidates(
     sourceSnippet: draft.sourceSnippet,
     blockType: draft.blockType,
     content: {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
       format: base.format,
       bg: base.bg,
       accent: base.accent,
