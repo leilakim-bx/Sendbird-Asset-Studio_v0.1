@@ -154,6 +154,7 @@ export type OrbitIconKey =
   | "mobile"
   | "voice"
   | "whatsapp"
+  | "slack"
   | "line"
   | "instagram"
   | "messenger"

@@ -20,6 +20,7 @@ import type { InfographicBlock, OrbitIconKey } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK } from "@/lib/types/infographic";
 import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
+import { DelightMark } from "./DelightMark";
 
 type Props = { block: Extract<InfographicBlock, { type: "orbit" }>; scale?: number };
 
@@ -49,6 +50,10 @@ const SIMPLE_ICONS: Partial<Record<OrbitIconKey, SimpleIcon>> = {
   gmail: siGmail,
 };
 
+const ASSET_ICONS: Partial<Record<OrbitIconKey, string>> = {
+  slack: "/preview/icon_slack.svg",
+};
+
 const DEFAULT_NODES = [
   { label: "Detect" },
   { label: "Activate" },
@@ -60,6 +65,7 @@ const DEFAULT_SATELLITES: Array<{ key: OrbitIconKey }> = [
   { key: "mobile" },
   { key: "web" },
   { key: "chat" },
+  { key: "slack" },
   { key: "email" },
   { key: "whatsapp" },
   { key: "site" },
@@ -93,14 +99,7 @@ function CenterMark({ scale }: { scale: number }) {
         pointerEvents: "none",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/preview/delight_logo.png"
-        alt=""
-        width={size}
-        height={size}
-        style={{ display: "block", width: size, height: size, objectFit: "contain" }}
-      />
+      <DelightMark size={size} />
     </div>
   );
 }
@@ -197,7 +196,7 @@ function CycleDiagram({ block, scale = 1 }: Props) {
 function HubSpokeDiagram({ block, scale = 1 }: Props) {
   const rawSatellites = block.satellites?.length ? block.satellites : DEFAULT_SATELLITES;
   const satellites = rawSatellites
-    .filter((satellite) => satellite.key in LUCIDE_ICONS || satellite.key in SIMPLE_ICONS)
+    .filter((satellite) => satellite.key in ASSET_ICONS || satellite.key in LUCIDE_ICONS || satellite.key in SIMPLE_ICONS)
     .slice(0, INFOGRAPHIC_BLOCK_LIMITS.orbitSatellites);
   const radius = satellites.length > 6 ? 124 : 116;
   const outerGuideRadius = radius + 72;
@@ -214,6 +213,7 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
 
       {satellites.map((satellite, i) => {
         const p = nodePos(i, satellites.length, radius);
+        const assetIcon = ASSET_ICONS[satellite.key];
         const simpleIcon = SIMPLE_ICONS[satellite.key];
         const Icon = LUCIDE_ICONS[satellite.key] ?? Globe;
         return (
@@ -236,7 +236,17 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
               boxShadow: brand.elevation[1],
             }}
           >
-            {simpleIcon ? (
+            {assetIcon ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={assetIcon}
+                alt=""
+                width={iconSize}
+                height={iconSize}
+                aria-hidden
+                style={{ display: "block", width: iconSize, height: iconSize, objectFit: "contain" }}
+              />
+            ) : simpleIcon ? (
               <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" aria-hidden style={{ display: "block" }}>
                 <path d={simpleIcon.path} fill="currentColor" />
               </svg>

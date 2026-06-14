@@ -2,24 +2,27 @@ import { type NextRequest } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
+import {
+  ASSET_IMAGE_MAX_BYTES,
+  ASSET_IMAGE_MAX_UPLOAD_MB,
+  hasAssetImageBlobCredentials,
+  isAllowedAssetImageType,
+  uploadAssetImageToBlob,
+} from "@/lib/server/asset-image-storage";
 
 /**
  * POST /api/upload-background
  *
- * Stores uploaded background images in /public/background.
- * External object storage is intentionally disabled by security policy.
+ * Stores uploaded background images in Vercel Blob when available, with a
+ * local filesystem fallback for development.
  *
  * 반환: { id, label, url }
  */
-
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const EXT_MAP: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png":  "png",
   "image/webp": "webp",
-  "image/gif":  "gif",
 };
 
 function deriveLabel(filename: string): string {
@@ -45,21 +48,31 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Validation ───────────────────────────────────────────
-  if (!ALLOWED_TYPES.has(file.type)) {
+  if (!isAllowedAssetImageType(file.type)) {
     return Response.json(
-      { error: "Only JPEG, PNG, WebP, and GIF images are allowed" },
+      { error: "Only JPEG, PNG, and WebP images are allowed" },
       { status: 400 },
     );
   }
 
-  if (file.size > MAX_UPLOAD_SIZE) {
+  if (file.size > ASSET_IMAGE_MAX_BYTES) {
     return Response.json(
-      { error: "파일이 너무 큽니다. 최대 10MB." },
+      { error: `Image is too large — keep it under ${ASSET_IMAGE_MAX_UPLOAD_MB} MB.` },
       { status: 400 },
     );
   }
 
   const label = deriveLabel(file.name);
+
+  if (hasAssetImageBlobCredentials()) {
+    try {
+      const blob = await uploadAssetImageToBlob(file, "custom-background");
+      const id = `custom-${Date.now()}`;
+      return Response.json({ id, label, url: blob.url, storage: "blob" });
+    } catch {
+      return Response.json({ error: "Could not upload background image" }, { status: 500 });
+    }
+  }
 
   // ── Local filesystem storage ─────────────────────────────
   const UPLOAD_DIR = join(process.cwd(), "public", "background");
@@ -76,5 +89,5 @@ export async function POST(request: NextRequest) {
 
   await writeFile(filepath, buffer);
 
-  return Response.json({ id, label, url: `/background/${filename}` });
+  return Response.json({ id, label, url: `/background/${filename}`, storage: "local" });
 }

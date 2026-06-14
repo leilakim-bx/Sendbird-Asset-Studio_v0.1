@@ -50,6 +50,40 @@ describe("infographic block render limits", () => {
     expect(html).not.toContain("Step 9");
   });
 
+  it("defensively limits product layer diagrams to three layers", () => {
+    const block: InfographicBlock = {
+      id: "stack",
+      type: "stack",
+      layers: Array.from({ length: INFOGRAPHIC_BLOCK_LIMITS.stackLayers.blog + 1 }, (_, index) => ({
+        title: `Layer ${index + 1}`,
+        caption: "Brief layer detail.",
+        cells: [{ title: `Cell ${index + 1}` }],
+      })),
+    };
+
+    const html = renderBlock(block, "product");
+
+    expect(html).toContain("Layer 3");
+    expect(html).not.toContain("Layer 4");
+  });
+
+  it("keeps blog layer diagrams at the broader layer cap", () => {
+    const block: InfographicBlock = {
+      id: "stack",
+      type: "stack",
+      layers: Array.from({ length: INFOGRAPHIC_BLOCK_LIMITS.stackLayers.blog + 1 }, (_, index) => ({
+        title: `Layer ${index + 1}`,
+        caption: "Brief layer detail.",
+        cells: [{ title: `Cell ${index + 1}` }],
+      })),
+    };
+
+    const html = renderBlock(block, "blog");
+
+    expect(html).toContain("Layer 4");
+    expect(html).not.toContain("Layer 5");
+  });
+
   it("defensively limits multi-series bar rows and series", () => {
     const block: InfographicBlock = {
       id: "stacked",

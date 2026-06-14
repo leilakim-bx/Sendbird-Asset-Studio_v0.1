@@ -8,6 +8,7 @@ import {
   cardGridBodyMaxChars,
   compareMaxRows,
   stackedBarMaxRows,
+  stackMaxLayers,
   stepMaxItems,
 } from "@/lib/infographic-block-limits";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
@@ -86,6 +87,20 @@ function num(v: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function nextColumnChartItem(items: Extract<InfographicBlock, { type: "bar-group" }>["items"]) {
+  const nextIndex = items.length;
+  const nextCount = nextIndex + 1;
+  const valueA = nextCount <= 1 ? 96 : Math.round(52 + (nextIndex / Math.max(1, nextCount - 1)) * 44);
+  return {
+    label: `Step ${nextCount}`,
+    valueA,
+    heading: `Lv.${nextCount}`,
+    tag: nextIndex === 0 ? "Today" : "ZTI",
+    desc: "",
+    highlight: true,
+  };
+}
+
 type EditorProps = {
   block: InfographicBlock;
   onChange: (b: InfographicBlock) => void;
@@ -97,6 +112,7 @@ const ORBIT_ICON_OPTIONS: Array<{ key: OrbitIconKey; label: string }> = [
   { key: "mobile", label: "Mobile" },
   { key: "chat", label: "Chat" },
   { key: "web", label: "Web" },
+  { key: "slack", label: "Slack" },
   { key: "whatsapp", label: "WhatsApp" },
   { key: "line", label: "LINE" },
   { key: "instagram", label: "Instagram" },
@@ -117,6 +133,7 @@ const DEFAULT_ORBIT_SATELLITES: Array<{ key: OrbitIconKey }> = [
   { key: "mobile" },
   { key: "web" },
   { key: "chat" },
+  { key: "slack" },
   { key: "email" },
   { key: "whatsapp" },
   { key: "site" },
@@ -472,6 +489,13 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
           <AddRow
             onClick={() => {
               if (columnsAtLimit) return;
+              if (variant === "columns") {
+                setItems([
+                  ...editableItems.map((item) => ({ ...item, highlight: false })),
+                  nextColumnChartItem(editableItems),
+                ]);
+                return;
+              }
               setItems([...editableItems, { label: "Row", valueA: 50, valueB: 50 }]);
             }}
             disabled={columnsAtLimit}
@@ -532,9 +556,10 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
 
     case "stack": {
       const b = block;
-      const layers = (b.layers ?? []).slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers);
+      const maxLayers = stackMaxLayers(format);
+      const layers = (b.layers ?? []).slice(0, maxLayers);
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
-      const setLayers = (next: typeof layers) => onChange({ ...b, layers: next.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers) });
+      const setLayers = (next: typeof layers) => onChange({ ...b, layers: next.slice(0, maxLayers) });
       const patchLayer = (i: number, patch: Partial<(typeof layers)[number]>) =>
         setLayers(layers.map((x, k) => (k === i ? { ...x, ...patch } : x)));
       const patchCell = (i: number, j: number, patch: { title?: string; desc?: string }) =>
@@ -615,10 +640,10 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
           })}
           <AddRow
             onClick={() => setLayers([...layers, { title: "Layer", cells: [] }])}
-            disabled={layers.length >= INFOGRAPHIC_BLOCK_LIMITS.stackLayers}
+            disabled={layers.length >= maxLayers}
             title={
-              layers.length >= INFOGRAPHIC_BLOCK_LIMITS.stackLayers
-                ? `Layer diagrams can have up to ${INFOGRAPHIC_BLOCK_LIMITS.stackLayers} layers.`
+              layers.length >= maxLayers
+                ? `${format === "product" ? "Product feature" : "Blog"} layer diagrams can have up to ${maxLayers} layers.`
                 : undefined
             }
           >

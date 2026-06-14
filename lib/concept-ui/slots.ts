@@ -16,6 +16,15 @@ function reusableBlockSlots(spec: SceneSpec): ConceptSlot[] {
   ) {
     return [
       ...(spec.content.logicBlocks?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.autonomyMatrices?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.controlPanels?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.knowledgeCoverages?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.evaluationScorecards?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.integrationHealths?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.channelMatrices?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.actionTrails?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.improvementSignals?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
+      ...(spec.content.validationLoops?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
       ...(spec.content.reviewQueues?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
       ...(spec.content.toolCallLists?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),
       ...(spec.content.instructionSections?.map((block) => ({ id: block.slotId, label: block.title })) ?? []),

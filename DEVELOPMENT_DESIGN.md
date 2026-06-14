@@ -45,7 +45,8 @@ lib/
 | `/api/source-content` | 붙여넣은 소스 텍스트 정규화 |
 | `/api/product-image` | Pexels 이미지 검색 |
 | `/api/proxy-image` | Pexels 이미지 same-origin 프록시 |
-| `/api/upload-background` | 배경 이미지 로컬 업로드 |
+| `/api/upload-background` | 커스텀 배경 이미지 업로드. Blob 연결 시 Blob URL, 미연결 개발 환경에서는 로컬 filesystem |
+| `/api/upload-asset-image` | Product Visual 스크린샷 등 에셋 이미지 Blob 업로드 |
 | `/api/work-backups` | Settings 복원을 위한 Vercel Blob 작업 스냅샷 저장/조회 |
 
 ## 3. 템플릿 분기
@@ -74,7 +75,7 @@ lib/
 persist 키는 `sendbird-editor-v1`, 현재 version은 `4`다.
 마이그레이션은 구 메시지 포맷 변환, retired template 제거, persisted 컬렉션 상한 정리, saved work `schemaVersion` 부여를 처리한다.
 
-저장되는 작업 데이터는 모두 `schemaVersion: 1`을 가진다. 현재 마이그레이션 레이어는 `lib/work-data-schema.ts`에 있으며 v1은 변환이 없지만, 이후 구조 변경 시 `vN -> vN+1` 변환 함수를 추가하는 구조다.
+저장되는 작업 데이터는 모두 `schemaVersion: 4`를 가진다. 현재 마이그레이션 레이어는 `lib/work-data-schema.ts`에 있으며 v1 -> v2, v2 -> v3, v3 -> v4는 Concept UI reusable block 확장에 따른 identity migration이다. 이후 구조 변경 시 `vN -> vN+1` 변환 함수를 추가하는 구조다.
 
 ## 5. 저장/복원 흐름
 
@@ -93,7 +94,7 @@ My files에서 열기
 작업 중 변경
   -> Shell별 `useWorkAutosnapshot` debounce
   -> 작업 단위별 최근 5개 스냅샷 저장
-  -> `BLOB_READ_WRITE_TOKEN`이 있으면 같은 스냅샷을 Blob에도 best-effort 저장
+  -> Blob credentials가 있으면 같은 스냅샷을 Blob에도 best-effort 저장
   -> UI 노출 없음
 
 Settings 메뉴
@@ -148,13 +149,15 @@ Settings 메뉴
 | Route | 허용 타입 | 제한 | 저장소 |
 |---|---|---|---|
 | `/api/upload-background` | jpg, png, webp, gif | 10MB | `public/background` |
+| `/api/upload-asset-image` | jpg, png, webp | 10MB | Vercel Blob public objects |
 | `/api/work-backups` | work snapshot payload | 3.5MB | Vercel Blob private objects |
 
-Product Visual 스크린샷은 서버 업로드 없이 브라우저에서 data URL로 읽어 localStorage snapshot에 저장한다.
+Product Visual 스크린샷은 Blob이 연결된 환경에서 `/api/upload-asset-image`를 통해 Blob public URL로 저장한다. Blob 미연결 로컬 개발 환경에서는 2MB 이하 이미지에 한해 data URL fallback을 사용한다. 저장 snapshot에는 URL과 natural dimensions만 유지해 localStorage payload를 작게 유지한다.
 Reference Rebuild는 현재 marketer-facing UI에서 archived 상태다. 기존 타입/코드 경로는 향후 품질 개선 후 재활성화할 수 있게 남기되, 서버/저장소 업로드 없이 세션 중 object URL만 사용하는 원칙을 유지한다.
-커스텀 배경은 localStorage 보호를 위해 최근 20개까지만 유지한다.
+커스텀 배경은 Blob이 연결된 환경에서 Blob URL로 저장하고, Blob 미연결 개발 환경에서는 `/public/background` 로컬 filesystem fallback을 사용한다. localStorage 보호를 위해 최근 20개까지만 유지한다.
 
 Vercel Blob 작업 백업은 localStorage 자동 스냅샷의 보조 안전망이다. 클라이언트는 브라우저별 `asset-studio-work-backup-client-v1` id를 만들고, 서버 route는 `work-backups/{clientId}/{kind}/{templateId}/` 아래 최근 5개만 유지한다. Blob 토큰이 없거나 스냅샷이 3.5MB를 넘으면 클라우드 동기화만 건너뛰며, 메인 작업 흐름과 로컬 백업은 실패시키지 않는다.
+Vercel Blob 에셋 이미지는 `asset-images/{purpose}/{date}/` 아래 저장한다. 이 URL은 canvas `<img>`와 PNG export inline 단계에서 직접 읽어야 하므로 public object를 사용한다. 민감한 고객 데이터 스크린샷은 업로드하지 않는 운영 가이드가 필요하다.
 
 ## 8. 외부 서비스
 
@@ -162,7 +165,7 @@ Vercel Blob 작업 백업은 localStorage 자동 스냅샷의 보조 안전망�
 |---|---|---|
 | Pexels | product card 이미지 검색 | 선택, 미설정 시 해당 기능 제한 |
 | Vercel | 배포/접근 보호 | 운영 권장 |
-| Vercel Blob | 작업 스냅샷 보조 백업 | 선택, 미설정 시 localStorage만 사용 |
+| Vercel Blob | 업로드 이미지 저장 + 작업 스냅샷 보조 백업 | 선택, 미설정 시 localStorage/local filesystem fallback |
 
 Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import, 외부 LLM, 승인되지 않은 외부 object storage 업로드는 사용하지 않는다.
 
@@ -197,6 +200,7 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - 붙여넣은 기사/데이터/이미지 노트는 `/api/source-content`에서 정규화 후 후보 생성에 사용한다.
 - rule-based 후보를 선택해 여러 이미지를 한 번에 export할 수 있다.
 - 블록별 입력 상한은 `lib/infographic-block-limits.ts`가 source of truth다. 사이드바는 Add 버튼/입력 길이를 이 값으로 제한하고, 각 block renderer도 같은 값으로 slice해 저장 데이터가 과해도 export 프레임이 깨지지 않게 한다.
+- Layer diagram(`stack`)은 Product feature 고정 프레임에서 최대 3개 layer, Blog/Perspective에서 최대 4개 layer로 제한한다.
 
 ### Product Visual
 
@@ -207,8 +211,9 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - Product Feature 포맷은 Concept UI source만 허용하며 Screenshot upload/source는 비활성화한다.
 - `concept` 모드는 현재 deterministic UI builder로 제품 UI 느낌의 가상 화면을 만든다.
 - `reference` 모드는 archived 상태다. 기존 저장본이 `reference`를 가지고 있어도 런타임에서는 Concept UI scene처럼 렌더한다.
-- Concept UI scene spec은 Dashboard/Workspace/Builder/Modal 안에 optional reusable blocks를 받을 수 있다. `logicBlocks`, `instructionSections`, `reviewQueues`, `toolCallLists`는 if/else, policy, approval, tool/function call 단서에 따라 새 source/structure 선택지를 만들지 않고 삽입된다.
+- Concept UI scene spec은 Dashboard/Workspace/Builder/Modal 안에 optional reusable blocks를 받을 수 있다. `logicBlocks`, `controlPanels`, `autonomyMatrices`, `knowledgeCoverages`, `evaluationScorecards`, `integrationHealths`, `channelMatrices`, `instructionSections`, `reviewQueues`, `toolCallLists`, `actionTrails`, `improvementSignals`, `validationLoops`는 if/else, self-service control, autonomy/permission, knowledge coverage, evaluation, integration health, channel performance, policy, approval, tool/function call, visible agent action log, production signal, self-validation 단서에 따라 새 source/structure 선택지를 만들지 않고 삽입된다.
 - Product Visual 첫 진입은 저장 데이터에 샘플을 seed하지 않고, 왼쪽 preview에 Concept UI 샘플 대시보드만 placeholder로 보여준다.
+- Concept UI export는 Hero crop/Floating panel 모두 전체 scene 배경이 아니라 primary panel만 screenshot pipeline으로 넘긴다. Hero crop은 이후 crop selector를 여는 UX 차이만 가진다.
 - 외부 AI chat으로 만든 Concept UI 답변은 서버 API 없이 클라이언트에서 JSON을 추출/검증한다. Studio SceneSpec과 다른 구조라도 archetype 의도가 명확하면 가장 가까운 지원 layout sample로 변환하고, table cell의 `kind`처럼 누락이 잦은 필드는 column 정보로 보정한다. 의도 자체를 알 수 없는 구조만 에러로 처리한다.
 - SceneSpec JSON 직접 import/export는 일반 Concept UI 플로우와 분리해 `Developer tools` 섹션에 둔다.
 
@@ -217,12 +222,13 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 | 변수 | 설명 |
 |---|---|
 | `PEXELS_API_KEY` | Pexels 이미지 검색 |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 작업 스냅샷 저장/조회. Vercel Storage 연결 시 자동 주입 |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob 업로드 이미지와 작업 스냅샷 저장/조회. Vercel Storage 연결 시 token 방식에서 자동 주입 |
+| `BLOB_STORE_ID` + `VERCEL_OIDC_TOKEN` | Vercel Blob OIDC 연결 방식. `BLOB_READ_WRITE_TOKEN`이 없어도 Blob operations에 사용 |
 
 ## 12. 운영 전환 체크리스트
 
 - `PEXELS_API_KEY` 설정 후 product image search 검증
-- Vercel Blob Store 연결 후 `BLOB_READ_WRITE_TOKEN`이 Production/Preview/Development에 주입됐는지 확인
+- Vercel Blob Store 연결 후 `BLOB_READ_WRITE_TOKEN` 또는 `BLOB_STORE_ID` + `VERCEL_OIDC_TOKEN`이 Production/Preview/Development에 주입됐는지 확인
 - Vercel protection 또는 인증 정책 적용
 - localStorage 저장 한계 테스트: 큰 screenshot, 다수 saved asset
 - 대표 템플릿별 PNG export QA: Desktop, Mobile, Blog, Release Thumbnail
@@ -239,7 +245,7 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 | Blob 백업 | 토큰 없음 fallback, 3.5MB 초과 skip, local+remote 복원 목록 병합 확인 |
 | Export | 각 템플릿 대표 포맷 PNG가 지정 크기/@2x로 생성되는지 확인 |
 | Infographic limits | 블록별 item/text 상한이 에디터와 renderer 양쪽에서 적용되는지 확인 |
-| 업로드 | 배경 허용 타입/10MB 제한과 Product Visual 로컬 screenshot 처리 확인 |
+| 업로드 | 배경/Product Visual 허용 타입/10MB 제한, Blob URL 저장, Blob 미연결 fallback 확인 |
 | 소스 입력 | URL-only 거부, 텍스트 붙여넣기 케이스 확인 |
 
 테스트 우선순위는 validator, 저장/복원, export 순서다. 이 세 영역은 깨지면 사용자가 만든 결과물이 손상되거나 다운로드가 불가능해진다.

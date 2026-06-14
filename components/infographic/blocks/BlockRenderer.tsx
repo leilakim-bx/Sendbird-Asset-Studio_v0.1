@@ -46,7 +46,7 @@ export function BlockRenderer({
     case "step":
       return <StepBlock block={block} scale={scale} format={format} />;
     case "stack":
-      return <StackBlock block={block} scale={scale} />;
+      return <StackBlock block={block} scale={scale} format={format} />;
     case "node-list":
       return <NodeListBlock block={block} scale={scale} format={format} />;
     case "compare":

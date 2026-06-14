@@ -86,7 +86,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | Autosave | Chat UI, Infographic 작업 초안 자동 저장 |
 | 작업 보존 | 모든 저장 작업 데이터는 `schemaVersion`을 가지며, 변경 시 작업 단위별 최근 5개 자동 스냅샷을 보존한다. Vercel Blob이 연결된 배포에서는 같은 스냅샷을 클라우드에도 best-effort로 보존한다. 복원/백업 파일 기능은 Settings 안에만 둔다. |
 | Export | `html-to-image` 기반 @2x PNG 다운로드 |
-| 이미지 업로드 | 배경은 로컬 filesystem 저장, Product Visual 스크린샷은 브라우저 로컬 data URL 저장. 대용량 이미지의 Blob client upload 전환은 별도 단계로 둔다. |
+| 이미지 업로드 | Product Visual 스크린샷과 커스텀 배경은 Vercel Blob 연결 시 Blob URL로 저장한다. Blob 미연결 로컬 개발에서는 작은 Product Visual 스크린샷만 data URL로 fallback하고, 커스텀 배경은 로컬 filesystem에 저장한다. |
 | 이탈 방지 | 저장하지 않은 변경사항이 있으면 홈 이동 전 확인 |
 
 ## 8. 생성/추천 요구사항
@@ -135,7 +135,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 
 | 리스크 | 대응 |
 |---|---|
-| localStorage 용량 한계 | 큰 스크린샷/썸네일 저장 최소화, 저장 에셋/커스텀 배경 개수 제한, Vercel Blob 클라우드 스냅샷 병행. 3.5MB 초과 스냅샷은 클라우드 동기화를 건너뛰고 로컬 백업만 유지 |
+| localStorage 용량 한계 | 업로드 이미지는 Blob URL 우선 저장, 큰 스크린샷/썸네일 저장 최소화, 저장 에셋/커스텀 배경 개수 제한, Vercel Blob 클라우드 스냅샷 병행. 3.5MB 초과 스냅샷은 클라우드 동기화를 건너뛰고 로컬 백업만 유지 |
 | 저장 데이터 구조 변경 | `schemaVersion` 증가와 마이그레이션 함수 추가를 필수 변경 절차로 둔다 |
 | 로컬 생성 품질 한계 | 프리셋/규칙 registry와 validator 유지 |
 | Pexels 이미지 CORS | Pexels-only same-origin proxy와 export 전 이미지 inline 처리 |

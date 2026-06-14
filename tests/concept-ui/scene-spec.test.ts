@@ -90,6 +90,121 @@ describe("SceneSpec", () => {
         ],
       },
     ];
+    spec.content.actionTrails = [
+      {
+        slotId: "action-trail",
+        title: "AI action trail",
+        summary: "Every agent step is visible before approval.",
+        steps: [
+          { label: "Looked up booking #FL-4821", detail: "Customer context loaded.", duration: "0.8s", status: "Done", tone: "good" },
+          { label: "Checked refund policy", detail: "Policy matched this case.", duration: "1.2s", status: "Done", tone: "good" },
+          { label: "Paused for approval", detail: "Agent gate required.", status: "Gate", tone: "warn" },
+        ],
+        gate: {
+          title: "Approve refund of $89.00?",
+          detail: "To Visa ending 4242",
+          primaryAction: "Approve",
+          secondaryAction: "Modify",
+        },
+      },
+    ];
+    spec.content.improvementSignals = [
+      {
+        slotId: "improvement-signal",
+        title: "Improvement signal",
+        signal: "Production signal found a gap",
+        proposal: "Propose a targeted update to the affected policy path.",
+        impact: "Expected to reduce repeat contacts before publish.",
+        confidence: "82%",
+        status: "Suggested",
+        tone: "ai",
+      },
+    ];
+    spec.content.validationLoops = [
+      {
+        slotId: "validation-loop",
+        title: "Validation loop",
+        summary: "Proposed updates iterate through tests before approval.",
+        iterationCount: "3 runs",
+        passRate: "96% pass",
+        status: "Ready",
+        steps: [
+          { label: "Draft update", detail: "Create a proposed change.", status: "Done", tone: "good" },
+          { label: "Run tests", detail: "Validate against saved scenarios.", status: "Pass", tone: "good" },
+        ],
+      },
+    ];
+    spec.content.controlPanels = [
+      {
+        slotId: "control-panel",
+        title: "Self-service controls",
+        summary: "Teams can manage tone, behavior, knowledge, and rollout settings without engineering support.",
+        items: [
+          { label: "Tone", value: "Brand voice", detail: "Adjust how the agent sounds across conversations.", status: "Editable", tone: "ai" },
+          { label: "Behavior", value: "Live rules", detail: "Change escalation and handoff behavior from the UI.", status: "No code", tone: "good" },
+        ],
+        footer: "Every configurable area stays visible and reversible.",
+      },
+    ];
+    spec.content.autonomyMatrices = [
+      {
+        slotId: "autonomy-matrix",
+        title: "Autonomy matrix",
+        summary: "Shows which actions the agent can observe, suggest, approve, or run on its own.",
+        levels: [
+          { label: "Observe", scope: "Read customer context", detail: "Summarize data without changing customer state.", status: "Safe", tone: "neutral" },
+          { label: "Approve", scope: "Human-gated action", detail: "Refunds pause for approval.", status: "Gate", tone: "warn" },
+        ],
+        guardrail: "Risky actions always route through a visible approval gate.",
+      },
+    ];
+    spec.content.knowledgeCoverages = [
+      {
+        slotId: "knowledge-coverage",
+        title: "Knowledge coverage",
+        summary: "Track topics that are ready for automation and source gaps that need work.",
+        topics: [
+          { label: "Billing", coverage: "94%", detail: "Refund policies are mapped to agent answers.", status: "Ready", tone: "good" },
+          { label: "Shipping", coverage: "82%", detail: "Delay edge cases need source updates.", status: "Watch", tone: "warn" },
+        ],
+        freshness: "Missing and stale sources become reviewable tasks.",
+      },
+    ];
+    spec.content.evaluationScorecards = [
+      {
+        slotId: "evaluation-scorecard",
+        title: "Evaluation scorecard",
+        summary: "Summarizes scenario tests, policy checks, and quality signals before launch.",
+        checks: [
+          { label: "Policy fit", score: "98%", detail: "Responses match approved rules.", status: "Pass", tone: "good" },
+          { label: "Grounding", score: "96%", detail: "Claims use trusted sources.", status: "Pass", tone: "good" },
+        ],
+        verdict: "Only passing checks can move to rollout.",
+      },
+    ];
+    spec.content.integrationHealths = [
+      {
+        slotId: "integration-health",
+        title: "Integration health",
+        summary: "Monitor systems the agent depends on before it reads data or takes action.",
+        systems: [
+          { name: "CRM", metric: "99.9%", detail: "Customer profile fields are syncing normally.", status: "Live", tone: "good" },
+          { name: "Billing", metric: "2 alerts", detail: "Payment failures route to review.", status: "Watch", tone: "warn" },
+        ],
+        lastSync: "Synced 4m ago",
+      },
+    ];
+    spec.content.channelMatrices = [
+      {
+        slotId: "channel-matrix",
+        title: "Channel matrix",
+        summary: "Compare agent performance across customer channels from one view.",
+        channels: [
+          { channel: "Voice", volume: "1.8k convos", resolution: "71% solved", latency: "0.8s", tone: "ai" },
+          { channel: "Chat", volume: "4.2k convos", resolution: "84% solved", latency: "1.4s", tone: "good" },
+        ],
+      },
+    ];
 
     expect(() => parseSceneSpec(spec)).not.toThrow();
   });

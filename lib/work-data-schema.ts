@@ -1,4 +1,4 @@
-export const WORK_DATA_SCHEMA_VERSION = 1;
+export const WORK_DATA_SCHEMA_VERSION = 4;
 
 export type WorkDataKind = "chat" | "infographic" | "product-visual";
 
@@ -6,9 +6,21 @@ type VersionedRecord = Record<string, unknown> & { schemaVersion?: unknown };
 type Migration = (data: VersionedRecord) => VersionedRecord;
 
 const MIGRATIONS: Record<WorkDataKind, Record<number, Migration>> = {
-  chat: {},
-  infographic: {},
-  "product-visual": {},
+  chat: {
+    1: (data) => data,
+    2: (data) => data,
+    3: (data) => data,
+  },
+  infographic: {
+    1: (data) => data,
+    2: (data) => data,
+    3: (data) => data,
+  },
+  "product-visual": {
+    1: (data) => data,
+    2: (data) => data,
+    3: (data) => data,
+  },
 };
 
 export type VersionedWorkData<T extends object> = T & {

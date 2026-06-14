@@ -1,12 +1,21 @@
 import { conceptUiSamples } from "./samples";
 import {
   parseSceneSpec,
+  type ActionTrailSpec,
+  type AutonomyMatrixSpec,
+  type ChannelMatrixSpec,
   type ConceptUiArchetype,
+  type ControlPanelSpec,
+  type EvaluationScorecardSpec,
+  type ImprovementSignalSpec,
   type InstructionSectionSpec,
+  type IntegrationHealthSpec,
+  type KnowledgeCoverageSpec,
   type LogicBlockSpec,
   type ReviewQueueSpec,
   type SceneSpec,
   type ToolCallListSpec,
+  type ValidationLoopSpec,
 } from "./scene-spec";
 import { conceptUiArchetypes } from "./slots";
 
@@ -226,6 +235,10 @@ const REVIEW_PATTERNS = [
   /experiment/i,
   /manual inspection/i,
   /compliance/i,
+  /governance/i,
+  /enterprise governance/i,
+  /full visibility/i,
+  /visibility into outcomes/i,
   /reliability/i,
   /검토/,
   /승인/,
@@ -236,6 +249,7 @@ const REVIEW_PATTERNS = [
   /알림/,
   /실험/,
   /컴플라이언스/,
+  /거버넌스/,
 ];
 
 const TOOL_CALL_PATTERNS = [
@@ -264,6 +278,153 @@ const TOOL_CALL_PATTERNS = [
   /연동/,
   /데이터/,
   /추천/,
+];
+
+const ACTION_TRAIL_PATTERNS = [
+  /ai action trails?/i,
+  /action trails?/i,
+  /action logs?/i,
+  /agent activity/i,
+  /activity trails?/i,
+  /audit trails?/i,
+  /looked up/i,
+  /drafted .*approval/i,
+  /paused.*approval/i,
+  /requires agent approval/i,
+  /approval gate/i,
+  /행동 로그/,
+  /액션 로그/,
+  /작업 내역/,
+  /승인 게이트/,
+];
+
+const IMPROVEMENT_SIGNAL_PATTERNS = [
+  /automated agent improvement/i,
+  /agent improvement/i,
+  /continuous(?:ly)? turning/i,
+  /production signals?/i,
+  /production insight/i,
+  /informed updates?/i,
+  /proposed updates?/i,
+  /suggested updates?/i,
+  /update suggestions?/i,
+  /detected issue/i,
+  /quality drift/i,
+  /handoff spike/i,
+  /failure rate/i,
+  /개선/,
+  /운영 신호/,
+  /업데이트 제안/,
+];
+
+const VALIDATION_LOOP_PATTERNS = [
+  /self[-\s]?validation/i,
+  /validation loop/i,
+  /testing loop/i,
+  /iterate(?:s|d|ion)? until tests pass/i,
+  /tests? pass/i,
+  /run tests?/i,
+  /proposed updates?.*tests?/i,
+  /simulation loop/i,
+  /검증/,
+  /테스트 통과/,
+  /반복 테스트/,
+];
+
+const CONTROL_PANEL_PATTERNS = [
+  /full confidence/i,
+  /you(?:'|’)re in control/i,
+  /\bin control\b/i,
+  /fully manage/i,
+  /manage yourself/i,
+  /self[-\s]?service/i,
+  /configure|configuring|configuration/i,
+  /customi[sz](?:e|ing|ation)/i,
+  /tone/i,
+  /behaviou?r/i,
+  /without engineering/i,
+  /no[-\s]?code/i,
+  /engineering resources/i,
+  /experiment and learn/i,
+  /never need to contact/i,
+  /직접 관리/,
+  /셀프서비스/,
+  /설정/,
+  /톤/,
+  /행동/,
+  /엔지니어/,
+];
+
+const AUTONOMY_MATRIX_PATTERNS = [
+  /autonomy/i,
+  /autonomous/i,
+  /agent permissions?/i,
+  /permission level/i,
+  /human gate/i,
+  /act with approval/i,
+  /where .*agent .*act/i,
+  /scope of action/i,
+  /observe .*advise .*act/i,
+  /자율/,
+  /권한/,
+  /승인 단계/,
+];
+
+const KNOWLEDGE_COVERAGE_PATTERNS = [
+  /knowledge coverage/i,
+  /coverage gaps?/i,
+  /missing (?:article|source|knowledge)/i,
+  /stale (?:source|article|knowledge)/i,
+  /source health/i,
+  /unanswered topics?/i,
+  /content gaps?/i,
+  /지식 커버리지/,
+  /누락된 지식/,
+  /오래된 문서/,
+];
+
+const EVALUATION_SCORECARD_PATTERNS = [
+  /evaluation scorecard/i,
+  /eval(?:uation)?s?/i,
+  /quality scorecard/i,
+  /hallucination/i,
+  /policy check/i,
+  /scenario pass/i,
+  /pass rate/i,
+  /response quality/i,
+  /평가/,
+  /스코어카드/,
+  /환각/,
+];
+
+const INTEGRATION_HEALTH_PATTERNS = [
+  /integration health/i,
+  /connector health/i,
+  /sync status/i,
+  /last synced/i,
+  /crm/i,
+  /zendesk/i,
+  /salesforce/i,
+  /shopify/i,
+  /data sync/i,
+  /연동 상태/,
+  /동기화/,
+];
+
+const CHANNEL_MATRIX_PATTERNS = [
+  /channel matrix/i,
+  /all channels/i,
+  /every customer channel/i,
+  /omnichannel/i,
+  /voice.*chat|chat.*voice/i,
+  /chat.*email|email.*chat/i,
+  /voice.*email|email.*voice/i,
+  /slack.*email|email.*slack/i,
+  /social.*chat|chat.*social/i,
+  /whatsapp.*chat|chat.*whatsapp/i,
+  /채널/,
+  /보이스.*채팅|채팅.*보이스/,
+  /이메일.*채팅|채팅.*이메일/,
 ];
 
 function clampText(value: string, max: number): string {
@@ -390,7 +551,29 @@ function buildInstructionSection(description: string): InstructionSectionSpec {
 
 function buildReviewQueue(description: string): ReviewQueueSpec {
   const mentionsRisk = /risk|policy|audit|compliance|source|citation|위험|정책/i.test(description);
+  const mentionsGovernance = /governance|enterprise|full visibility|visibility into outcomes|거버넌스/i.test(description);
   const mentionsQuality = /testing|regression|simulation|\bqa\b|quality assurance|observability|alert|experiment|manual inspection|reliability|테스트|품질|알림|실험/i.test(description);
+  if (mentionsGovernance) {
+    return {
+      slotId: "review-governance-approval",
+      title: "Governance review",
+      summary: "Human approvals keep proposed agent updates visible before they affect production behavior.",
+      items: [
+        {
+          label: "Approval gate",
+          detail: "A manager reviews the proposed update, test evidence, and expected customer impact.",
+          status: "Needs approval",
+          tone: "warn",
+        },
+        {
+          label: "Outcome log",
+          detail: "Approved, rejected, and published outcomes stay visible for enterprise governance.",
+          status: "Visible",
+          tone: "good",
+        },
+      ],
+    };
+  }
   if (mentionsQuality) {
     return {
       slotId: "review-quality-monitor",
@@ -430,6 +613,283 @@ function buildReviewQueue(description: string): ReviewQueueSpec {
         detail: "Low-risk actions keep their reason, owner, and next step visible in the queue.",
         status: "Ready",
         tone: "good",
+      },
+    ],
+  };
+}
+
+function buildImprovementSignal(description: string): ImprovementSignalSpec {
+  const mentionsHandoff = /handoff|escalat|human loop|상담|이관/i.test(description);
+  const mentionsFailure = /fail|error|drop|regression|quality drift|실패|오류/i.test(description);
+  const signal = mentionsHandoff
+    ? "Handoff volume increased 18%"
+    : mentionsFailure
+      ? "Resolution quality drift detected"
+      : "Production signal found a behavior gap";
+
+  return {
+    slotId: "improvement-production-signal",
+    title: "Improvement signal",
+    signal,
+    proposal: "Propose a targeted update to the affected policy, workflow, or response path.",
+    impact: "Expected to reduce repeat contacts while keeping the change reviewable before publish.",
+    confidence: "82%",
+    status: "Suggested",
+    tone: "ai",
+  };
+}
+
+function buildValidationLoop(description: string): ValidationLoopSpec {
+  const mentionsRegression = /regression|saved scenarios?|test suite|qa|회귀|시나리오/i.test(description);
+  return {
+    slotId: "validation-test-loop",
+    title: "Validation loop",
+    summary: "Proposed updates iterate through test scenarios until the change is safe to approve.",
+    iterationCount: "3 runs",
+    passRate: "96% pass",
+    status: "Ready",
+    steps: [
+      {
+        label: "Draft update",
+        detail: "Create a proposed change from the production signal.",
+        status: "Done",
+        tone: "good",
+      },
+      {
+        label: mentionsRegression ? "Run regression" : "Run tests",
+        detail: mentionsRegression
+          ? "Replay saved scenarios against the proposed workflow update."
+          : "Validate the update against the relevant test loop.",
+        status: "Pass",
+        tone: "good",
+      },
+      {
+        label: "Send for review",
+        detail: "Package test evidence and expected impact for approval.",
+        status: "Next",
+        tone: "ai",
+      },
+    ],
+  };
+}
+
+function buildControlPanel(description: string): ControlPanelSpec {
+  const mentionsExperiment = /experiment|learn|test|실험|학습/i.test(description);
+  return {
+    slotId: "control-self-service",
+    title: "Self-service controls",
+    summary: "Teams can manage tone, behavior, knowledge, and rollout settings without engineering support.",
+    items: [
+      {
+        label: "Tone",
+        value: "Brand voice",
+        detail: "Adjust how the agent sounds across customer conversations.",
+        status: "Editable",
+        tone: "ai",
+      },
+      {
+        label: "Behavior",
+        value: "Live rules",
+        detail: "Change escalation, handoff, and response behavior from the UI.",
+        status: "No code",
+        tone: "good",
+      },
+      {
+        label: "Knowledge",
+        value: "Trusted sources",
+        detail: "Choose which policies and articles the agent can use.",
+        status: "Managed",
+        tone: "neutral",
+      },
+      {
+        label: mentionsExperiment ? "Learning" : "Rollout",
+        value: mentionsExperiment ? "Fast tests" : "Controlled publish",
+        detail: mentionsExperiment
+          ? "Experiment with changes and learn from outcomes quickly."
+          : "Publish controlled changes without waiting on engineering.",
+        status: "Ready",
+        tone: "good",
+      },
+    ],
+    footer: "Every configurable area stays visible, owned, and reversible for the CX team.",
+  };
+}
+
+function buildAutonomyMatrix(description: string): AutonomyMatrixSpec {
+  const mentionsApproval = /approval|human gate|review|승인|검토/i.test(description);
+  return {
+    slotId: "autonomy-action-scope",
+    title: "Autonomy matrix",
+    summary: "Shows which actions the agent can observe, suggest, approve, or run on its own.",
+    levels: [
+      {
+        label: "Observe",
+        scope: "Read customer context",
+        detail: "Agent can summarize data without changing customer state.",
+        status: "Safe",
+        tone: "neutral",
+      },
+      {
+        label: "Advise",
+        scope: "Draft next action",
+        detail: "Agent recommends a response or workflow step for review.",
+        status: "Draft",
+        tone: "ai",
+      },
+      {
+        label: "Approve",
+        scope: "Human-gated action",
+        detail: "Refunds, changes, or account actions pause for approval.",
+        status: mentionsApproval ? "Gate" : "Review",
+        tone: "warn",
+      },
+      {
+        label: "Autonomous",
+        scope: "Low-risk updates",
+        detail: "Agent completes safe, reversible actions inside policy.",
+        status: "Live",
+        tone: "good",
+      },
+    ],
+    guardrail: "Risky or irreversible actions always route through a visible approval gate.",
+  };
+}
+
+function buildKnowledgeCoverage(description: string): KnowledgeCoverageSpec {
+  const mentionsStale = /stale|old|오래된/i.test(description);
+  return {
+    slotId: "knowledge-coverage-map",
+    title: "Knowledge coverage",
+    summary: "Track which topics are ready for automation and where source gaps still need work.",
+    topics: [
+      {
+        label: "Billing",
+        coverage: "94%",
+        detail: "Refund and dispute policies are mapped to agent answers.",
+        status: "Ready",
+        tone: "good",
+      },
+      {
+        label: "Shipping",
+        coverage: "82%",
+        detail: "Carrier delay edge cases need a source update.",
+        status: mentionsStale ? "Stale" : "Watch",
+        tone: "warn",
+      },
+      {
+        label: "Account",
+        coverage: "76%",
+        detail: "Password and identity flows have partial coverage.",
+        status: "Gap",
+        tone: "ai",
+      },
+    ],
+    freshness: "Missing and stale sources become reviewable tasks instead of hidden prompt risk.",
+  };
+}
+
+function buildEvaluationScorecard(description: string): EvaluationScorecardSpec {
+  const mentionsVoice = /voice|latency|보이스/i.test(description);
+  return {
+    slotId: "evaluation-quality-scorecard",
+    title: "Evaluation scorecard",
+    summary: "Summarizes saved scenario tests, policy checks, and quality signals before launch.",
+    checks: [
+      {
+        label: "Policy fit",
+        score: "98%",
+        detail: "Responses match approved refund and escalation rules.",
+        status: "Pass",
+        tone: "good",
+      },
+      {
+        label: "Grounding",
+        score: "96%",
+        detail: "Claims are supported by trusted knowledge sources.",
+        status: "Pass",
+        tone: "good",
+      },
+      {
+        label: mentionsVoice ? "Voice latency" : "Regression",
+        score: mentionsVoice ? "780ms" : "92%",
+        detail: mentionsVoice
+          ? "Voice responses stay below the live interaction target."
+          : "Saved scenarios pass after the proposed update.",
+        status: mentionsVoice ? "Live" : "Ready",
+        tone: "ai",
+      },
+    ],
+    verdict: "Only passing checks can move from draft to production rollout.",
+  };
+}
+
+function buildIntegrationHealth(description: string): IntegrationHealthSpec {
+  const mentionsMcp = /mcp/i.test(description);
+  return {
+    slotId: "integration-health-status",
+    title: "Integration health",
+    summary: "Monitor the systems the agent depends on before it reads data or takes action.",
+    systems: [
+      {
+        name: "CRM",
+        metric: "99.9%",
+        detail: "Customer profile and account fields are syncing normally.",
+        status: "Live",
+        tone: "good",
+      },
+      {
+        name: mentionsMcp ? "MCP" : "Orders",
+        metric: "1.1s",
+        detail: mentionsMcp ? "Tool bridge latency is inside the action target." : "Lookup latency is inside the action target.",
+        status: "Ready",
+        tone: "ai",
+      },
+      {
+        name: "Billing",
+        metric: "2 alerts",
+        detail: "Payment action failures are routed to review.",
+        status: "Watch",
+        tone: "warn",
+      },
+    ],
+    lastSync: "Synced 4m ago",
+  };
+}
+
+function buildChannelMatrix(description: string): ChannelMatrixSpec {
+  const includesSlack = /slack/i.test(description);
+  return {
+    slotId: "channel-performance-matrix",
+    title: "Channel matrix",
+    summary: "Compare agent performance across customer channels from one operational view.",
+    channels: [
+      {
+        channel: "Voice",
+        volume: "1.8k convos",
+        resolution: "71% solved",
+        latency: "0.8s",
+        tone: "ai",
+      },
+      {
+        channel: "Chat",
+        volume: "4.2k convos",
+        resolution: "84% solved",
+        latency: "1.4s",
+        tone: "good",
+      },
+      {
+        channel: "Email",
+        volume: "920 cases",
+        resolution: "68% solved",
+        latency: "12m",
+        tone: "neutral",
+      },
+      {
+        channel: includesSlack ? "Slack" : "Social",
+        volume: includesSlack ? "340 threads" : "510 mentions",
+        resolution: includesSlack ? "76% solved" : "62% solved",
+        latency: includesSlack ? "2.1s" : "5m",
+        tone: includesSlack ? "good" : "warn",
       },
     ],
   };
@@ -494,13 +954,85 @@ function buildToolCallList(description: string): ToolCallListSpec {
   };
 }
 
+function buildActionTrail(description: string): ActionTrailSpec {
+  const mentionsRefund = /refund|billing dispute|charge|payment|환불|결제/i.test(description);
+  const mentionsBooking = /booking|flight|rebook|reservation|예약|항공/i.test(description);
+  const objectLabel = mentionsBooking ? "booking #FL-4821" : mentionsRefund ? "billing case #1052" : "customer context";
+  const policyLabel = mentionsBooking ? "rebooking policy" : mentionsRefund ? "refund policy" : "policy guardrail";
+  const draftedLabel = mentionsBooking ? "Drafted rebooking option" : mentionsRefund ? "Drafted refund outcome" : "Prepared next action";
+
+  return {
+    slotId: "action-trail-agent-steps",
+    title: "AI action trail",
+    summary: "Every agent step is visible before a gated customer-impacting action is approved.",
+    steps: [
+      {
+        label: `Looked up ${objectLabel}`,
+        detail: "System context loaded for this customer.",
+        duration: "0.8s",
+        status: "Done",
+        tone: "good",
+      },
+      {
+        label: `Checked ${policyLabel}`,
+        detail: "Relevant rule matched the active case.",
+        duration: "1.2s",
+        status: "Done",
+        tone: "good",
+      },
+      {
+        label: draftedLabel,
+        detail: "Proposed action is ready for review.",
+        duration: "2.1s",
+        status: "Done",
+        tone: "good",
+      },
+      {
+        label: "Paused for approval",
+        detail: "Customer-impacting action requires an agent gate.",
+        status: "Gate",
+        tone: "warn",
+      },
+    ],
+    gate: {
+      title: mentionsRefund ? "Approve refund of $89.00?" : mentionsBooking ? "Approve rebooking change?" : "Approve proposed action?",
+      detail: mentionsRefund ? "To Visa ending 4242" : mentionsBooking ? "Customer itinerary will update" : "Human approval required before publish",
+      primaryAction: "Approve",
+      secondaryAction: "Modify",
+    },
+  };
+}
+
 function applyReusableBlocks(spec: SceneSpec, description: string): SceneSpec {
   const addLogic = needsLogicBlock(description);
+  const addActionTrail = matchesAny(description, ACTION_TRAIL_PATTERNS);
+  const addImprovement = matchesAny(description, IMPROVEMENT_SIGNAL_PATTERNS);
+  const addValidation = matchesAny(description, VALIDATION_LOOP_PATTERNS);
+  const addControlPanel = matchesAny(description, CONTROL_PANEL_PATTERNS);
+  const addAutonomyMatrix = matchesAny(description, AUTONOMY_MATRIX_PATTERNS);
+  const addKnowledgeCoverage = matchesAny(description, KNOWLEDGE_COVERAGE_PATTERNS);
+  const addEvaluationScorecard = matchesAny(description, EVALUATION_SCORECARD_PATTERNS);
+  const addIntegrationHealth = matchesAny(description, INTEGRATION_HEALTH_PATTERNS);
+  const addChannelMatrix = matchesAny(description, CHANNEL_MATRIX_PATTERNS);
   const addInstruction = matchesAny(description, INSTRUCTION_PATTERNS);
   const addReview = matchesAny(description, REVIEW_PATTERNS);
   const addToolCalls = matchesAny(description, TOOL_CALL_PATTERNS);
 
-  if (!addLogic && !addInstruction && !addReview && !addToolCalls) return spec;
+  if (
+    !addLogic &&
+    !addActionTrail &&
+    !addImprovement &&
+    !addValidation &&
+    !addControlPanel &&
+    !addAutonomyMatrix &&
+    !addKnowledgeCoverage &&
+    !addEvaluationScorecard &&
+    !addIntegrationHealth &&
+    !addChannelMatrix &&
+    !addInstruction &&
+    !addReview &&
+    !addToolCalls
+  ) return spec;
 
   const next = cloneSpec(spec);
   if (
@@ -510,6 +1042,15 @@ function applyReusableBlocks(spec: SceneSpec, description: string): SceneSpec {
     next.archetype === "workspace"
   ) {
     if (addLogic) next.content.logicBlocks = [buildLogicBlock(description)];
+    if (addActionTrail) next.content.actionTrails = [buildActionTrail(description)];
+    if (addImprovement) next.content.improvementSignals = [buildImprovementSignal(description)];
+    if (addValidation) next.content.validationLoops = [buildValidationLoop(description)];
+    if (addControlPanel) next.content.controlPanels = [buildControlPanel(description)];
+    if (addAutonomyMatrix) next.content.autonomyMatrices = [buildAutonomyMatrix(description)];
+    if (addKnowledgeCoverage) next.content.knowledgeCoverages = [buildKnowledgeCoverage(description)];
+    if (addEvaluationScorecard) next.content.evaluationScorecards = [buildEvaluationScorecard(description)];
+    if (addIntegrationHealth) next.content.integrationHealths = [buildIntegrationHealth(description)];
+    if (addChannelMatrix) next.content.channelMatrices = [buildChannelMatrix(description)];
     if (addReview) next.content.reviewQueues = [buildReviewQueue(description)];
     if (addToolCalls) next.content.toolCallLists = [buildToolCallList(description)];
     if (addInstruction) next.content.instructionSections = [buildInstructionSection(description)];
@@ -584,10 +1125,30 @@ export function mapDescriptionToArchetype(text: string): ArchetypeChoice {
   const ranked = [...scores].sort((a, b) => b.hits - a.hits);
   const top = ranked[0];
   const second = ranked[1];
+  const controlPanelOnly = matchesAny(description, CONTROL_PANEL_PATTERNS);
+  const operationalDashboardOnly =
+    matchesAny(description, AUTONOMY_MATRIX_PATTERNS) ||
+    matchesAny(description, KNOWLEDGE_COVERAGE_PATTERNS) ||
+    matchesAny(description, EVALUATION_SCORECARD_PATTERNS) ||
+    matchesAny(description, INTEGRATION_HEALTH_PATTERNS) ||
+    matchesAny(description, CHANNEL_MATRIX_PATTERNS);
+
+  if ((controlPanelOnly || operationalDashboardOnly) && (!top || top.hits <= 1)) {
+    return { kind: "resolved", archetype: "dashboard", confidence: 0.66 };
+  }
 
   if (!top || top.hits === 0) {
     if (needsLogicBlock(description)) {
       return { kind: "resolved", archetype: "builder", confidence: 0.66 };
+    }
+    if (matchesAny(description, ACTION_TRAIL_PATTERNS)) {
+      return { kind: "resolved", archetype: "dashboard", confidence: 0.66 };
+    }
+    if (matchesAny(description, IMPROVEMENT_SIGNAL_PATTERNS) || matchesAny(description, VALIDATION_LOOP_PATTERNS)) {
+      return { kind: "resolved", archetype: "dashboard", confidence: 0.66 };
+    }
+    if (operationalDashboardOnly) {
+      return { kind: "resolved", archetype: "dashboard", confidence: 0.66 };
     }
     if (matchesAny(description, REVIEW_PATTERNS)) {
       return { kind: "resolved", archetype: "dashboard", confidence: 0.64 };

@@ -112,4 +112,75 @@ describe("ruleBasedSpecProvider", () => {
     expect(result.spec.content.reviewQueues?.[0]?.title).toBe("Quality monitor");
     expect(result.spec.content.toolCallLists?.[0]?.title).toBe("Action sequence");
   });
+
+  it("adds improvement signals, validation loops, and governance review from agent improvement cues", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description:
+        "Dashboard for automated agent improvement: production signals become proposed updates, self-validation runs a testing loop until tests pass, and enterprise governance requires human approvals with visibility into outcomes.",
+      uiTextLanguage: "en",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.improvementSignals?.[0]?.title).toBe("Improvement signal");
+    expect(result.spec.content.validationLoops?.[0]?.title).toBe("Validation loop");
+    expect(result.spec.content.reviewQueues?.[0]?.title).toBe("Governance review");
+  });
+
+  it("adds self-service control panels from no-code configuration cues", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description:
+        "Fin gives full confidence because CX teams are in control: they fully manage tone, behavior, knowledge, and experiments without engineering resources.",
+      uiTextLanguage: "en",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.controlPanels?.[0]?.title).toBe("Self-service controls");
+    expect(result.spec.content.controlPanels?.[0]?.items.map((item) => item.label)).toEqual([
+      "Tone",
+      "Behavior",
+      "Knowledge",
+      "Learning",
+    ]);
+  });
+
+  it("adds operational dashboard blocks for autonomy, knowledge, evaluation, integrations, and channels", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description:
+        "Dashboard for agent autonomy permissions, knowledge coverage gaps, evaluation scorecard pass rate, integration health sync status, and every customer channel across Voice, Chat, Email, and Slack.",
+      uiTextLanguage: "en",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.autonomyMatrices?.[0]?.title).toBe("Autonomy matrix");
+    expect(result.spec.content.knowledgeCoverages?.[0]?.title).toBe("Knowledge coverage");
+    expect(result.spec.content.evaluationScorecards?.[0]?.title).toBe("Evaluation scorecard");
+    expect(result.spec.content.integrationHealths?.[0]?.title).toBe("Integration health");
+    expect(result.spec.content.channelMatrices?.[0]?.title).toBe("Channel matrix");
+  });
+
+  it("keeps generic chat requests mapped to inbox instead of channel dashboards", () => {
+    const result = mapDescriptionToArchetype("chat support inbox");
+
+    expect(result.kind).toBe("resolved");
+    if (result.kind === "resolved") {
+      expect(result.archetype).toBe("inbox");
+    }
+  });
+
+  it("adds an action trail for visible agent steps and approval gates", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description:
+        "Dashboard with AI action trail for billing dispute: looked up booking, found refund policy, drafted refund, then paused because it requires agent approval.",
+      uiTextLanguage: "en",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.actionTrails?.[0]?.title).toBe("AI action trail");
+    expect(result.spec.content.actionTrails?.[0]?.steps.at(-1)?.status).toBe("Gate");
+    expect(result.spec.content.actionTrails?.[0]?.gate?.primaryAction).toBe("Approve");
+  });
 });

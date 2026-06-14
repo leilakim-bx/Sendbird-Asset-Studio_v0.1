@@ -14,7 +14,10 @@ export const INFOGRAPHIC_BLOCK_LIMITS = {
     product: 8,
     blog:    12,
   },
-  stackLayers:          4,
+  stackLayers: {
+    product: 3,
+    blog:    4,
+  },
   stackCellsPerLayer:   3,
   nodeListItems:        5,
   hubTitleChars:        18,
@@ -44,6 +47,10 @@ export function cardGridBodyMaxChars(cardCount: number) {
 
 export function stepMaxItems(format: InfographicFormat) {
   return INFOGRAPHIC_BLOCK_LIMITS.stepItems[format];
+}
+
+export function stackMaxLayers(format: InfographicFormat) {
+  return INFOGRAPHIC_BLOCK_LIMITS.stackLayers[format];
 }
 
 export function compareMaxRows(format: InfographicFormat) {

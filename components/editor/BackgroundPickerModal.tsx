@@ -169,7 +169,7 @@ export function BackgroundPickerModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -192,7 +192,7 @@ export function BackgroundPickerModal({
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-studio-muted">
                   <ImageIcon size={11} className="shrink-0" />
-                  JPEG · PNG · WebP · max 5 MB
+                  JPEG · PNG · WebP · max 10 MB
                 </span>
               </div>
             )}

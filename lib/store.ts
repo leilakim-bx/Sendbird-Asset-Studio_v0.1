@@ -495,7 +495,7 @@ function migrateV2toV3(raw: unknown): PersistedV1 {
 }
 
 // ── v3 → v4 마이그레이션 ──────────────────────────────────
-// Add schemaVersion to all saved work payloads. Current work schema is v1, so
+// Add schemaVersion to all saved work payloads. Current work schema is v4, so
 // old records are structurally unchanged aside from the explicit marker.
 
 function migrateV3toV4(raw: unknown): PersistedV1 {

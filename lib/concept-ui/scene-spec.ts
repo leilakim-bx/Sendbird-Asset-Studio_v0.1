@@ -118,9 +118,202 @@ const toolCallListSchema = z
   })
   .strict();
 
+const actionTrailStepSchema = z
+  .object({
+    label: mediumText,
+    detail: bodyText.optional(),
+    duration: z.string().trim().min(1).max(12).optional(),
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const actionTrailSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText.optional(),
+    steps: z.array(actionTrailStepSchema).min(2).max(4),
+    gate: z
+      .object({
+        title: mediumText,
+        detail: bodyText,
+        primaryAction: shortText,
+        secondaryAction: shortText,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const improvementSignalSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    signal: mediumText,
+    proposal: bodyText,
+    impact: bodyText,
+    confidence: z.string().trim().min(1).max(12),
+    status: shortText,
+    tone: blockToneSchema.default("ai"),
+  })
+  .strict();
+
+const validationLoopSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    iterationCount: z.string().trim().min(1).max(12),
+    passRate: z.string().trim().min(1).max(12),
+    status: shortText,
+    steps: z
+      .array(
+        z
+          .object({
+            label: shortText,
+            detail: bodyText,
+            status: shortText,
+            tone: blockToneSchema.default("neutral"),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(4),
+  })
+  .strict();
+
+const controlPanelItemSchema = z
+  .object({
+    label: shortText,
+    value: mediumText,
+    detail: bodyText,
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const controlPanelSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    items: z.array(controlPanelItemSchema).min(2).max(4),
+    footer: bodyText.optional(),
+  })
+  .strict();
+
+const autonomyLevelSchema = z
+  .object({
+    label: shortText,
+    scope: mediumText,
+    detail: bodyText,
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const autonomyMatrixSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    levels: z.array(autonomyLevelSchema).min(2).max(4),
+    guardrail: bodyText.optional(),
+  })
+  .strict();
+
+const knowledgeCoverageTopicSchema = z
+  .object({
+    label: shortText,
+    coverage: z.string().trim().min(1).max(12),
+    detail: bodyText,
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const knowledgeCoverageSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    topics: z.array(knowledgeCoverageTopicSchema).min(2).max(4),
+    freshness: bodyText.optional(),
+  })
+  .strict();
+
+const evaluationCheckSchema = z
+  .object({
+    label: shortText,
+    score: z.string().trim().min(1).max(12),
+    detail: bodyText,
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const evaluationScorecardSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    checks: z.array(evaluationCheckSchema).min(2).max(4),
+    verdict: bodyText.optional(),
+  })
+  .strict();
+
+const integrationSystemSchema = z
+  .object({
+    name: shortText,
+    metric: z.string().trim().min(1).max(16),
+    detail: bodyText,
+    status: shortText,
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const integrationHealthSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    systems: z.array(integrationSystemSchema).min(2).max(4),
+    lastSync: shortText.optional(),
+  })
+  .strict();
+
+const channelMatrixRowSchema = z
+  .object({
+    channel: shortText,
+    volume: z.string().trim().min(1).max(16),
+    resolution: z.string().trim().min(1).max(16),
+    latency: z.string().trim().min(1).max(16),
+    tone: blockToneSchema.default("neutral"),
+  })
+  .strict();
+
+const channelMatrixSchema = z
+  .object({
+    slotId,
+    title: mediumText,
+    summary: bodyText,
+    channels: z.array(channelMatrixRowSchema).min(2).max(4),
+  })
+  .strict();
+
 const instructionSectionsSchema = z.array(instructionSectionSchema).min(1).max(2).optional();
 const reviewQueuesSchema = z.array(reviewQueueSchema).min(1).max(2).optional();
 const toolCallListsSchema = z.array(toolCallListSchema).min(1).max(2).optional();
+const actionTrailsSchema = z.array(actionTrailSchema).min(1).max(2).optional();
+const improvementSignalsSchema = z.array(improvementSignalSchema).min(1).max(2).optional();
+const validationLoopsSchema = z.array(validationLoopSchema).min(1).max(2).optional();
+const controlPanelsSchema = z.array(controlPanelSchema).min(1).max(2).optional();
+const autonomyMatricesSchema = z.array(autonomyMatrixSchema).min(1).max(2).optional();
+const knowledgeCoveragesSchema = z.array(knowledgeCoverageSchema).min(1).max(2).optional();
+const evaluationScorecardsSchema = z.array(evaluationScorecardSchema).min(1).max(2).optional();
+const integrationHealthsSchema = z.array(integrationHealthSchema).min(1).max(2).optional();
+const channelMatricesSchema = z.array(channelMatrixSchema).min(1).max(2).optional();
 
 const inboxConversationSchema = z
   .object({
@@ -264,6 +457,15 @@ const dashboardSceneSpecSchema = z
         instructionSections: instructionSectionsSchema,
         reviewQueues: reviewQueuesSchema,
         toolCallLists: toolCallListsSchema,
+        actionTrails: actionTrailsSchema,
+        improvementSignals: improvementSignalsSchema,
+        validationLoops: validationLoopsSchema,
+        controlPanels: controlPanelsSchema,
+        autonomyMatrices: autonomyMatricesSchema,
+        knowledgeCoverages: knowledgeCoveragesSchema,
+        evaluationScorecards: evaluationScorecardsSchema,
+        integrationHealths: integrationHealthsSchema,
+        channelMatrices: channelMatricesSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -360,6 +562,15 @@ const builderSceneSpecSchema = z
         instructionSections: instructionSectionsSchema,
         reviewQueues: reviewQueuesSchema,
         toolCallLists: toolCallListsSchema,
+        actionTrails: actionTrailsSchema,
+        improvementSignals: improvementSignalsSchema,
+        validationLoops: validationLoopsSchema,
+        controlPanels: controlPanelsSchema,
+        autonomyMatrices: autonomyMatricesSchema,
+        knowledgeCoverages: knowledgeCoveragesSchema,
+        evaluationScorecards: evaluationScorecardsSchema,
+        integrationHealths: integrationHealthsSchema,
+        channelMatrices: channelMatricesSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -500,6 +711,15 @@ const modalSceneSpecSchema = z
         instructionSections: instructionSectionsSchema,
         reviewQueues: reviewQueuesSchema,
         toolCallLists: toolCallListsSchema,
+        actionTrails: actionTrailsSchema,
+        improvementSignals: improvementSignalsSchema,
+        validationLoops: validationLoopsSchema,
+        controlPanels: controlPanelsSchema,
+        autonomyMatrices: autonomyMatricesSchema,
+        knowledgeCoverages: knowledgeCoveragesSchema,
+        evaluationScorecards: evaluationScorecardsSchema,
+        integrationHealths: integrationHealthsSchema,
+        channelMatrices: channelMatricesSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -554,6 +774,15 @@ const workspaceSceneSpecSchema = z
         instructionSections: instructionSectionsSchema,
         reviewQueues: reviewQueuesSchema,
         toolCallLists: toolCallListsSchema,
+        actionTrails: actionTrailsSchema,
+        improvementSignals: improvementSignalsSchema,
+        validationLoops: validationLoopsSchema,
+        controlPanels: controlPanelsSchema,
+        autonomyMatrices: autonomyMatricesSchema,
+        knowledgeCoverages: knowledgeCoveragesSchema,
+        evaluationScorecards: evaluationScorecardsSchema,
+        integrationHealths: integrationHealthsSchema,
+        channelMatrices: channelMatricesSchema,
       })
       .strict(),
     modifiers: modifiersSchema,
@@ -580,6 +809,15 @@ export type LogicBlockSpec = z.infer<typeof logicBlockSchema>;
 export type InstructionSectionSpec = z.infer<typeof instructionSectionSchema>;
 export type ReviewQueueSpec = z.infer<typeof reviewQueueSchema>;
 export type ToolCallListSpec = z.infer<typeof toolCallListSchema>;
+export type ActionTrailSpec = z.infer<typeof actionTrailSchema>;
+export type ImprovementSignalSpec = z.infer<typeof improvementSignalSchema>;
+export type ValidationLoopSpec = z.infer<typeof validationLoopSchema>;
+export type ControlPanelSpec = z.infer<typeof controlPanelSchema>;
+export type AutonomyMatrixSpec = z.infer<typeof autonomyMatrixSchema>;
+export type KnowledgeCoverageSpec = z.infer<typeof knowledgeCoverageSchema>;
+export type EvaluationScorecardSpec = z.infer<typeof evaluationScorecardSchema>;
+export type IntegrationHealthSpec = z.infer<typeof integrationHealthSchema>;
+export type ChannelMatrixSpec = z.infer<typeof channelMatrixSchema>;
 
 export function parseSceneSpec(input: unknown): SceneSpec {
   return sceneSpecSchema.parse(input);

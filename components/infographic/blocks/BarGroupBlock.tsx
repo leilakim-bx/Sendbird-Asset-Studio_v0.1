@@ -483,7 +483,26 @@ function Columns({
   return (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 16, width: "100%" }}>
       {items.map((it, i) => {
-        const h = Math.max(COL_MIN_H, (Math.max(0, it.valueA) / maxV) * COL_CHART_H);
+        const headingFont = fs(26);
+        const chipFont = fs(11);
+        const chipPadY = Math.max(4, Math.round(4 * scale));
+        const chipPadX = Math.max(10, Math.round(10 * scale));
+        const contentGap = Math.max(10, Math.round(10 * scale));
+        const bottomPad = Math.max(18, Math.round(18 * scale));
+        const topPad = Math.max(10, Math.round(10 * scale));
+        const chipHeight = it.tag ? chipFont + chipPadY * 2 + 2 : 0;
+        const headingHeight = it.heading ? Math.round(headingFont * 1.05) : 0;
+        const contentMinH =
+          topPad +
+          headingHeight +
+          chipHeight +
+          (it.heading && it.tag ? contentGap : 0) +
+          bottomPad;
+        const growthFloor =
+          items.length <= 1
+            ? COL_CHART_H
+            : COL_MIN_H + (i / (items.length - 1)) * (COL_CHART_H - COL_MIN_H);
+        const h = Math.max(COL_MIN_H, contentMinH, growthFloor, (Math.max(0, it.valueA) / maxV) * COL_CHART_H);
         const fill = COL_RAMP[Math.min(i, COL_RAMP.length - 1)];
         const lightText = i >= 2; // darker fills → light text
         const textColor = lightText ? brand.color.white : brand.color.ink;
@@ -497,12 +516,7 @@ function Columns({
                   height: h,
                   background: fill,
                   borderRadius: 12,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-end",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "0 12px 18px",
+                  position: "relative",
                   boxSizing: "border-box",
                   overflow: "hidden",
                 }}
@@ -510,12 +524,19 @@ function Columns({
                 {it.heading && (
                   <span
                     style={{
+                      position: "absolute",
+                      left: 10,
+                      right: 10,
+                      bottom: bottomPad + (it.tag ? chipHeight + contentGap : 0),
                       fontFamily: INFOGRAPHIC_SERIF,
-                      fontSize: fs(26),
+                      fontSize: headingFont,
                       fontWeight: 500,
+                      lineHeight: 1,
                       letterSpacing: "-0.02em",
                       color: textColor,
                       whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {it.heading}
@@ -524,14 +545,24 @@ function Columns({
                 {it.tag && (
                   <span
                     style={{
-                      fontSize: fs(11),
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position: "absolute",
+                      left: "50%",
+                      bottom: bottomPad,
+                      transform: "translateX(-50%)",
+                      minHeight: chipHeight,
+                      fontSize: chipFont,
                       fontWeight: 600,
+                      lineHeight: 1,
                       color: brand.color.ink,
                       background: it.highlight ? "var(--ig-accent)" : brand.color.white,
-                      padding: "4px 10px",
+                      padding: `${chipPadY}px ${chipPadX}px`,
                       borderRadius: 8,
                       whiteSpace: "nowrap",
-                      maxWidth: "100%",
+                      maxWidth: "calc(100% - 16px)",
+                      boxSizing: "border-box",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}

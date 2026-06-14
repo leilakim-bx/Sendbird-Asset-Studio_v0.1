@@ -6,6 +6,7 @@ import {
 } from "@/lib/types/infographic";
 import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
+import { DelightMark } from "./DelightMark";
 
 type Props = {
   block: Extract<InfographicBlock, { type: "node-list" }>;
@@ -37,14 +38,7 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
       {/* Hub — the circle is the alignment anchor (arrow + nodes center on it).
           The title floats absolutely below so it never shifts that centering. */}
       <div style={{ position: "relative", flexShrink: 0, lineHeight: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/preview/delight_logo.png"
-          alt=""
-          width={hubSize}
-          height={hubSize}
-          style={{ display: "block", width: hubSize, height: hubSize, objectFit: "contain" }}
-        />
+        <DelightMark size={hubSize} />
         <div
           style={{
             position: "absolute",

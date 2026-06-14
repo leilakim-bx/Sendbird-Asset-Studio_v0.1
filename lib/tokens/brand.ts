@@ -66,7 +66,7 @@ export const brand = {
       accent: {
         lime: "#F2FF66",
         blue: "#27A6F7",
-        red: "#B23A48",
+        red: "#FF5E69",
         green: "#25BD85",
       },
       track: "#D9D6D2",

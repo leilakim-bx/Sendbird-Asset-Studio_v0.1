@@ -145,7 +145,7 @@ export function Pill({
     neutral: { background: t.color.surfaceStrong, color: t.color.muted },
     good: { background: t.color.goodSoft, color: t.color.goodText },
     warn: { background: t.color.warnSoft, color: t.color.warnText },
-    ai: { background: t.color.aiSoft, color: t.color.ink },
+    ai: { background: t.color.ai, color: t.color.ink },
   }[tone];
   return (
     <span

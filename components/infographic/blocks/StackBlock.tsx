@@ -1,8 +1,8 @@
-import type { InfographicBlock } from "@/lib/types/infographic";
-import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
+import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS, stackMaxLayers } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
-type Props = { block: Extract<InfographicBlock, { type: "stack" }>; scale?: number };
+type Props = { block: Extract<InfographicBlock, { type: "stack" }>; scale?: number; format?: InfographicFormat };
 
 /** Dark elements (pills, highlight bands, callout). */
 const DARK = brand.color.ink;
@@ -28,10 +28,11 @@ const CONNECTOR = brand.color.infographic.connector;
  * Covers architecture-style diagrams (e.g. AMP Architecture, Production Voice
  * Agent Architecture, The Agent Era Stack, the org-chart flow).
  */
-export function StackBlock({ block, scale = 1 }: Props) {
+export function StackBlock({ block, scale = 1, format }: Props) {
   const fs = (n: number) => Math.round(n * scale);
+  const maxLayers = stackMaxLayers(format ?? "blog");
   const layers = (block.layers ?? [])
-    .slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackLayers)
+    .slice(0, maxLayers)
     .map((layer) => ({
       ...layer,
       cells: layer.cells?.slice(0, INFOGRAPHIC_BLOCK_LIMITS.stackCellsPerLayer),

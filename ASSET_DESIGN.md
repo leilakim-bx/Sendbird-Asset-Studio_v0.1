@@ -18,6 +18,10 @@ import하지 않는다.
 - Infographic block renderer는 `lib/infographic-block-limits.ts`의 항목/텍스트 상한을 방어적으로 적용한다.
 - Product feature 포맷은 고정 866×660 export이므로 dense chart/list block은 안전 여백을 침범하지 않도록 item 수를 제한하거나 내부 spacing을 조밀하게 조정한다.
 - Blog/Perspective 포맷은 가변 높이를 허용하지만, block library preview와 실제 export가 같은 구조를 유지해야 한다.
+- Layer diagram은 Product feature 포맷에서 최대 3개 layer만 렌더/편집한다. Blog/Perspective는 최대 4개 layer까지 허용한다.
+- Column chart의 컬럼 내부 chip은 낮은 value 컬럼에서도 잘리지 않아야 하며, heading/chip 실제 크기를 기준으로 최소 컬럼 높이를 확보한다.
+- Column chart는 maturity/growth 표현이므로 value가 낮거나 새 column 기본값이 들어와도 왼쪽에서 오른쪽으로 최소 계단식 성장 높이를 유지한다. Add column은 새 마지막 column을 다음 level로 만들고 highlight를 이동한다.
+- Infographic accent palette는 `lime #F2FF66`, `red #FF5E69`, `blue #27A6F7`, `green #25BD85`만 사용한다.
 
 ## Canvas (Export 기준)
 
@@ -224,15 +228,23 @@ fontSize: 13 × fs
 - Concept UI 생성 전에는 텍스트 empty state 대신 샘플 대시보드를 캔버스에 표시해 결과물 형태를 먼저 이해할 수 있게 한다.
 - Workspace scene은 editor, preview, AI tester의 3-column 구조를 기본으로 하는 Concept UI kit 패턴이다.
 - if/else, condition, branching, outcome 같은 로직 표현은 새 archetype을 계속 늘리지 않고, Dashboard/Workspace/Builder/Modal scene 안에 재사용 `logicBlocks`로 삽입한다.
+- self-service configuration, tone/behavior/knowledge 설정, no-code control, no engineering resource 같은 관리 화면 패턴은 `controlPanels` reusable block으로 표현한다.
+- agent autonomy/permission, knowledge coverage/source gap, evaluation scorecard, integration health, channel performance 같은 운영 대시보드 패턴은 `autonomyMatrices`, `knowledgeCoverages`, `evaluationScorecards`, `integrationHealths`, `channelMatrices` reusable block으로 표현한다.
 - policy/instruction, approval/review queue, tool/function call 같은 AI agent SaaS 패턴도 새 archetype 대신 `instructionSections`, `reviewQueues`, `toolCallLists` reusable block으로 받아낸다.
+- AI action trail, action log, visible agent steps, approval gate, paused action 같은 패턴은 `actionTrails` reusable block으로 표현해 실행 내역과 human approval gate를 한 카드 안에 보여준다.
 - 공개 AI agent product에서 반복되는 knowledge/procedure, testing/QA/observability, data connector/action 패턴은 별도 preset으로 복제하지 않고 기존 reusable block의 provider 단서와 copy variant로만 흡수한다.
+- production signal 기반 improvement proposal과 self-validation/testing loop 패턴은 `improvementSignals`, `validationLoops` reusable block으로 표현하고, enterprise approval/governance는 `reviewQueues` variant로 처리한다.
 - Hero crop으로 잘라낸 Concept UI 이미지는 외곽 corner radius를 유지한다.
+- Concept UI Hero crop은 전체 1600×1000 scene 배경을 캡처하지 않고 primary panel만 이미지로 만든 뒤 crop selector를 열어, Product Visual 배경 위에 솔리드 베이지 판이 한 겹 더 올라오지 않게 한다.
 - Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 compact radius만 사용한다.
 - Floating panel export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
 - Concept UI builder scene은 첫 렌더 시 Floating panel을 기본 캡처로 사용해 canvas 전체가 얇은 hero crop처럼 보이지 않게 한다. 사용자가 이후 Hero crop을 직접 선택하는 것은 허용한다.
+- Concept UI builder scene의 canvas node AI callout은 floating popover로 띄우지 않고, node는 하이라이트만 적용한 뒤 오른쪽 config panel에 inline 설명으로 렌더해 노드/엣지 텍스트와 겹치지 않게 한다.
+- Concept UI builder scene의 edge label은 작은 label chip으로 렌더하되, label bounds가 node bounds와 충돌하면 숨겨 노드 카드 위아래로 텍스트가 새어 보이지 않게 한다.
 - Concept UI builder scene의 우측 config panel 안 reusable block callout은 floating popover가 아니라 inline callout으로 렌더해 canvas node와 겹치거나 export 영역에서 잘리지 않게 한다.
 - Concept UI dashboard는 상단 header와 하단 body에 같은 compact radius를 적용해 모서리가 square로 보이지 않게 한다.
 - Concept UI primary scene header는 로고와 title만 표시하고 productName/subtitle은 숨긴다.
+- Concept UI의 작은 AI/status pill은 흐린 라임 배경이 아니라 브랜드 라임 토큰을 사용해 Studio 전반의 accent와 맞춘다.
 - Concept UI primary scene header의 좌상단 브랜드 자리는 항상 delight mark를 사용하고 archetype별 로보트/테이블/워크플로우 아이콘으로 대체하지 않는다.
 - Concept UI inbox의 AI agent 메시지 라벨 앞에는 로보트 아이콘을 쓰지 않고 작은 검은 원 표시를 사용한다.
 - Concept UI modal은 배경 앱 화면을 테두리/둥근 shell 없이 흐린 full-bleed skeleton으로만 보여주고, 실제 카드/대시보드가 두 겹으로 보이지 않게 한다.

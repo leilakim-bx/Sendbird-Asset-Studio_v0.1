@@ -43,6 +43,37 @@ function edgePath(
   return `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ey}, ${ex} ${ey}`;
 }
 
+function edgeLabelPosition(
+  from: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
+  to: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
+  label: string,
+  nodes: BuilderSceneSpec["content"]["canvas"]["nodes"],
+) {
+  const a = nodePosition(from);
+  const b = nodePosition(to);
+  const labelWidth = Math.min(170, Math.max(58, label.length * 7 + 20));
+  const labelHeight = 24;
+  const x = (a.left + b.left + NODE_W) / 2 - labelWidth / 2;
+  const y = (a.top + b.top + NODE_H) / 2 - 32;
+  const padded = {
+    left: x - 10,
+    right: x + labelWidth + 10,
+    top: y - 8,
+    bottom: y + labelHeight + 8,
+  };
+  const overlapsNode = nodes.some((node) => {
+    const pos = nodePosition(node);
+    return (
+      padded.left < pos.left + NODE_W &&
+      padded.right > pos.left &&
+      padded.top < pos.top + NODE_H &&
+      padded.bottom > pos.top
+    );
+  });
+  if (overlapsNode) return null;
+  return { x, y, width: labelWidth, height: labelHeight };
+}
+
 function nodePopover(node: BuilderSceneSpec["content"]["canvas"]["nodes"][number]) {
   const pos = nodePosition(node);
   if (pos.left > STAGE_W - NODE_W - 260) return "left";
@@ -55,8 +86,11 @@ export function BuilderScene({ spec }: Props) {
   const callout = spec.modifiers.aiCallout;
   const cursor = spec.modifiers.cursor;
   const nodesById = new Map(content.canvas.nodes.map((node) => [node.id, node]));
+  const nodeSlotIds = new Set(content.canvas.nodes.map((node) => node.slotId));
   const selected = nodesById.get(content.selectedNode.nodeId) ?? content.canvas.nodes[0];
   const hasBlocks = hasReusableBlocks(content);
+  const nodeCallout = callout && nodeSlotIds.has(callout.targetSlotId) ? callout : undefined;
+  const blockCallout = nodeCallout ? undefined : callout;
 
   return (
     <Card
@@ -171,8 +205,7 @@ export function BuilderScene({ spec }: Props) {
                 const from = nodesById.get(edge.from);
                 const to = nodesById.get(edge.to);
                 if (!from || !to) return null;
-                const a = nodePosition(from);
-                const b = nodePosition(to);
+                const labelPos = edge.label ? edgeLabelPosition(from, to, edge.label, content.canvas.nodes) : null;
                 return (
                   <g key={`${edge.from}-${edge.to}-${index}`}>
                     <path
@@ -182,16 +215,27 @@ export function BuilderScene({ spec }: Props) {
                       strokeWidth={3}
                       markerEnd="url(#builder-arrow)"
                     />
-                    {edge.label ? (
-                      <text
-                        x={(a.left + b.left + NODE_W) / 2}
-                        y={(a.top + b.top + NODE_H) / 2 - 8}
-                        fill={t.color.muted}
-                        fontSize="12"
-                        fontWeight="700"
-                      >
-                        {edge.label}
-                      </text>
+                    {edge.label && labelPos ? (
+                      <>
+                        <rect
+                          x={labelPos.x}
+                          y={labelPos.y}
+                          width={labelPos.width}
+                          height={labelPos.height}
+                          rx="10"
+                          fill={t.color.app}
+                          stroke={t.color.border}
+                        />
+                        <text
+                          x={labelPos.x + 10}
+                          y={labelPos.y + 16}
+                          fill={t.color.muted}
+                          fontSize="12"
+                          fontWeight="700"
+                        >
+                          {edge.label}
+                        </text>
+                      </>
                     ) : null}
                   </g>
                 );
@@ -205,7 +249,7 @@ export function BuilderScene({ spec }: Props) {
                 <Slot
                   key={node.id}
                   id={node.slotId}
-                  callout={callout}
+                  highlighted={callout?.targetSlotId === node.slotId || spec.modifiers.highlightedSlotId === node.slotId}
                   cursor={cursor}
                   popover={nodePopover(node)}
                   style={{
@@ -281,7 +325,7 @@ export function BuilderScene({ spec }: Props) {
           {hasBlocks ? (
             <ReusableBlockStack
               {...content}
-              callout={callout}
+              callout={blockCallout}
               cursor={cursor}
               compact
               max={1}
@@ -289,26 +333,65 @@ export function BuilderScene({ spec }: Props) {
               style={{ marginTop: 20, boxShadow: t.shadow.none }}
             />
           ) : (
-            <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 13 }}>
-              {content.selectedNode.fields.map((field, index) => (
+            <>
+              {nodeCallout ? (
                 <div
-                  key={`${index}-${field.label}`}
                   style={{
+                    marginTop: 20,
                     borderRadius: 17,
-                    background: t.color.surface,
-                    border: `1px solid ${t.color.border}`,
+                    background: t.color.app,
+                    border: `1px solid ${t.color.borderStrong}`,
                     padding: 15,
                   }}
                 >
-                  <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.faint }}>
-                    {field.label}
-                  </EllipsisText>
-                  <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 15, lineHeight: 1.35, color: t.color.text }}>
-                    {field.value}
+                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 22,
+                        height: 18,
+                        borderRadius: 7,
+                        background: t.color.ink,
+                        color: t.color.inverse,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        flex: "0 0 auto",
+                      }}
+                    >
+                      AI
+                    </span>
+                    <EllipsisText style={{ minWidth: 0, fontSize: 16, fontWeight: 800, color: t.color.text }}>
+                      {nodeCallout.label}
+                    </EllipsisText>
+                  </div>
+                  <EllipsisText lines={3} style={{ marginTop: 8, fontSize: 13, lineHeight: 1.35, color: t.color.muted }}>
+                    {nodeCallout.description}
                   </EllipsisText>
                 </div>
-              ))}
-            </div>
+              ) : null}
+              <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 13 }}>
+                {content.selectedNode.fields.map((field, index) => (
+                  <div
+                    key={`${index}-${field.label}`}
+                    style={{
+                      borderRadius: 17,
+                      background: t.color.surface,
+                      border: `1px solid ${t.color.border}`,
+                      padding: 15,
+                    }}
+                  >
+                    <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.faint }}>
+                      {field.label}
+                    </EllipsisText>
+                    <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 15, lineHeight: 1.35, color: t.color.text }}>
+                      {field.value}
+                    </EllipsisText>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           <div style={{ marginTop: 22, display: "flex", gap: 10 }}>

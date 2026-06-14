@@ -65,29 +65,18 @@ export async function exportConceptSceneElement(
   element: HTMLElement,
   preset: FramingPreset = "floating-panel",
 ): Promise<ExportedConceptScene> {
-  if (preset === "floating-panel") {
-    const primaryPanel = element.querySelector<HTMLElement>("[data-concept-primary-panel='true']");
-    if (!primaryPanel) throw new Error("Could not find the primary Concept UI panel.");
-    const { width, height } = measureRenderedBounds(primaryPanel);
-    const url = elementToSvgDataUrl(primaryPanel, {
-      width,
-      height,
-    });
-    return {
-      url,
-      naturalWidth: Math.round(width),
-      naturalHeight: Math.round(height),
-    };
-  }
-
-  const url = elementToSvgDataUrl(element, {
-    width: CONCEPT_UI_CANVAS_WIDTH,
-    height: CONCEPT_UI_CANVAS_HEIGHT,
+  void preset;
+  const primaryPanel = element.querySelector<HTMLElement>("[data-concept-primary-panel='true']");
+  if (!primaryPanel) throw new Error("Could not find the primary Concept UI panel.");
+  const { width, height } = measureRenderedBounds(primaryPanel);
+  const url = elementToSvgDataUrl(primaryPanel, {
+    width,
+    height,
   });
   return {
     url,
-    naturalWidth: CONCEPT_UI_CANVAS_WIDTH,
-    naturalHeight: CONCEPT_UI_CANVAS_HEIGHT,
+    naturalWidth: Math.round(width),
+    naturalHeight: Math.round(height),
   };
 }
 

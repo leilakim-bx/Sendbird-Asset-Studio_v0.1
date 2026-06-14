@@ -21,6 +21,7 @@ import {
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
+import { compareMaxRows, stackMaxLayers } from "@/lib/infographic-block-limits";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
@@ -354,6 +355,7 @@ const ORBIT_ICON_LABELS: Record<OrbitIconKey, string> = {
   mobile: "Mobile",
   voice: "Voice",
   whatsapp: "WhatsApp",
+  slack: "Slack",
   line: "LINE",
   instagram: "Instagram",
   messenger: "Messenger",
@@ -901,7 +903,12 @@ function previewBlockFor(libraryId: BlockLibraryId, id: string): InfographicBloc
   return { ...structuredClone(previewBlock), id };
 }
 
-function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?: string): InfographicBlock {
+function convertBlock(
+  block: InfographicBlock,
+  libraryId: BlockLibraryId,
+  format: InfographicFormat,
+  title?: string,
+): InfographicBlock {
   const type = libraryBlockType(libraryId);
 
   if (block.type === type) {
@@ -1021,15 +1028,15 @@ function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?
       return {
         id,
         type: "compare",
-        layout: "table",
-        columnA: "Item",
-        columnB: "Value",
+        layout: "cards",
+        columnA: "Before",
+        columnB: "After",
         highlightB: true,
-        rows: rows.slice(0, 6).map((row) => ({
-          label: "",
-          a: row.label,
-          b: formatPortableNumber(row.value, row.valueText),
-        })),
+        rows: [
+          { a: "Manual review queue", b: "Risk surfaced automatically" },
+          { a: "Context scattered", b: "History summarized in one view" },
+          { a: "Slow handoff", b: "Next action suggested instantly" },
+        ],
       };
     case "step":
       return {
@@ -1064,7 +1071,7 @@ function convertBlock(block: InfographicBlock, libraryId: BlockLibraryId, title?
       return {
         id,
         type: "stack",
-        layers: rows.slice(0, 5).map((row, index) => ({
+        layers: rows.slice(0, stackMaxLayers(format)).map((row, index) => ({
           title: row.label,
           caption: row.desc || formatPortableNumber(row.value, row.valueText),
           highlight: row.highlight ?? index === 0,
@@ -1125,7 +1132,7 @@ function SelectedImageEditor({
     onChange({
       ...content,
       showTitle: type === "stat" ? false : content.showTitle,
-      blocks: [convertBlock(block, libraryId, content.title)],
+      blocks: [convertBlock(block, libraryId, content.format, content.title)],
     });
   };
 
@@ -1222,6 +1229,36 @@ function SelectedImageEditor({
 
       {block.type === "compare" && (
         <>
+          <SimpleField label="Layout">
+            <div className="flex items-center gap-1 rounded-lg bg-studio-input p-1">
+              {(["cards", "table"] as const).map((layout) => {
+                const active = (block.layout ?? "cards") === layout;
+                return (
+                  <button
+                    key={layout}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setBlock({
+                        ...block,
+                        layout,
+                        rows:
+                          layout === "table"
+                            ? block.rows.map((row) => ({ ...row, label: row.label || row.a }))
+                            : block.rows,
+                      })
+                    }
+                    className={[
+                      "flex-1 rounded-md px-2 py-1.5 text-xs font-semibold capitalize transition-colors",
+                      active ? "bg-studio-hover text-studio-text" : "text-studio-muted hover:text-studio-text",
+                    ].join(" ")}
+                  >
+                    {layout}
+                  </button>
+                );
+              })}
+            </div>
+          </SimpleField>
           <div className="grid grid-cols-2 gap-2">
             <SimpleField label="Before">
               <input
@@ -1245,6 +1282,21 @@ function SelectedImageEditor({
                 setBlock({ ...block, rows: block.rows.filter((_, rowIndex) => rowIndex !== index) });
               } : undefined}
             >
+              {(block.layout ?? "cards") === "table" && (
+                <input
+                  className={inputCls + " mb-1.5"}
+                  placeholder="Row label"
+                  value={row.label ?? ""}
+                  onChange={(event) =>
+                    setBlock({
+                      ...block,
+                      rows: block.rows.map((candidate, rowIndex) =>
+                        rowIndex === index ? { ...candidate, label: event.target.value } : candidate,
+                      ),
+                    })
+                  }
+                />
+              )}
               <div className="grid grid-cols-2 gap-1.5">
                 <input
                   className={inputCls}
@@ -1275,9 +1327,16 @@ function SelectedImageEditor({
               </div>
             </SimpleItem>
           ))}
-          <AddMiniRow onClick={() => setBlock({ ...block, rows: [...block.rows, { a: "", b: "" }] })}>
-            Add row
-          </AddMiniRow>
+          {block.rows.length < compareMaxRows(content.format) ? (
+            <AddMiniRow onClick={() => setBlock({ ...block, rows: [...block.rows, { label: "", a: "", b: "" }] })}>
+              Add row
+            </AddMiniRow>
+          ) : (
+            <p className="text-[11px] leading-relaxed text-studio-muted">
+              {content.format === "product" ? "Product feature" : "Blog/Perspective"} fits up to{" "}
+              {compareMaxRows(content.format)} comparison rows.
+            </p>
+          )}
         </>
       )}
 
