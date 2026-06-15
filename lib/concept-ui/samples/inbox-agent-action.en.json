@@ -10,8 +10,8 @@
         "slotId": "conv-ticket",
         "customer": "Amelia Park",
         "title": "Convert to customer ticket",
-        "preview": "AI pre-filled fields from the thread.",
-        "status": "Pre-filled",
+        "preview": "Draft fields extracted from the thread.",
+        "status": "Draft ready",
         "time": "Now",
         "score": "High"
       },
@@ -67,7 +67,7 @@
       "sections": [
         {
           "slotId": "action-fields",
-          "title": "Pre-filled fields",
+          "title": "Extracted fields",
           "items": [
             { "label": "Type", "value": "Account access" },
             { "label": "Plan", "value": "Enterprise" },
@@ -89,7 +89,7 @@
   "modifiers": {
     "aiCallout": {
       "targetSlotId": "action-fields",
-      "label": "Pre-filled",
+      "label": "Draft ready",
       "description": "AI turns the thread into structured fields the agent can approve."
     }
   }

@@ -10,10 +10,16 @@ type Props = {
   spec: BuilderSceneSpec;
 };
 
-const STAGE_W = 700;
-const STAGE_H = 560;
-const NODE_W = 150;
-const NODE_H = 92;
+const BUILDER_PANEL_W = 1180;
+const BUILDER_PANEL_H = 720;
+const HEADER_H = 78;
+const PALETTE_W = 230;
+const MAIN_W = 660;
+const INSPECTOR_W = 290;
+const STAGE_W = 600;
+const STAGE_H = 480;
+const NODE_W = 138;
+const NODE_H = 88;
 
 function typeIcon(type: BuilderSceneSpec["content"]["canvas"]["nodes"][number]["type"], size = 18) {
   if (type === "trigger") return <PlayCircle size={size} />;
@@ -96,11 +102,11 @@ export function BuilderScene({ spec }: Props) {
     <Card
       primaryPanel
       style={{
-        width: 1370,
-        height: 790,
+        width: BUILDER_PANEL_W,
+        height: BUILDER_PANEL_H,
         overflow: "hidden",
         display: "grid",
-        gridTemplateRows: "88px 1fr",
+        gridTemplateRows: `${HEADER_H}px 1fr`,
       }}
     >
       <div
@@ -108,14 +114,14 @@ export function BuilderScene({ spec }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 34px",
+          padding: "0 30px",
           borderBottom: `1px solid ${t.color.border}`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <DelightMark size={46} />
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <DelightMark size={40} />
           <div>
-            <EllipsisText style={{ fontSize: 29, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 26, fontWeight: 800, color: t.color.text }}>
               {content.title}
             </EllipsisText>
           </div>
@@ -123,28 +129,34 @@ export function BuilderScene({ spec }: Props) {
         <Pill tone="ai">Workflow live</Pill>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr 320px", minHeight: 0 }}>
-        <aside style={{ borderRight: `1px solid ${t.color.border}`, padding: 24 }}>
-          <EllipsisText style={{ fontSize: 22, fontWeight: 800, color: t.color.text }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `${PALETTE_W}px ${MAIN_W}px ${INSPECTOR_W}px`,
+          minHeight: 0,
+        }}
+      >
+        <aside style={{ borderRight: `1px solid ${t.color.border}`, padding: 20 }}>
+          <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
             {content.paletteTitle}
           </EllipsisText>
-          <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 11 }}>
             {content.paletteItems.map((item, index) => (
               <div
                 key={`${index}-${item.type}`}
                 style={{
-                  borderRadius: 18,
+                  borderRadius: 16,
                   border: `1px solid ${t.color.border}`,
                   background: t.color.surface,
-                  padding: 15,
+                  padding: 13,
                   display: "flex",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
                 <div
                   style={{
-                    width: 34,
-                    height: 34,
+                    width: 30,
+                    height: 30,
                     borderRadius: 11,
                     background: item.type === "ai" ? t.color.aiSoft : t.color.app,
                     color: item.type === "ai" ? t.color.ink : t.color.text,
@@ -157,10 +169,10 @@ export function BuilderScene({ spec }: Props) {
                   {typeIcon(item.type, 18)}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>
+                  <EllipsisText style={{ fontSize: 15, fontWeight: 800, color: t.color.text }}>
                     {item.label}
                   </EllipsisText>
-                  <EllipsisText lines={2} style={{ marginTop: 5, fontSize: 13, lineHeight: 1.35, color: t.color.muted }}>
+                  <EllipsisText lines={2} style={{ marginTop: 5, fontSize: 12, lineHeight: 1.35, color: t.color.muted }}>
                     {item.description}
                   </EllipsisText>
                 </div>
@@ -169,9 +181,9 @@ export function BuilderScene({ spec }: Props) {
           </div>
         </aside>
 
-        <main style={{ padding: 28, background: t.color.surface, minWidth: 0 }}>
+        <main style={{ padding: 24, background: t.color.surface, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <EllipsisText style={{ fontSize: 22, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
               {content.canvas.title}
             </EllipsisText>
             <Pill tone="neutral">Deterministic layout</Pill>
@@ -296,12 +308,12 @@ export function BuilderScene({ spec }: Props) {
           </div>
         </main>
 
-        <aside style={{ borderLeft: `1px solid ${t.color.border}`, padding: 24 }}>
+        <aside style={{ borderLeft: `1px solid ${t.color.border}`, padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 borderRadius: 13,
                 background: t.color.ink,
                 color: t.color.inverse,
@@ -313,7 +325,7 @@ export function BuilderScene({ spec }: Props) {
               <CheckCircle2 size={20} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: 22, fontWeight: 800, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
                 {content.selectedNode.panelTitle}
               </EllipsisText>
               <EllipsisText style={{ marginTop: 4, fontSize: 14, color: t.color.muted }}>

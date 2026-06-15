@@ -88,6 +88,8 @@ export function InboxScene({ spec }: Props) {
                   borderRadius: 20,
                   background: index === 0 ? t.color.surface : t.color.app,
                   border: `1px solid ${index === 0 ? t.color.borderStrong : t.color.border}`,
+                  height: 128,
+                  overflow: "hidden",
                   padding: 18,
                 }}
               >
@@ -104,7 +106,17 @@ export function InboxScene({ spec }: Props) {
                       {conversation.preview}
                     </EllipsisText>
                     <div style={{ marginTop: 11, display: "flex", alignItems: "center", gap: 8 }}>
-                      <Pill tone={index === 0 ? "warn" : "neutral"} style={{ minHeight: 24, padding: "4px 8px", fontSize: 12 }}>
+                      <Pill
+                        tone={index === 0 ? "warn" : "neutral"}
+                        style={{
+                          minHeight: 24,
+                          maxWidth: 112,
+                          overflow: "hidden",
+                          padding: "4px 8px",
+                          fontSize: 12,
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {conversation.status}
                       </Pill>
                       {conversation.score ? (

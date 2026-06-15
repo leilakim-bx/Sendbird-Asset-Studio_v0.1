@@ -39,6 +39,10 @@ const LINE = brand.typography.lineHeight;
 const SPACE = brand.spacing;
 const STROKE = brand.stroke;
 const cssPx = brandPx;
+const FRAME_WIDTH_RATIO = {
+  desktop: 0.4273,
+  mobile: 0.73,
+} as const;
 
 // ── ActionPills — shared button column ───────────────────
 // Used by BOTH the bot text bubble (TextBlock.buttons add-on) and the
@@ -855,14 +859,13 @@ export const FeatureMockup = memo(function FeatureMockup({
     ? Math.max(MIN_PAD, Math.round(canvasW * 0.05))              // split 왼쪽
     : MIN_PAD;                                                   // center/mobile
 
-  // Frame width follows the original canvas ratios.
+  // Keep the phone/card scale stable across desktop layout modes. Split changes
+  // placement and background crop only; the object itself should not shrink.
   const maxFrameW = canvasW - hPadL - MIN_PAD;
   const frameW = Math.min(
     isMobile
-      ? Math.round(canvasW * 0.73)
-      : isCenter
-        ? Math.round(canvasW * 0.4273)
-        : Math.round(canvasW * 0.39),
+      ? Math.round(canvasW * FRAME_WIDTH_RATIO.mobile)
+      : Math.round(canvasW * FRAME_WIDTH_RATIO.desktop),
     maxFrameW,
   );
 

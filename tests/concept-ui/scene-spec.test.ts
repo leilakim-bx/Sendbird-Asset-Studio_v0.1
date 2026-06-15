@@ -18,7 +18,7 @@ describe("SceneSpec", () => {
     }
   });
 
-  it("parses max-length Korean fixtures for every archetype", () => {
+  it("parses max-length English fixtures for every archetype", () => {
     expect(longestStringFixtures).toHaveLength(6);
     for (const fixture of longestStringFixtures) {
       expect(() => parseSceneSpec(fixture.spec)).not.toThrow();

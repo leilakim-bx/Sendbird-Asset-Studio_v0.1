@@ -6,6 +6,7 @@ import { Menu } from "@base-ui/react/menu";
 import {
   INFOGRAPHIC_BLOCK_LIMITS,
   cardGridBodyMaxChars,
+  compareCardPointMaxChars,
   compareMaxRows,
   stackedBarMaxRows,
   stackMaxLayers,
@@ -685,8 +686,13 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
               onChange={(e) => set({ hubTitle: e.target.value })}
             />
           </Field>
-          <Field label="Hub subtitle">
-            <input className={inputCls} value={b.hubSub ?? ""} onChange={(e) => set({ hubSub: e.target.value })} />
+          <Field label={`Hub subtitle (max ${INFOGRAPHIC_BLOCK_LIMITS.hubSubtitleChars})`}>
+            <input
+              className={inputCls}
+              value={b.hubSub ?? ""}
+              maxLength={INFOGRAPHIC_BLOCK_LIMITS.hubSubtitleChars}
+              onChange={(e) => set({ hubSub: e.target.value })}
+            />
           </Field>
           {items.map((it, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setItems(items.filter((_, j) => j !== i))}>
@@ -834,6 +840,7 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
       const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
       const maxRows = compareMaxRows(format);
       const rows = b.rows.slice(0, maxRows);
+      const cardPointMaxLength = layout === "cards" ? compareCardPointMaxChars(format) : undefined;
       const setRows = (next: typeof b.rows) => onChange({ ...b, rows: next.slice(0, maxRows) });
       return (
         <>
@@ -872,15 +879,22 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
             Highlight column B
           </label>
           {layout === "cards" && (
-            <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={b.bullets !== false}
-                onChange={(e) => set({ bullets: e.target.checked })}
-                className="sb-checkbox"
-              />
-              Bullet points
-            </label>
+            <>
+              <label className="flex items-center gap-2 mb-2.5 text-xs text-studio-text cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={b.bullets !== false}
+                  onChange={(e) => set({ bullets: e.target.checked })}
+                  className="sb-checkbox"
+                />
+                Bullet points
+              </label>
+              {format === "product" && (
+                <p className="mb-2.5 px-0.5 text-[11px] leading-relaxed text-studio-muted">
+                  Use short points. Product feature cards keep fixed padding and fit up to {maxRows} points per side.
+                </p>
+              )}
+            </>
           )}
           {rows.map((r, i) => (
             <ItemCard key={i} idx={i} onRemove={() => setRows(rows.filter((_, j) => j !== i))}>
@@ -896,12 +910,14 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
                 <input
                   className={inputCls}
                   placeholder={b.columnA || "A"}
+                  maxLength={cardPointMaxLength}
                   value={r.a}
                   onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)))}
                 />
                 <input
                   className={inputCls}
                   placeholder={b.columnB || "B"}
+                  maxLength={cardPointMaxLength}
                   value={r.b}
                   onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, b: e.target.value } : x)))}
                 />

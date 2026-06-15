@@ -152,15 +152,15 @@ export function Pill({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        minHeight: 30,
+        minHeight: t.control.pill.minHeight,
         maxWidth: "100%",
-        borderRadius: 9,
-        padding: "5px 10px",
+        borderRadius: t.control.pill.radius,
+        padding: `${t.control.pill.paddingY}px ${t.control.pill.paddingX}px`,
         background: palette.background,
         color: palette.color,
-        fontSize: 15,
+        fontSize: t.control.pill.fontSize,
         fontWeight: 700,
-        lineHeight: 1,
+        lineHeight: t.control.pill.lineHeight,
         whiteSpace: "nowrap",
         ...style,
       }}
@@ -253,6 +253,7 @@ function AiPopover({ callout, popover }: { callout: AiCallout; popover: SlotPopo
 
   return (
     <div
+      data-concept-ai-popover="true"
       style={{
         position: inline ? "relative" : "absolute",
         zIndex: 20,

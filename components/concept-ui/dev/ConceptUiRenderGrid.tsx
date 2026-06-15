@@ -15,7 +15,7 @@ export function ConceptUiRenderGrid() {
         <div>
           <h1 className="text-2xl font-semibold">Concept UI render grid</h1>
           <p className="mt-1 text-sm text-studio-muted">
-            {samples.length} sample specs plus {fixtures.length} max-length Korean fixtures.
+            {samples.length} sample specs plus {fixtures.length} max-length English fixtures.
           </p>
         </div>
         <a href="/dev/concept-ui" className="text-sm font-semibold text-studio-accent underline underline-offset-4">
@@ -27,7 +27,11 @@ export function ConceptUiRenderGrid() {
         <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-studio-muted">Samples</h2>
         <div className="grid grid-cols-2 gap-5">
           {samples.map((sample) => (
-            <article key={sample.id} className="rounded-xl border border-studio-border bg-studio-sidebar p-3">
+            <article
+              key={sample.id}
+              data-concept-render-card={`sample-${sample.id}`}
+              className="rounded-xl border border-studio-border bg-studio-sidebar p-3"
+            >
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="truncate text-sm font-semibold">{sample.label}</h3>
                 <span className="rounded-full border border-studio-border px-2 py-0.5 text-[10px] uppercase text-studio-muted">
@@ -35,6 +39,7 @@ export function ConceptUiRenderGrid() {
                 </span>
               </div>
               <div
+                data-concept-render-preview="true"
                 className="overflow-hidden rounded-lg bg-[#F7F5F0]"
                 style={{ width: CONCEPT_UI_CANVAS_WIDTH * 0.32, height: CONCEPT_UI_CANVAS_HEIGHT * 0.32 }}
               >
@@ -48,10 +53,14 @@ export function ConceptUiRenderGrid() {
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-studio-muted">Max-length Korean fixtures</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-studio-muted">Max-length English fixtures</h2>
         <div className="grid grid-cols-2 gap-5">
           {fixtures.map((fixture) => (
-            <article key={fixture.id} className="rounded-xl border border-studio-border bg-studio-sidebar p-3">
+            <article
+              key={fixture.id}
+              data-concept-render-card={`fixture-${fixture.id}`}
+              className="rounded-xl border border-studio-border bg-studio-sidebar p-3"
+            >
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="truncate text-sm font-semibold">{fixture.label}</h3>
                 <span className="rounded-full border border-studio-border px-2 py-0.5 text-[10px] uppercase text-studio-muted">
@@ -59,6 +68,7 @@ export function ConceptUiRenderGrid() {
                 </span>
               </div>
               <div
+                data-concept-render-preview="true"
                 className="overflow-hidden rounded-lg bg-[#F7F5F0]"
                 style={{ width: CONCEPT_UI_CANVAS_WIDTH * 0.32, height: CONCEPT_UI_CANVAS_HEIGHT * 0.32 }}
               >

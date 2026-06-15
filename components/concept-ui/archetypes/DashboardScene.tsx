@@ -130,7 +130,7 @@ export function DashboardScene({ spec }: Props) {
       <div
         style={{
           padding: 18,
-          background: t.color.surface,
+          background: t.color.app,
           minHeight: 0,
           borderBottomLeftRadius: t.radius.sm,
           borderBottomRightRadius: t.radius.sm,

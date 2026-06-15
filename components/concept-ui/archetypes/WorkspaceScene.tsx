@@ -11,21 +11,23 @@ type Props = {
   spec: WorkspaceSceneSpec;
 };
 
-function ToolButton({ children }: { children: ReactNode }) {
+function ToolButton({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <span
       style={{
-        minWidth: 42,
-        height: 42,
-        borderRadius: 12,
+        minWidth: wide ? "auto" : t.control.toolbarButton.minWidth,
+        height: t.control.toolbarButton.height,
+        borderRadius: t.control.toolbarButton.radius,
+        padding: `0 ${wide ? t.control.toolbarButton.widePaddingX : t.control.toolbarButton.paddingX}px`,
         background: t.color.surface,
         border: `1px solid ${t.color.border}`,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         color: t.color.muted,
-        fontSize: 17,
+        fontSize: t.control.toolbarButton.fontSize,
         fontWeight: 800,
+        boxSizing: "border-box",
       }}
     >
       {children}
@@ -89,7 +91,7 @@ export function WorkspaceScene({ spec }: Props) {
         </EllipsisText>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
           {content.filters.map((filter, index) => (
-            <Pill key={`${index}-${filter}`} tone={index === 0 ? "ai" : "neutral"} style={{ minHeight: 44, fontSize: 16 }}>
+            <Pill key={`${index}-${filter}`} tone={index === 0 ? "ai" : "neutral"} style={{ minHeight: t.control.pill.largeMinHeight, fontSize: t.control.pill.largeFontSize }}>
               {filter}
             </Pill>
           ))}
@@ -100,8 +102,8 @@ export function WorkspaceScene({ spec }: Props) {
               borderRadius: 14,
               background: t.color.app,
               color: t.color.text,
-              minHeight: 54,
-              padding: "0 26px",
+              minHeight: t.control.actionButton.minHeight,
+              padding: `0 ${t.control.actionButton.paddingX}px`,
               fontSize: 18,
               fontWeight: 800,
             }}
@@ -125,7 +127,7 @@ export function WorkspaceScene({ spec }: Props) {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14, height: 72 }}>
-            <ToolButton>
+            <ToolButton wide>
               Normal <ChevronDown size={16} />
             </ToolButton>
             <ToolButton>B</ToolButton>
@@ -143,37 +145,37 @@ export function WorkspaceScene({ spec }: Props) {
             </ToolButton>
           </div>
 
-          <div style={{ marginTop: 38 }}>
+          <div style={{ marginTop: 26 }}>
             <EllipsisText style={{ fontSize: 17, fontWeight: 850, letterSpacing: "0.12em", color: t.color.faint }}>
               {content.editor.eyebrow}
             </EllipsisText>
             <div
               style={{
-                marginTop: 18,
+                marginTop: 14,
                 border: `1px solid ${t.color.border}`,
                 borderRadius: 18,
                 background: t.color.app,
-                padding: 24,
+                padding: 18,
               }}
             >
-              <EllipsisText lines={3} style={{ fontSize: 22, lineHeight: 1.45, color: t.color.muted }}>
+              <EllipsisText lines={2} style={{ fontSize: 19, lineHeight: 1.4, color: t.color.muted }}>
                 {content.editor.body}
               </EllipsisText>
             </div>
 
-            <div style={{ marginTop: 34, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <EllipsisText style={{ fontSize: 29, fontWeight: 850, color: t.color.text }}>
+            <div style={{ marginTop: 22, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <EllipsisText style={{ fontSize: 24, fontWeight: 850, color: t.color.text }}>
                 Key points
               </EllipsisText>
               {content.editor.tags.map((tag, index) => (
-                <Pill key={`${index}-${tag}`} tone={index === 0 ? "neutral" : "ai"} style={{ fontSize: 13, minHeight: 28 }}>
+                <Pill key={`${index}-${tag}`} tone={index === 0 ? "neutral" : "ai"} style={{ fontSize: 12, minHeight: t.control.pill.denseMinHeight }}>
                   {tag}
                 </Pill>
               ))}
             </div>
-            <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 18 }}>
-              {content.editor.keyPoints.map((point, index) => (
-                <EllipsisText key={`${index}-${point}`} lines={3} style={{ fontSize: 21, lineHeight: 1.48, color: t.color.muted }}>
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+              {content.editor.keyPoints.slice(0, 2).map((point, index) => (
+                <EllipsisText key={`${index}-${point}`} lines={2} style={{ fontSize: 17, lineHeight: 1.42, color: t.color.muted }}>
                   {point}
                 </EllipsisText>
               ))}
@@ -243,7 +245,7 @@ export function WorkspaceScene({ spec }: Props) {
             <EllipsisText style={{ fontSize: 20, fontWeight: 850, color: t.color.text }}>
               Tester
             </EllipsisText>
-            <Pill tone="neutral" style={{ minHeight: 42, fontSize: 14 }}>
+            <Pill tone="neutral" style={{ minHeight: t.control.pill.menuMinHeight, fontSize: t.control.pill.fontSize }}>
               {content.tester.status} <ChevronDown size={15} />
             </Pill>
           </div>
@@ -257,37 +259,39 @@ export function WorkspaceScene({ spec }: Props) {
             </EllipsisText>
           </div>
 
-          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 13 }}>
-            {content.tester.messages.map((message, index) => (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            {content.tester.messages.slice(0, 2).map((message, index) => (
               <div
                 key={`${index}-${message.text}`}
                 style={{
-                  borderRadius: 20,
+                  height: 60,
+                  borderRadius: 16,
                   background: message.author === "ai" ? t.color.surface : t.color.app,
                   border: message.author === "user" ? `1px solid ${t.color.border}` : undefined,
-                  padding: "18px 20px",
+                  overflow: "hidden",
+                  padding: "8px 12px",
                 }}
               >
-                <EllipsisText lines={3} style={{ fontSize: 20, lineHeight: 1.4, color: t.color.text }}>
+                <EllipsisText lines={2} style={{ fontSize: 14, lineHeight: 1.35, color: t.color.text }}>
                   {message.text}
                 </EllipsisText>
               </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-            {content.tester.replies.map((reply, index) => (
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+            {content.tester.replies.slice(0, 2).map((reply, index) => (
               <div
                 key={`${index}-${reply}`}
                 style={{
-                  minHeight: 54,
-                  borderRadius: 20,
+                  minHeight: 36,
+                  borderRadius: 14,
                   border: `1px solid ${t.color.border}`,
                   display: "flex",
                   alignItems: "center",
-                  padding: "0 20px",
+                  padding: "0 14px",
                   color: t.color.muted,
-                  fontSize: 17,
+                  fontSize: 14,
                   fontWeight: 800,
                 }}
               >
@@ -298,8 +302,8 @@ export function WorkspaceScene({ spec }: Props) {
 
           <div
             style={{
-              marginTop: 28,
-              minHeight: 62,
+              marginTop: 12,
+              minHeight: 42,
               borderRadius: 17,
               border: `1px solid ${t.color.border}`,
               display: "flex",

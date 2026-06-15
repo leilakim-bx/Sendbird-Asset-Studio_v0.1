@@ -38,7 +38,7 @@ lib/
 | Route | 역할 |
 |---|---|
 | `/` | 템플릿 선택, My files 표시 |
-| `/open` | 저장 에셋을 Chat UI / Infographic / Product Visual 탭으로 분류 |
+| `/open?type=chat\|infographic\|product-visual` | 저장 에셋을 Chat UI / Infographic / Product Visual 탭으로 분류. 홈 좌측 Finder 링크는 이 query로 1-depth 진입한다 |
 | `/editor/[templateId]` | 템플릿 id 조회 후 Shell 렌더링 |
 | `/api/generate-scenario` | Chat UI 로컬 프리셋 시나리오 생성 |
 | `/api/analyze-article` | Infographic 로컬 추천 생성 |
@@ -85,7 +85,7 @@ Save 클릭
   -> SavedAsset 생성
   -> localStorage savedAssets prepend (최근 24개까지만 유지)
 
-My files에서 열기
+My files / Finder에서 열기
   -> pendingAssetRestore 설정
   -> /editor/{templateId} 이동
   -> Shell mount 시 pending snapshot 복원
@@ -212,6 +212,7 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - `concept` 모드는 현재 deterministic UI builder로 제품 UI 느낌의 가상 화면을 만든다.
 - `reference` 모드는 archived 상태다. 기존 저장본이 `reference`를 가지고 있어도 런타임에서는 Concept UI scene처럼 렌더한다.
 - Concept UI scene spec은 Dashboard/Workspace/Builder/Modal 안에 optional reusable blocks를 받을 수 있다. `logicBlocks`, `controlPanels`, `autonomyMatrices`, `knowledgeCoverages`, `evaluationScorecards`, `integrationHealths`, `channelMatrices`, `instructionSections`, `reviewQueues`, `toolCallLists`, `actionTrails`, `improvementSignals`, `validationLoops`는 if/else, self-service control, autonomy/permission, knowledge coverage, evaluation, integration health, channel performance, policy, approval, tool/function call, visible agent action log, production signal, self-validation 단서에 따라 새 source/structure 선택지를 만들지 않고 삽입된다.
+- Generic resolution/procedure/agent flow 단서는 Builder canvas로 고정하지 않고 Dashboard kit + reusable blocks로 라우팅한다. Builder는 workflow editor/canvas/actionbook/node/rule authoring이 명시된 경우에 우선한다.
 - Product Visual 첫 진입은 저장 데이터에 샘플을 seed하지 않고, 왼쪽 preview에 Concept UI 샘플 대시보드만 placeholder로 보여준다.
 - Concept UI export는 Hero crop/Floating panel 모두 전체 scene 배경이 아니라 primary panel만 screenshot pipeline으로 넘긴다. Hero crop은 이후 crop selector를 여는 UX 차이만 가진다.
 - 외부 AI chat으로 만든 Concept UI 답변은 서버 API 없이 클라이언트에서 JSON을 추출/검증한다. Studio SceneSpec과 다른 구조라도 archetype 의도가 명확하면 가장 가까운 지원 layout sample로 변환하고, table cell의 `kind`처럼 누락이 잦은 필드는 column 정보로 보정한다. 의도 자체를 알 수 없는 구조만 에러로 처리한다.
@@ -245,6 +246,8 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 | Blob 백업 | 토큰 없음 fallback, 3.5MB 초과 skip, local+remote 복원 목록 병합 확인 |
 | Export | 각 템플릿 대표 포맷 PNG가 지정 크기/@2x로 생성되는지 확인 |
 | Infographic limits | 블록별 item/text 상한이 에디터와 renderer 양쪽에서 적용되는지 확인 |
+| Concept UI render quality | bundled sample과 max-length English fixture가 `SceneRenderer`에서 빈 화면/불안정 markup 없이 렌더되는지 확인 |
+| Concept UI browser QA | Playwright로 `/dev/concept-ui/render`를 열어 각 샘플/fixture를 스크린샷 캡처하고 primary panel, broken image, canvas overflow, 금지 demo copy를 확인 |
 | 업로드 | 배경/Product Visual 허용 타입/10MB 제한, Blob URL 저장, Blob 미연결 fallback 확인 |
 | 소스 입력 | URL-only 거부, 텍스트 붙여넣기 케이스 확인 |
 
@@ -253,6 +256,7 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 검증 명령:
 
 - `npm run test:run` — 단위 테스트
+- `npm run test:visual` — Concept UI 브라우저 렌더 smoke QA
 - `npm run verify:core` — 단위 테스트 + production build
 - `npm run verify` — lint + 단위 테스트 + production build
 

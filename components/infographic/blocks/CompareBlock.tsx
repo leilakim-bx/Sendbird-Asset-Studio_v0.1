@@ -7,6 +7,7 @@ type Props = {
   block: Extract<InfographicBlock, { type: "compare" }>;
   scale?: number;
   format?: InfographicFormat;
+  maxHeight?: number;
 };
 
 const CARD_BG = brand.color.infographic.paper;
@@ -21,7 +22,7 @@ const CHIP_BG = brand.color.infographic.chip;
  * table with row labels. Column B can be highlighted (black) as the "new/better"
  * side. Column names sit in rounded chips.
  */
-export function CompareBlock({ block, scale = 1, format }: Props) {
+export function CompareBlock({ block, scale = 1, format, maxHeight }: Props) {
   const { columnA, columnB, highlightB } = block;
   const rows = block.rows.slice(0, compareMaxRows(format ?? "blog"));
   const layout = block.layout ?? "cards";
@@ -61,9 +62,8 @@ export function CompareBlock({ block, scale = 1, format }: Props) {
                 fontWeight: 600,
                 color: INFOGRAPHIC_INK,
                 minWidth: 0,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                whiteSpace: "normal",
+                overflowWrap: "anywhere",
               }}
             >
               {r.label}
@@ -78,9 +78,17 @@ export function CompareBlock({ block, scale = 1, format }: Props) {
 
   const bullets = block.bullets !== false;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "stretch" }}>
-      <CompareCard title={columnA} items={rows.map((r) => r.a)} highlight={false} bullets={bullets} fs={fs} />
-      <CompareCard title={columnB} items={rows.map((r) => r.b)} highlight={!!highlightB} bullets={bullets} fs={fs} />
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 16,
+        alignItems: "stretch",
+        ...(format === "product" && maxHeight ? { maxHeight, overflow: "hidden" } : {}),
+      }}
+    >
+      <CompareCard title={columnA} items={rows.map((r) => r.a)} highlight={false} bullets={bullets} fs={fs} format={format} />
+      <CompareCard title={columnB} items={rows.map((r) => r.b)} highlight={!!highlightB} bullets={bullets} fs={fs} format={format} />
     </div>
   );
 }
@@ -111,16 +119,25 @@ function CompareCard({
   highlight,
   bullets,
   fs,
+  format,
 }: {
   title: string;
   items: string[];
   highlight: boolean;
   bullets: boolean;
   fs: (n: number) => number;
+  format?: InfographicFormat;
 }) {
   // Item text metrics — used to vertically center the bullet on the first line.
-  const itemFs = fs(17);
-  const lineH = Math.round(itemFs * 1.45);
+  const isProduct = format === "product";
+  const itemBaseSize = isProduct ? (items.length >= 6 ? 14 : items.length >= 5 ? 15 : 16) : 17;
+  const itemFs = fs(itemBaseSize);
+  const itemLineHeight = isProduct ? (items.length >= 5 ? 1.35 : 1.38) : 1.45;
+  // Product feature can accept more short points, but never lets a single long
+  // point expand the fixed frame. Padding stays fixed; gap only tightens by 1px.
+  // Each point can read as a short paragraph, then clamps before it breaks export.
+  const itemGap = isProduct && items.length >= 5 ? 8 : 9;
+  const lineH = Math.round(itemFs * itemLineHeight);
   return (
     <div
       style={{
@@ -133,6 +150,7 @@ function CompareCard({
         borderRadius: 12,
         padding: 20,
         boxSizing: "border-box",
+        overflow: isProduct ? "hidden" : undefined,
       }}
     >
       <span
@@ -150,10 +168,10 @@ function CompareCard({
       >
         {title}
       </span>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: itemGap }}>
         {items.map((it, i) =>
           it ? (
-            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start", minWidth: 0 }}>
               {bullets && (
                 // Wrapper spans one line-height and centers the dot, so the dot
                 // aligns to the middle of the first text line at any scale.
@@ -168,7 +186,25 @@ function CompareCard({
                   />
                 </span>
               )}
-              <span style={{ fontSize: itemFs, lineHeight: 1.45, color: INFOGRAPHIC_INK }}>{it}</span>
+              <span
+                style={{
+                  minWidth: 0,
+                  fontSize: itemFs,
+                  lineHeight: itemLineHeight,
+                  color: INFOGRAPHIC_INK,
+                  overflowWrap: "anywhere",
+                  ...(isProduct
+                    ? {
+                        display: "-webkit-box",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 5,
+                        overflow: "hidden",
+                      }
+                    : {}),
+                }}
+              >
+                {it}
+              </span>
             </div>
           ) : null,
         )}

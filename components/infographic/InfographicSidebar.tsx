@@ -21,7 +21,7 @@ import {
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
-import { compareMaxRows, stackMaxLayers } from "@/lib/infographic-block-limits";
+import { compareCardPointMaxChars, compareMaxRows, stackMaxLayers } from "@/lib/infographic-block-limits";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
@@ -42,7 +42,7 @@ const SOURCE_TEMPLATE = "Article:\n[paste article text, chart data, or key notes
 const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
 const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
-type BlockLibraryId = InfographicBlockType | "single-card" | "column-chart";
+type BlockLibraryId = InfographicBlockType | "single-card" | "column-chart" | "compare-table";
 
 const TYPE_OPTIONS: { id: BlockLibraryId; label: string; description: string }[] = [
   { id: "orbit", label: "Orbit diagram", description: "Cycle, channels, or connected nodes" },
@@ -53,12 +53,18 @@ const TYPE_OPTIONS: { id: BlockLibraryId; label: string; description: string }[]
   { id: "bar-group", label: "Bar chart", description: "Ranked values, splits, or progress" },
   { id: "column-chart", label: "Column chart", description: "Maturity levels or staged growth" },
   { id: "stacked-bar", label: "Multi-series bar", description: "Composition across segments" },
-  { id: "compare", label: "Comparison", description: "Before and after, old and new" },
+  { id: "compare", label: "Comparison cards", description: "Before and after in two panels" },
+  { id: "compare-table", label: "Comparison table", description: "Aligned before and after rows" },
   { id: "step", label: "Steps", description: "Flow, sequence, or process" },
   { id: "line-chart", label: "Trend", description: "Change over time" },
   { id: "node-list", label: "Hub map", description: "Central object with supporting items" },
   { id: "stack", label: "Layer diagram", description: "Nested layers or capabilities" },
 ];
+
+const QUICK_BLOCK_OPTION_IDS: BlockLibraryId[] = ["orbit", "node-list", "compare"];
+const QUICK_BLOCK_OPTIONS = QUICK_BLOCK_OPTION_IDS.map((id) => TYPE_OPTIONS.find((item) => item.id === id)).filter(
+  (item): item is (typeof TYPE_OPTIONS)[number] => Boolean(item),
+);
 
 const BLOCK_PREVIEW_CONTENT = {
   stat: {
@@ -236,6 +242,40 @@ const BLOCK_PREVIEW_CONTENT = {
           { a: "Manual review queue", b: "Risk surfaced automatically" },
           { a: "Context scattered", b: "History summarized in one view" },
           { a: "Slow handoff", b: "Next action suggested instantly" },
+        ],
+      },
+    ],
+  },
+  "compare-table": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-compare-table",
+        type: "compare",
+        layout: "table",
+        columnA: "Before",
+        columnB: "After",
+        highlightB: true,
+        rows: [
+          {
+            label: "Manual review queue",
+            a: "Manual review queue",
+            b: "Risk surfaced automatically",
+          },
+          {
+            label: "Context scattered",
+            a: "Context scattered",
+            b: "History summarized in one view",
+          },
+          {
+            label: "Slow handoff",
+            a: "Slow handoff",
+            b: "Next action suggested instantly",
+          },
         ],
       },
     ],
@@ -474,18 +514,21 @@ function SimpleItem({
 function libraryBlockType(id: BlockLibraryId): InfographicBlockType {
   if (id === "single-card") return "card-grid";
   if (id === "column-chart") return "bar-group";
+  if (id === "compare-table") return "compare";
   return id;
 }
 
 function libraryIdForBlock(block: InfographicBlock | undefined): BlockLibraryId {
   if (block?.type === "card-grid" && block.cards.length <= 1) return "single-card";
   if (block?.type === "bar-group" && block.variant === "columns") return "column-chart";
+  if (block?.type === "compare" && block.layout === "table") return "compare-table";
   return block?.type ?? "stat";
 }
 
 function blockTypeLabel(type: InfographicBlockType | undefined, block?: InfographicBlock): string {
   if (block?.type === "card-grid" && block.cards.length <= 1) return "Single card";
   if (block?.type === "bar-group" && block.variant === "columns") return "Column chart";
+  if (block?.type === "compare" && block.layout === "table") return "Comparison table";
   return TYPE_OPTIONS.find((item) => item.id === type)?.label ?? "Image";
 }
 
@@ -633,8 +676,11 @@ function BlockTypeSelector({
   onChange: (type: BlockLibraryId) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const currentIndex = Math.max(0, TYPE_OPTIONS.findIndex((item) => item.id === value));
-  const visibleOptions = Array.from({ length: 3 }, (_, index) => TYPE_OPTIONS[(currentIndex + index) % TYPE_OPTIONS.length]);
+  const selectedOption = TYPE_OPTIONS.find((option) => option.id === value);
+  const visibleOptions =
+    selectedOption && !QUICK_BLOCK_OPTION_IDS.includes(selectedOption.id)
+      ? [selectedOption, ...QUICK_BLOCK_OPTIONS]
+      : QUICK_BLOCK_OPTIONS;
 
   return (
     <>
@@ -1028,14 +1074,26 @@ function convertBlock(
       return {
         id,
         type: "compare",
-        layout: "cards",
+        layout: libraryId === "compare-table" ? "table" : "cards",
         columnA: "Before",
         columnB: "After",
         highlightB: true,
         rows: [
-          { a: "Manual review queue", b: "Risk surfaced automatically" },
-          { a: "Context scattered", b: "History summarized in one view" },
-          { a: "Slow handoff", b: "Next action suggested instantly" },
+          {
+            label: "Manual review queue",
+            a: "Manual review queue",
+            b: "Risk surfaced automatically",
+          },
+          {
+            label: "Context scattered",
+            a: "Context scattered",
+            b: "History summarized in one view",
+          },
+          {
+            label: "Slow handoff",
+            a: "Slow handoff",
+            b: "Next action suggested instantly",
+          },
         ],
       };
     case "step":
@@ -1275,6 +1333,11 @@ function SelectedImageEditor({
               />
             </SimpleField>
           </div>
+          {(block.layout ?? "cards") === "cards" && content.format === "product" && (
+            <p className="mb-2.5 text-[11px] leading-relaxed text-studio-muted">
+              Use short points. Product feature cards keep fixed padding and fit up to {compareMaxRows(content.format)} points per side.
+            </p>
+          )}
           {block.rows.map((row, index) => (
             <SimpleItem
               key={index}
@@ -1301,6 +1364,7 @@ function SelectedImageEditor({
                 <input
                   className={inputCls}
                   placeholder={block.columnA || "Before"}
+                  maxLength={(block.layout ?? "cards") === "cards" ? compareCardPointMaxChars(content.format) : undefined}
                   value={row.a}
                   onChange={(event) =>
                     setBlock({
@@ -1314,6 +1378,7 @@ function SelectedImageEditor({
                 <input
                   className={inputCls}
                   placeholder={block.columnB || "After"}
+                  maxLength={(block.layout ?? "cards") === "cards" ? compareCardPointMaxChars(content.format) : undefined}
                   value={row.b}
                   onChange={(event) =>
                     setBlock({
@@ -1592,7 +1657,7 @@ export function InfographicSidebar({
       <div className="relative m-4 rounded-xl border border-studio-border bg-white/[0.02] p-3.5">
         {showSourceCoach && (
           <CoachmarkBubble
-            text="Paste an article to generate image ideas."
+            text="Paste your source to get recommended infographic blocks, then edit the best fit."
             onDismiss={dismissSourceCoach}
           />
         )}

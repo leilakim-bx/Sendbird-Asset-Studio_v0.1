@@ -51,6 +51,12 @@ Studio가 **만들어내는** 목업 디자인 규칙은 `ASSET_DESIGN.md` 참�
 └─────────────┴──────────────────────┴───────────────┘
 ```
 
+### Left Sidebar
+
+- 홈/최근 에셋 네비게이션은 상단에 둔다.
+- 저장 에셋 찾기는 `Chat UI Finder`, `Infographic Finder`, `Product Visual Finder` 3개 링크로 1-depth 노출한다. 각 링크는 `/open?type=...`으로 해당 카테고리의 저장 파일 목록을 바로 연다.
+- 새 작업 시작은 `Create asset` 기본 액션 하나만 노출한다.
+
 ### Right Panel
 
 - 기본 너비: `320px` (w-80)
@@ -71,7 +77,7 @@ Studio가 **만들어내는** 목업 디자인 규칙은 `ASSET_DESIGN.md` 참�
 - 타이틀: `text-[10px] font-semibold uppercase tracking-wider text-studio-muted`
 - 섹션 간격: `mb-6` (하단 마진)
 - 구분선: `border-b border-studio-border mb-4`
-- Infographic의 Block 선택 섹션은 현재 블록 1개만 크게 보여주지 않고, 현재 선택 포함 최소 3개 블록 타입을 compact list로 노출한다.
+- Infographic의 Block 선택 섹션은 quick list를 선택 상태에 따라 바꾸지 않고 `Orbit diagram`, `Hub map`, `Comparison cards` 3개를 고정 노출한다. 나머지 블록 타입은 `Browse all blocks` 모달에서 선택한다. 단, 모달에서 선택된 library-only 블록은 현재 선택 상태를 명확히 하기 위해 이 3개 위에 임시로 노출한다.
 
 ---
 
@@ -144,9 +150,9 @@ text-sm text-studio-text px-4 py-2.5
 ### Coachmark
 
 - 첫 진입 안내는 공통 `CoachmarkBubble`을 사용한다.
-- Chat UI는 Scenario 섹션, Infographic은 source 입력에 고정한다.
+- Chat UI는 Scenario 섹션, Infographic은 source 입력, Product Visual은 Concept UI 설명 입력에 고정한다.
 - 사용자가 해당 입력/선택/생성 행동을 시작하면 즉시 dismiss한다.
-- Product Visual은 다단계 Concept UI 흐름이므로 coachmark 대신 우측 step 안내와 왼쪽 샘플 대시보드 preview를 사용한다.
+- Product Visual은 step 안내와 왼쪽 샘플 대시보드 preview를 유지하되, 첫 진입에는 Concept UI 설명 입력을 가리키는 1회성 coachmark를 함께 사용한다.
 
 ---
 

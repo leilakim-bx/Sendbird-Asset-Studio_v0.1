@@ -9,7 +9,7 @@ export const INFOGRAPHIC_BLOCK_LIMITS = {
     single: 320,
     multi:  170,
   },
-  barColumnsItems: 15,
+  barColumnsItems: 6,
   stepItems: {
     product: 8,
     blog:    12,
@@ -21,12 +21,17 @@ export const INFOGRAPHIC_BLOCK_LIMITS = {
   stackCellsPerLayer:   3,
   nodeListItems:        5,
   hubTitleChars:        18,
+  hubSubtitleChars:     64,
   orbitLabelChars:      20,
   orbitNodes:           8,
   orbitSatellites:      8,
   compareRows: {
     product: 6,
     blog:    8,
+  },
+  compareCardPointChars: {
+    product: 160,
+    blog:    120,
   },
   lineChartPoints:      8,
   stackedBarSeries:     4,
@@ -55,6 +60,10 @@ export function stackMaxLayers(format: InfographicFormat) {
 
 export function compareMaxRows(format: InfographicFormat) {
   return INFOGRAPHIC_BLOCK_LIMITS.compareRows[format];
+}
+
+export function compareCardPointMaxChars(format: InfographicFormat) {
+  return INFOGRAPHIC_BLOCK_LIMITS.compareCardPointChars[format];
 }
 
 export function stackedBarMaxRows(format: InfographicFormat) {

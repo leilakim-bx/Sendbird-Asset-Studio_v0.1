@@ -83,11 +83,11 @@ export function LogicBlockCard({ block, callout, cursor, compact = false, popove
           borderRadius: compact ? 15 : 18,
           background: t.color.surface,
           border: `1px solid ${t.color.border}`,
-          padding: compact ? "10px 12px" : "13px 15px",
+          padding: compact ? "9px 12px" : "12px 15px",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <Pill tone="neutral" style={{ minHeight: compact ? 24 : 28, fontSize: compact ? 11 : 12 }}>
+          <Pill tone="neutral" style={{ minHeight: compact ? t.control.pill.compactMinHeight : t.control.pill.denseMinHeight, fontSize: compact ? t.control.pill.compactFontSize : 12 }}>
             {block.conditionLabel}
           </Pill>
           <EllipsisText lines={2} style={{ minWidth: 0, fontSize: compact ? 13 : 15, fontWeight: 850, color: t.color.text }}>
@@ -109,10 +109,10 @@ export function LogicBlockCard({ block, callout, cursor, compact = false, popove
               borderRadius: compact ? 15 : 17,
               border: `1px solid ${t.color.border}`,
               background: outcome.tone === "ai" ? t.color.aiSoft : t.color.surface,
-              padding: compact ? 11 : 14,
+              padding: compact ? 10 : 13,
             }}
           >
-            <Pill tone={outcomeTone(outcome.tone)} style={{ minHeight: compact ? 23 : 26, fontSize: compact ? 11 : 12 }}>
+            <Pill tone={outcomeTone(outcome.tone)} style={{ minHeight: compact ? t.control.pill.compactMinHeight : t.control.pill.denseMinHeight, fontSize: compact ? t.control.pill.compactFontSize : 12 }}>
               {outcome.label}
             </Pill>
             <EllipsisText lines={3} style={{ marginTop: 8, fontSize: bodySize, lineHeight: 1.35, color: t.color.text }}>

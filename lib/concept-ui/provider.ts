@@ -98,16 +98,19 @@ const KEYWORDS: Record<ConceptUiArchetype, RegExp[]> = {
     /성과/,
   ],
   builder: [
+    /workflow builder/i,
     /workflow/i,
     /automation/i,
     /canvas/i,
     /\brule/i,
     /actionbook/i,
-    /\bflow/i,
+    /flow editor/i,
+    /node palette/i,
+    /trigger node/i,
+    /condition node/i,
     /워크플로우/,
     /자동화/,
     /룰/,
-    /플로우/,
   ],
   table: [
     /\blist/i,
@@ -287,6 +290,16 @@ const ACTION_TRAIL_PATTERNS = [
   /agent activity/i,
   /activity trails?/i,
   /audit trails?/i,
+  /resolution flow/i,
+  /support resolution/i,
+  /agent flow/i,
+  /agent steps?/i,
+  /visible agent steps?/i,
+  /procedure[-\s]?trained/i,
+  /trained agent/i,
+  /triage flow/i,
+  /handoff flow/i,
+  /approval flow/i,
   /looked up/i,
   /drafted .*approval/i,
   /paused.*approval/i,
@@ -427,6 +440,45 @@ const CHANNEL_MATRIX_PATTERNS = [
   /이메일.*채팅|채팅.*이메일/,
 ];
 
+const EXPLICIT_BUILDER_PATTERNS = [
+  /workflow builder/i,
+  /workflow editor/i,
+  /flow editor/i,
+  /canvas/i,
+  /node palette/i,
+  /trigger node/i,
+  /condition node/i,
+  /actionbook/i,
+  /rule editor/i,
+  /rule editing/i,
+  /branching logic/i,
+  /drag(?:-| )and(?:-| )drop/i,
+  /no[-\s]?code workflow/i,
+  /워크플로우 빌더/,
+  /캔버스/,
+  /노드/,
+  /액션북/,
+];
+
+const DASHBOARD_KIT_FLOW_PATTERNS = [
+  /resolution flow/i,
+  /support resolution/i,
+  /customer resolution/i,
+  /agent flow/i,
+  /agent steps?/i,
+  /visible agent steps?/i,
+  /procedure[-\s]?trained/i,
+  /trained agent/i,
+  /procedure flow/i,
+  /triage flow/i,
+  /handoff flow/i,
+  /approval flow/i,
+  /review flow/i,
+  /outcome flow/i,
+  /플로우/,
+  /절차/,
+];
+
 function clampText(value: string, max: number): string {
   const cleaned = value.replace(/\s+/g, " ").trim();
   if (cleaned.length <= max) return cleaned;
@@ -439,6 +491,10 @@ function needsLogicBlock(description: string): boolean {
 
 function matchesAny(description: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(description));
+}
+
+function prefersDashboardKitFlow(description: string): boolean {
+  return matchesAny(description, DASHBOARD_KIT_FLOW_PATTERNS) && !matchesAny(description, EXPLICIT_BUILDER_PATTERNS);
 }
 
 function extractCondition(description: string): string {
@@ -1118,6 +1174,10 @@ function nextSample(archetype: ConceptUiArchetype, description: string, language
 
 export function mapDescriptionToArchetype(text: string): ArchetypeChoice {
   const description = text.trim();
+  if (prefersDashboardKitFlow(description)) {
+    return { kind: "resolved", archetype: "dashboard", confidence: 0.82 };
+  }
+
   const scores = conceptUiArchetypes.map((archetype) => ({
     archetype,
     hits: countMatches(description, KEYWORDS[archetype]),

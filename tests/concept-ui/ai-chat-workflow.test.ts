@@ -20,6 +20,22 @@ describe("AI chat Concept UI workflow", () => {
     expect(prompt).toContain(description);
     expect(prompt).toContain("Few-shot example for dashboard");
     expect(prompt).toContain('"titleText": "string, 1-56 chars"');
+    expect(prompt).toContain("Treat the marketer description as a feature brief");
+    expect(prompt).toContain("Convert long paragraphs into compact SaaS UI labels");
+    expect(prompt).toContain("Use delight.ai domain context");
+  });
+
+  it("guides generic agent flows toward dashboard kit instead of builder canvas", () => {
+    const description = "Procedure-trained agent flow";
+    const prompt = buildAiChatPrompt({
+      description,
+      uiTextLanguage: "en",
+      choice: mapDescriptionToArchetype(description),
+    });
+
+    expect(prompt).toContain('Use archetype: "dashboard"');
+    expect(prompt).toContain("For generic resolution flows");
+    expect(prompt).toContain("Few-shot example for dashboard");
   });
 
   it("parses fenced JSON with prose before and after it", () => {

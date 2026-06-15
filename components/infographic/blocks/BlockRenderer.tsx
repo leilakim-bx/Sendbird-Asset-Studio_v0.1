@@ -50,10 +50,10 @@ export function BlockRenderer({
     case "node-list":
       return <NodeListBlock block={block} scale={scale} format={format} />;
     case "compare":
-      return <CompareBlock block={block} scale={scale} format={format} />;
+      return <CompareBlock block={block} scale={scale} maxHeight={maxHeight} format={format} />;
     case "line-chart":
       return <LineChartBlock block={block} />;
     case "orbit":
-      return <OrbitBlock block={block} scale={scale} />;
+      return <OrbitBlock block={block} scale={scale} format={format} />;
   }
 }

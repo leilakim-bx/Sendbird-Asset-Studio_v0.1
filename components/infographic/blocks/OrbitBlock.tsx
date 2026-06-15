@@ -16,13 +16,13 @@ import {
   siWhatsapp,
   type SimpleIcon,
 } from "simple-icons";
-import type { InfographicBlock, OrbitIconKey } from "@/lib/types/infographic";
+import type { InfographicBlock, InfographicFormat, OrbitIconKey } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK } from "@/lib/types/infographic";
 import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 import { DelightMark } from "./DelightMark";
 
-type Props = { block: Extract<InfographicBlock, { type: "orbit" }>; scale?: number };
+type Props = { block: Extract<InfographicBlock, { type: "orbit" }>; scale?: number; format?: InfographicFormat };
 
 const PAPER = brand.color.infographic.paper;
 const ORBIT_BLACK = brand.color.infographic.orbitBlack;
@@ -30,6 +30,7 @@ const HUB_DASH_STROKE = brand.color.inkMutedStrong;
 const ICON_RING_STROKE = brand.color.infographic.iconRing;
 
 const STAGE = { w: 560, h: 460 };
+const BLOG_HUB_STAGE = { w: 560, h: 404 };
 const CENTER = { x: STAGE.w / 2, y: STAGE.h / 2 };
 
 const LUCIDE_ICONS: Partial<Record<OrbitIconKey, LucideIcon>> = {
@@ -71,11 +72,11 @@ const DEFAULT_SATELLITES: Array<{ key: OrbitIconKey }> = [
   { key: "site" },
 ];
 
-function nodePos(i: number, n: number, r: number) {
+function nodePos(i: number, n: number, r: number, center = CENTER) {
   const angle = nodeAngle(i, n) * (Math.PI / 180);
   return {
-    x: CENTER.x + Math.cos(angle) * r,
-    y: CENTER.y + Math.sin(angle) * r,
+    x: center.x + Math.cos(angle) * r,
+    y: center.y + Math.sin(angle) * r,
   };
 }
 
@@ -193,26 +194,28 @@ function CycleDiagram({ block, scale = 1 }: Props) {
   );
 }
 
-function HubSpokeDiagram({ block, scale = 1 }: Props) {
+function HubSpokeDiagram({ block, scale = 1, format }: Props) {
   const rawSatellites = block.satellites?.length ? block.satellites : DEFAULT_SATELLITES;
   const satellites = rawSatellites
     .filter((satellite) => satellite.key in ASSET_ICONS || satellite.key in LUCIDE_ICONS || satellite.key in SIMPLE_ICONS)
     .slice(0, INFOGRAPHIC_BLOCK_LIMITS.orbitSatellites);
+  const stage = format === "blog" ? BLOG_HUB_STAGE : STAGE;
+  const center = { x: stage.w / 2, y: stage.h / 2 };
   const radius = satellites.length > 6 ? 124 : 116;
   const outerGuideRadius = radius + 72;
   const iconSize = Math.round(24 * scale);
 
   return (
-    <div style={{ position: "relative", width: "min(100%, 560px)", height: STAGE.h, margin: "0 auto" }}>
-      <svg width="100%" height="100%" viewBox={`0 0 ${STAGE.w} ${STAGE.h}`} fill="none" style={{ position: "absolute", inset: 0 }}>
-        <circle cx={CENTER.x} cy={CENTER.y} r={outerGuideRadius} stroke={ORBIT_BLACK} strokeWidth="1.2" opacity="0.12" />
-        <circle cx={CENTER.x} cy={CENTER.y} r={radius} stroke={HUB_DASH_STROKE} strokeWidth="2" strokeDasharray="6 9" />
+    <div style={{ position: "relative", width: "min(100%, 560px)", height: stage.h, margin: "0 auto" }}>
+      <svg width="100%" height="100%" viewBox={`0 0 ${stage.w} ${stage.h}`} fill="none" style={{ position: "absolute", inset: 0 }}>
+        <circle cx={center.x} cy={center.y} r={outerGuideRadius} stroke={ORBIT_BLACK} strokeWidth="1.2" opacity="0.12" />
+        <circle cx={center.x} cy={center.y} r={radius} stroke={HUB_DASH_STROKE} strokeWidth="2" strokeDasharray="6 9" />
       </svg>
 
       <CenterMark scale={scale} />
 
       {satellites.map((satellite, i) => {
-        const p = nodePos(i, satellites.length, radius);
+        const p = nodePos(i, satellites.length, radius, center);
         const assetIcon = ASSET_ICONS[satellite.key];
         const simpleIcon = SIMPLE_ICONS[satellite.key];
         const Icon = LUCIDE_ICONS[satellite.key] ?? Globe;
@@ -221,8 +224,8 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
             key={`${satellite.key}-${i}`}
             style={{
               position: "absolute",
-              left: `${(p.x / STAGE.w) * 100}%`,
-              top: `${(p.y / STAGE.h) * 100}%`,
+              left: `${(p.x / stage.w) * 100}%`,
+              top: `${(p.y / stage.h) * 100}%`,
               transform: "translate(-50%, -50%)",
               width: 58,
               height: 58,
@@ -261,9 +264,9 @@ function HubSpokeDiagram({ block, scale = 1 }: Props) {
   );
 }
 
-export function OrbitBlock({ block, scale = 1 }: Props) {
+export function OrbitBlock({ block, scale = 1, format }: Props) {
   if (block.variant === "hub-spoke") {
-    return <HubSpokeDiagram block={block} scale={scale} />;
+    return <HubSpokeDiagram block={block} scale={scale} format={format} />;
   }
 
   return <CycleDiagram block={block} scale={scale} />;

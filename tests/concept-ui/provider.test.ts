@@ -170,6 +170,25 @@ describe("ruleBasedSpecProvider", () => {
     }
   });
 
+  it("routes generic feature flows to dashboard kit instead of a fixed builder canvas", async () => {
+    const gamingFlow = mapDescriptionToArchetype("Gaming support resolution flow");
+    const procedureFlow = mapDescriptionToArchetype("Procedure-trained agent flow");
+    const explicitBuilder = mapDescriptionToArchetype("Actionbook workflow automation canvas");
+
+    expect(gamingFlow.kind === "resolved" && gamingFlow.archetype).toBe("dashboard");
+    expect(procedureFlow.kind === "resolved" && procedureFlow.archetype).toBe("dashboard");
+    expect(explicitBuilder.kind === "resolved" && explicitBuilder.archetype).toBe("builder");
+
+    const result = await ruleBasedSpecProvider.generate({
+      description: "Gaming support resolution flow",
+      uiTextLanguage: "en",
+    });
+
+    expect(result.spec.archetype).toBe("dashboard");
+    if (result.spec.archetype !== "dashboard") throw new Error("Expected dashboard spec");
+    expect(result.spec.content.actionTrails?.[0]?.title).toBe("AI action trail");
+  });
+
   it("adds an action trail for visible agent steps and approval gates", async () => {
     const result = await ruleBasedSpecProvider.generate({
       description:

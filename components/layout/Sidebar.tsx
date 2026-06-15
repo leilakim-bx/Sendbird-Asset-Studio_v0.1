@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { X, MessageSquare, LayoutDashboard, BarChart3, Sparkles, BookOpen } from "lucide-react";
+import { X, MessageSquare, LayoutDashboard, BarChart3, BookOpen, Plus } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 
 // ── Nav ───────────────────────────────────────────────────
@@ -12,6 +12,12 @@ import { useEditorStore } from "@/lib/store";
 const NAV_ITEMS = [
   { label: "Home",          href: "/" },
   { label: "Recent Assets", href: "/recent" },
+];
+
+const FINDER_ITEMS = [
+  { label: "Chat UI Finder",         href: "/open?type=chat" },
+  { label: "Infographic Finder",     href: "/open?type=infographic" },
+  { label: "Product Visual Finder",  href: "/open?type=product-visual" },
 ];
 
 function NavItem({ label, href, badge }: { label: string; href: string; badge?: number }) {
@@ -270,15 +276,14 @@ const ASSET_TYPES: AssetType[] = [
     id: "infographic",
     icon: BarChart3,
     title: "Infographic",
-    description: "Data-driven infographics and visual summaries for reports, overviews, and marketing decks.",
+    description: "Data-driven infographics and visual summaries, mainly used for blogs and Perspective.",
     ready: true,
-    inProgress: true,
   },
   {
     id: "product-visual",
     icon: LayoutDashboard,
     title: "Product Visual",
-    description: "Polish product screenshots for releases and blogs.",
+    description: "Polish real dashboard screenshots, mainly for product release pages.",
     ready: true,
     inProgress: true,
   },
@@ -374,7 +379,6 @@ function NewAssetModal({ onClose }: { onClose: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────
 
 export function Sidebar() {
-  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -411,6 +415,15 @@ export function Sidebar() {
 
         <div className="border-t border-studio-border" />
 
+        {/* Asset finders */}
+        <nav className="px-3 py-4 flex flex-col gap-0.5">
+          {FINDER_ITEMS.map((item) => (
+            <NavItem key={item.href} {...item} />
+          ))}
+        </nav>
+
+        <div className="border-t border-studio-border" />
+
         {/* Action buttons */}
         <div className="px-4 py-5 flex flex-col gap-2">
           {/* Create asset */}
@@ -418,27 +431,8 @@ export function Sidebar() {
             onClick={() => setModalOpen(true)}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] bg-studio-accent text-studio-accent-fg font-bold text-sm hover:opacity-90 transition-opacity"
           >
+            <Plus size={15} strokeWidth={2.4} />
             Create asset
-          </button>
-
-          {/* Create with AI — coming soon */}
-          <button
-            disabled
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] border border-studio-border text-studio-muted font-semibold text-sm opacity-50 cursor-not-allowed"
-          >
-            <Sparkles size={15} />
-            Create with AI
-            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-studio-accent/20 text-studio-accent">
-              Soon
-            </span>
-          </button>
-
-          {/* Open asset */}
-          <button
-            onClick={() => router.push("/open")}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-[10px] border border-studio-border text-studio-muted font-semibold text-sm hover:text-studio-text hover:border-studio-muted transition-colors"
-          >
-            Open asset
           </button>
         </div>
 

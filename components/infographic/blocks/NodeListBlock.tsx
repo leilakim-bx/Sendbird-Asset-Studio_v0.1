@@ -17,6 +17,12 @@ type Props = {
 /** Single hub→list arrow color (palette mid gray). */
 const ARROW = brand.color.inkMuted;
 
+function truncate(value: string, max: number): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, Math.max(0, max - 1))}…`;
+}
+
 /**
  * Hub + list. A circular brand hub (delight logo) on the left points — via a
  * single left-to-right arrow — to a vertical list of node cards on the right.
@@ -32,6 +38,7 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
   const groupGap = isBlog ? 20 : 24;
   const arrowWidth = isBlog ? 34 : 40;
   const listWidth = isBlog ? 360 : 440;
+  const hubSub = block.hubSub ? truncate(block.hubSub, INFOGRAPHIC_BLOCK_LIMITS.hubSubtitleChars) : "";
 
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: groupGap }}>
@@ -63,8 +70,20 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
           >
             {block.hubTitle}
           </div>
-          {block.hubSub && (
-            <div style={{ fontSize: fs(11), color: INFOGRAPHIC_INK_MUTED, lineHeight: 1.4 }}>{block.hubSub}</div>
+          {hubSub && (
+            <div
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                overflow: "hidden",
+                fontSize: fs(11),
+                color: INFOGRAPHIC_INK_MUTED,
+                lineHeight: 1.4,
+              }}
+            >
+              {hubSub}
+            </div>
           )}
         </div>
       </div>
@@ -118,7 +137,7 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
                     background: brand.color.infographic.chip,
                     padding: "3px 8px",
                     borderRadius: 6,
-                    color: INFOGRAPHIC_INK_MUTED,
+                    color: brand.color.inkMutedStrong,
                   }}
                 >
                   {it.tag}

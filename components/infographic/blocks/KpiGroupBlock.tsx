@@ -1,5 +1,6 @@
 import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
 import { INFOGRAPHIC_INK_MUTED, INFOGRAPHIC_SERIF } from "@/lib/types/infographic";
+import { INFOGRAPHIC_BLOCK_LIMITS } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
 
 type Props = {
@@ -10,9 +11,10 @@ type Props = {
 
 /** A row of big KPI numbers (one column per item). Ports prototype .b-kpi-group. */
 export function KpiGroupBlock({ block, scale = 1, format }: Props) {
+  const items = block.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.kpiItems);
   const isBlog = format === "blog";
-  const useTwoColumnBlog = isBlog && block.items.length >= 4;
-  const cols = useTwoColumnBlog ? 2 : block.items.length || 1;
+  const useTwoColumnBlog = isBlog && items.length >= 4;
+  const cols = useTwoColumnBlog ? 2 : items.length || 1;
   const columnGap = useTwoColumnBlog ? 28 : 32;
   const rowGap = useTwoColumnBlog ? 34 : 32;
   const fs = (n: number) => Math.round(n * scale);
@@ -26,7 +28,7 @@ export function KpiGroupBlock({ block, scale = 1, format }: Props) {
         gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
       }}
     >
-      {block.items.map((it, i) => (
+      {items.map((it, i) => (
         <div
           key={i}
           style={{

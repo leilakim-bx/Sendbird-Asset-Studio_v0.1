@@ -47,5 +47,44 @@ describe("editor sidebars", () => {
 
     expect(html).toContain("Create from source");
     expect(html).toContain("Selected image");
+    expect(html).toContain("Orbit diagram");
+    expect(html).toContain("Hub map");
+    expect(html).toContain("Comparison cards");
+    expect(html).not.toContain("Layer diagram");
+  });
+
+  it("keeps a library-selected Infographic block at the top of the block section", () => {
+    const template = getTemplate("infographic");
+    if (!template || template.kind !== "infographic") throw new Error("Missing infographic template");
+    const content = {
+      ...template.defaultContent,
+      showTitle: false,
+      blocks: [
+        {
+          id: "trend-test",
+          type: "line-chart" as const,
+          xLabels: ["Point 1", "Point 2", "Point 3"],
+          seriesA: { label: "Value", values: [1, 2, 3] },
+          fill: true,
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(InfographicSidebar, {
+        content,
+        articleImages: [],
+        activeArticleImageId: null,
+        onSuggestArticleImages: async () => ({ count: 0, notice: "" }),
+        onSelectArticleImage: () => undefined,
+        onToggleArticleImage: () => undefined,
+      }),
+    );
+
+    expect(html).toContain("Trend");
+    expect(html.indexOf("Trend")).toBeLessThan(html.indexOf("Orbit diagram"));
+    expect(html).toContain("Hub map");
+    expect(html).toContain("Comparison cards");
+    expect(html).not.toContain("Layer diagram");
   });
 });

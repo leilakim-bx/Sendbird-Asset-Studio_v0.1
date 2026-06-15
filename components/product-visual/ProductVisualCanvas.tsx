@@ -98,7 +98,7 @@ function ConceptSceneDisplay({
         height,
         overflow: "hidden",
         borderRadius: brand.radius[10],
-        boxShadow: brand.elevation.productScene,
+        boxShadow: brand.elevation.none,
       }}
     >
       <div

@@ -19,12 +19,14 @@ function renderScene(spec: SceneSpec) {
 }
 
 export function SceneRenderer({ spec }: { spec: SceneSpec }) {
+  const sceneBackground = spec.archetype === "dashboard" ? t.color.app : t.color.page;
+
   return (
     <div
       style={{
         width: CONCEPT_UI_CANVAS_WIDTH,
         height: CONCEPT_UI_CANVAS_HEIGHT,
-        background: t.color.page,
+        background: sceneBackground,
         color: t.color.text,
         fontFamily: t.font.sans,
         display: "flex",

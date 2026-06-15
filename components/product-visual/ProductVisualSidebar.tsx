@@ -21,6 +21,7 @@ import { MAX_UPLOAD_MB, uploadProductVisualScreenshot, UPLOAD_ACCEPT } from "@/l
 import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   conceptSceneToProductScreenshot,
@@ -31,6 +32,7 @@ import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
 import { parseSceneSpec, type ConceptUiArchetype, type SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
 import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
+import { useOnceFlag } from "@/lib/use-once-flag";
 
 const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "crop", label: "Crop" },
@@ -41,7 +43,9 @@ const DEFAULT_PANEL_W = 320;
 const MIN_PANEL_W = 240;
 const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
+const CONCEPT_UI_COACHMARK_COPY = "Describe the product screen you need, then generate a polished visual with Delight.ai components.";
 const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
+const PRODUCT_FEATURE_SCREENSHOT_RESTRICTION = "This format is restricted to maintain quality.";
 const SOURCE_OPTIONS: { id: ProductVisualSourceMode; label: string }[] = [
   { id: "concept", label: "Concept UI" },
   ...(PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? [] : [{ id: "reference" as const, label: "Rebuild" }]),
@@ -114,12 +118,12 @@ function IconTooltip({ label }: { label: string }) {
   );
 }
 
-function SourceInfoTooltip() {
+function FormatInfoTooltip() {
   return (
     <span className="group relative inline-flex items-center" tabIndex={0}>
       <Info size={13} className="cursor-help text-studio-muted transition-colors hover:text-studio-text" />
-      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-60 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100">
-        When using screenshots, use real product data rather than placeholder or dummy text.
+      <span className="pointer-events-none absolute left-0 top-full z-50 mt-1.5 w-64 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal normal-case leading-snug tracking-normal text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover:opacity-100 group-focus:opacity-100">
+        Screenshot-based images can&apos;t use Product Feature formats. Use Concept UI to keep Product Feature visuals polished and consistent.
       </span>
     </span>
   );
@@ -229,6 +233,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
   const [copyFeedbackTick, setCopyFeedbackTick] = useState(0);
   const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
+  const [showConceptCoach, dismissConceptCoach] = useOnceFlag("coach-product-visual-concept-v2");
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
   const manualPromptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -239,6 +244,11 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
       screenshot: { ...content.screenshot, displayMode: "crop" },
     });
   }, [content, setProductVisualContent]);
+
+  useEffect(() => {
+    if (!content || content.sourceMode !== "screenshot" || !isImageBgFormat(content.format)) return;
+    setProductVisualFormat("release-thumbnail");
+  }, [content, setProductVisualFormat]);
 
   useEffect(() => {
     return () => {
@@ -341,6 +351,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   }
 
   function updateConceptPrompt(prompt: string) {
+    dismissConceptCoach();
     setConceptPrompt(prompt);
     setSpecNotice(null);
     setAiChatPromptCopied(false);
@@ -366,6 +377,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   async function copyPromptForAiChat() {
     const prompt = effectiveConceptPrompt.trim();
     if (!prompt) return;
+    dismissConceptCoach();
     const text = buildAiChatPrompt({
       description: prompt,
       uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
@@ -600,7 +612,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
 
       <div className="flex-1 overflow-y-auto">
         {/* FORMAT — grouped dropdown */}
-        <Section title="Format">
+        <Section title="Format" info={<FormatInfoTooltip />}>
           <Menu.Root>
             <Menu.Trigger className="flex w-full items-center justify-between gap-2 rounded-md border border-studio-border bg-studio-sidebar px-2.5 py-2 text-xs text-studio-text hover:bg-studio-hover transition-colors outline-none">
               <span className="flex items-center gap-1.5">
@@ -620,17 +632,37 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                       </div>
                       {g.items.map((it) => {
                         const active = content.format === it.id;
+                        const disabled = sourceMode === "screenshot" && isImageBgFormat(it.id);
+                        const disabledReason = disabled ? PRODUCT_FEATURE_SCREENSHOT_RESTRICTION : undefined;
                         return (
                           <Menu.Item
                             key={it.id}
-                            onClick={() => setProductVisualFormat(it.id)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-studio-text hover:bg-studio-hover cursor-default outline-none rounded-lg mx-1"
+                            onClick={(event) => {
+                              if (disabled) {
+                                event.preventDefault();
+                                return;
+                              }
+                              setProductVisualFormat(it.id);
+                            }}
+                            aria-disabled={disabled}
+                            title={disabledReason}
+                            className={[
+                              "group/format-item relative flex items-center gap-2 px-3 py-2 text-sm outline-none rounded-lg mx-1",
+                              disabled
+                                ? "cursor-not-allowed text-studio-muted/35"
+                                : "cursor-default text-studio-text hover:bg-studio-hover",
+                            ].join(" ")}
                           >
                             <span className="w-4 shrink-0">
                               {active && <Check size={14} className="text-studio-accent" />}
                             </span>
                             <span className="flex-1">{it.label}</span>
                             <span className="text-[11px] text-studio-muted tabular-nums">{it.size}</span>
+                            {disabledReason ? (
+                              <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 w-52 -translate-y-1/2 rounded-md border border-studio-border bg-studio-bg px-2.5 py-2 text-[11px] font-normal leading-snug text-studio-text opacity-0 shadow-xl transition-opacity duration-150 group-hover/format-item:opacity-100 group-focus/format-item:opacity-100">
+                                {disabledReason}
+                              </span>
+                            ) : null}
                           </Menu.Item>
                         );
                       })}
@@ -701,7 +733,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
           </Section>
         )}
 
-        <Section title="Source" info={<SourceInfoTooltip />}>
+        <Section title="Source">
           <div className="flex items-center gap-1 p-1 rounded-lg bg-studio-input">
             {SOURCE_OPTIONS.map((item) => {
               const disabled = item.id === "screenshot" && screenshotSourceDisabled;
@@ -728,6 +760,14 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
               );
             })}
           </div>
+          {sourceMode === "screenshot" ? (
+            <div className="mt-3 rounded-lg border border-studio-border bg-studio-input px-3 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Guide</p>
+              <p className="mt-1 text-[11px] leading-snug text-studio-muted">
+                When using screenshots, use real product data rather than placeholder or dummy text.
+              </p>
+            </div>
+          ) : null}
         </Section>
 
         {/* SCREENSHOT */}
@@ -971,7 +1011,13 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
 
         {sourceMode === "concept" && (<>
           <Section title="Concept UI">
-            <div className="space-y-3">
+            <div className="relative space-y-3">
+              {showConceptCoach && (
+                <CoachmarkBubble
+                  text={CONCEPT_UI_COACHMARK_COPY}
+                  onDismiss={dismissConceptCoach}
+                />
+              )}
               <StepLabel
                 number={1}
                 title="Describe the feature"
@@ -979,6 +1025,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
               />
               <textarea
                 value={effectiveConceptPrompt}
+                onFocus={dismissConceptCoach}
                 onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
                 placeholder={CONCEPT_UI_PLACEHOLDER}
                 rows={5}

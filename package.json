@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:visual": "playwright test",
     "verify:core": "npm run test:run && npm run build",
     "verify": "npm run lint && npm run verify:core"
   },
@@ -33,6 +34,7 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

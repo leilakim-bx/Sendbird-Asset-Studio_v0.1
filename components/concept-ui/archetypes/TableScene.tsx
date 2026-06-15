@@ -189,7 +189,7 @@ export function TableScene({ spec }: Props) {
                 callout={callout}
                 cursor={cursor}
                 highlighted={highlighted}
-                popover={index < 3 ? "top" : "left"}
+                popover="top"
                 style={{
                   display: "grid",
                   gridTemplateColumns: gridColumns,

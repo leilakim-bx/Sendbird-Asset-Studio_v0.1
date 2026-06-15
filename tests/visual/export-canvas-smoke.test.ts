@@ -1,9 +1,11 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { FeatureMockup } from "@/components/templates/FeatureMockup";
 import { InfographicCanvas } from "@/components/infographic/InfographicCanvas";
 import { ProductVisualCanvas } from "@/components/product-visual/ProductVisualCanvas";
 import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
+import type { ChatMessage } from "@/lib/store";
 import type { InfographicContent } from "@/lib/types/infographic";
 import type { ProductVisualContent } from "@/lib/types/product-visual";
 
@@ -13,7 +15,59 @@ function expectStableMarkup(html: string) {
   expect(html).not.toContain("undefined");
 }
 
+const chatMessages: ChatMessage[] = [
+  {
+    id: "m1",
+    role: "user",
+    sender: "Aubrey",
+    block: { type: "text", text: "Continuing from my email yesterday..." },
+  },
+  {
+    id: "m2",
+    role: "bot",
+    sender: "delight.ai",
+    block: { type: "text", text: "Order #4821 delay — I already escalated it. Refund on the way." },
+  },
+];
+
+function renderChatMockup(layout: "center" | "split", exportSize: "desktop" | "mobile") {
+  return renderToStaticMarkup(React.createElement(FeatureMockup, {
+    layout,
+    exportSize,
+    backgroundUrl: "/background/bg-200.png",
+    appName: "delight.ai",
+    messages: chatMessages,
+    userName: "Aubrey",
+  }));
+}
+
+function extractPhoneFrameWidth(html: string, radius: number) {
+  const match = html.match(new RegExp(`width:(\\d+)px;border-radius:${radius}px;overflow:hidden;box-shadow`));
+  expect(match).not.toBeNull();
+  return Number(match?.[1]);
+}
+
 describe("export canvas visual smoke", () => {
+  it("keeps the desktop chat phone frame size stable between center and split layouts", () => {
+    const center = renderChatMockup("center", "desktop");
+    const split = renderChatMockup("split", "desktop");
+
+    expectStableMarkup(center);
+    expectStableMarkup(split);
+    expect(extractPhoneFrameWidth(center, 32)).toBe(370);
+    expect(extractPhoneFrameWidth(split, 32)).toBe(370);
+  });
+
+  it("keeps the mobile chat phone frame size stable regardless of layout selection", () => {
+    const center = renderChatMockup("center", "mobile");
+    const split = renderChatMockup("split", "mobile");
+
+    expectStableMarkup(center);
+    expectStableMarkup(split);
+    expect(extractPhoneFrameWidth(center, 26)).toBe(250);
+    expect(extractPhoneFrameWidth(split, 26)).toBe(250);
+  });
+
   it("renders a product infographic frame with fixed export dimensions", () => {
     const content: InfographicContent = {
       schemaVersion: WORK_DATA_SCHEMA_VERSION,
@@ -98,5 +152,30 @@ describe("export canvas visual smoke", () => {
     expect(html).toContain("blob.vercel-storage.com");
     expect(html).not.toContain("data:image");
   });
-});
 
+  it("does not render a screenshot source in product feature format", () => {
+    const content: ProductVisualContent = {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
+      format: "feature-desktop",
+      layout: "center",
+      bg: "warmgray",
+      bgImage: "/background/bg-200.png",
+      sourceMode: "screenshot",
+      title: "Product feature",
+      screenshot: {
+        url: "https://store.public.blob.vercel-storage.com/asset-images/product-visual-screenshot/feature.png",
+        displayMode: "highlight",
+        naturalWidth: 1440,
+        naturalHeight: 900,
+        crop: { x: 0.12, y: 0.14, width: 0.62, height: 0.48 },
+      },
+    };
+
+    const html = renderToStaticMarkup(React.createElement(ProductVisualCanvas, { content, exportMode: true }));
+
+    expectStableMarkup(html);
+    expect(html).toContain("width:866px");
+    expect(html).toContain("height:660px");
+    expect(html).not.toContain("product-visual-screenshot/feature.png");
+  });
+});

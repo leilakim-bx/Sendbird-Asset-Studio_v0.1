@@ -1231,6 +1231,14 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
       <div className="flex-1 overflow-y-auto">
 
+      <Section title="Export Size">
+        <ToggleGroup
+          value={exportSize}
+          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
+          onChange={setExportSize}
+        />
+      </Section>
+
       {/* AI MAGIC — generate a chat scenario from a description */}
       <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
         <div className="flex items-center gap-1.5 mb-2.5">
@@ -1485,14 +1493,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
           onChange={(e) => setAppName(e.target.value)}
           placeholder="e.g. sendbird.ai"
           className="h-8 text-sm bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
-        />
-      </Section>
-
-      <Section title="Export Size">
-        <ToggleGroup
-          value={exportSize}
-          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "Mobile" }]}
-          onChange={setExportSize}
         />
       </Section>
 

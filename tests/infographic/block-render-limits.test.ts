@@ -103,4 +103,23 @@ describe("infographic block render limits", () => {
     expect(html).toContain("Row 6");
     expect(html).not.toContain("Row 7");
   });
+
+  it("defensively limits column charts to six columns", () => {
+    const block: InfographicBlock = {
+      id: "columns",
+      type: "bar-group",
+      variant: "columns",
+      items: Array.from({ length: INFOGRAPHIC_BLOCK_LIMITS.barColumnsItems + 2 }, (_, index) => ({
+        heading: `Lv.${index + 1}`,
+        label: `Column ${index + 1}`,
+        tag: "ZTI",
+        valueA: 10 + index,
+      })),
+    };
+
+    const html = renderBlock(block, "product");
+
+    expect(html).toContain("Column 6");
+    expect(html).not.toContain("Column 7");
+  });
 });
