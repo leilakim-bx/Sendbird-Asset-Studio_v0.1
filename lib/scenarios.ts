@@ -204,8 +204,7 @@ export const SCENARIOS: Scenario[] = [
               id: "s6-g1",
               label: "MON",
               items: [
-                { id: "s6-g1-i1", icon: "lodging", title: "Check in at 4pm", sub: "InterContinental Thalasso", badge: "Best match", badgeTone: "accent" },
-                { id: "s6-g1-i2", icon: "dining",  title: "Dinner",          sub: "Bora Bora Beach Club Restaurant" },
+                { id: "s6-g1-i1", icon: "dining", title: "Dinner", sub: "Bora Bora Beach Club Restaurant", badge: "Best match", badgeTone: "accent" },
               ],
             },
             {
