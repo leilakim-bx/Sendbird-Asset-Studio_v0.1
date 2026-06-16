@@ -58,6 +58,13 @@ export const BACKGROUNDS: Background[] = [
     group: "general",
   },
   {
+    id: "bg-204",
+    label: "Golden Blur",
+    url: "/background/bg-204.png",
+    category: "nature",
+    group: "general",
+  },
+  {
     id: "bg-300",
     label: "Agent Steward",
     url: "/background/bg-300.png",
