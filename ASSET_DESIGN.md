@@ -18,10 +18,12 @@ import하지 않는다.
 - Infographic block renderer는 `lib/infographic-block-limits.ts`의 항목/텍스트 상한을 방어적으로 적용한다.
 - Product feature 포맷은 고정 866×660 export이므로 dense chart/list block은 안전 여백을 침범하지 않도록 item 수를 제한하거나 내부 spacing을 조밀하게 조정한다.
 - Blog/Perspective 포맷은 가변 높이를 허용하지만, block library preview와 실제 export가 같은 구조를 유지해야 한다.
-- Layer diagram은 Product feature 포맷에서 최대 3개 layer만 렌더/편집한다. Blog/Perspective는 최대 4개 layer까지 허용한다.
+- Layer diagram은 Product feature 포맷에서 최대 3개 layer만 렌더/편집한다. Blog/Perspective는 최대 4개 layer까지 허용한다. Product feature에서는 layer caption과 cell title/detail을 최대 2줄로 clamp해 고정 프레임 밖으로 밀리지 않게 한다.
 - Column chart의 컬럼 내부 chip은 낮은 value 컬럼에서도 잘리지 않아야 하며, heading/chip 실제 크기를 기준으로 최소 컬럼 높이를 확보한다.
 - Column chart는 maturity/growth 표현이므로 value가 낮거나 새 column 기본값이 들어와도 왼쪽에서 오른쪽으로 최소 계단식 성장 높이를 유지한다. Add column은 새 마지막 column을 다음 level로 만들고 highlight를 이동한다.
 - Column chart는 Product feature 고정 프레임에서 과밀해지지 않도록 최대 6개 column까지만 렌더/편집한다.
+- Steps block은 Product feature 고정 프레임에서 최대 5개 step까지만 렌더/편집하며, 카드 padding/gap은 유지하고 step title/detail copy는 각각 최대 2줄로 clamp한다.
+- Process loop block은 linear workflow와 dotted feedback return을 표현한다. Product feature에서는 최대 5개 step, Blog/Perspective에서는 최대 6개 step까지만 렌더/편집하고, active step은 dark solid pill로 강조한다. Step pill은 동일 padding을 유지하되 text hug width와 최소 폭을 사용해 기본 단어(`Hypothesize` 등)가 불필요하게 ellipsis 처리되지 않게 한다. Step label은 semibold로 유지해 pill 내부 텍스트가 과하게 무거워 보이지 않게 한다. Product feature에서는 step label과 arrow의 font scale을 캡해 export frame 확대 배율 때문에 기본 step label이 잘리지 않게 한다.
 - Infographic accent palette는 `lime #F2FF66`, `red #FF5E69`, `blue #27A6F7`, `green #25BD85`만 사용한다.
 
 ## Canvas (Export 기준)
@@ -235,6 +237,7 @@ fontSize: 13 × fs
 - Concept UI용 외부 AI chat prompt는 긴 마케팅 문단을 그대로 UI에 넣지 않고, delight.ai 도메인에 맞는 짧은 label/value/status/action copy로 요약하도록 안내한다.
 - Concept UI에서 broad/ambiguous한 설명은 새로운 임의 layout을 만들지 않고 가장 구체적인 운영 화면(dashboard/table/inbox 등)과 reusable block 조합으로 흡수한다.
 - Workspace scene은 editor, preview, AI tester의 3-column 구조를 기본으로 하는 Concept UI kit 패턴이다.
+- Workspace preview label이 `Phone mockup`이면 preview card copy를 compact phone-frame chat preview로 렌더해 모바일 push/notification 흐름을 보여줄 수 있다.
 - if/else, condition, branching, outcome 같은 로직 표현은 새 archetype을 계속 늘리지 않고, Dashboard/Workspace/Builder/Modal scene 안에 재사용 `logicBlocks`로 삽입한다.
 - self-service configuration, tone/behavior/knowledge 설정, no-code control, no engineering resource 같은 관리 화면 패턴은 `controlPanels` reusable block으로 표현한다.
 - agent autonomy/permission, knowledge coverage/source gap, evaluation scorecard, integration health, channel performance 같은 운영 대시보드 패턴은 `autonomyMatrices`, `knowledgeCoverages`, `evaluationScorecards`, `integrationHealths`, `channelMatrices` reusable block으로 표현한다.
@@ -250,6 +253,7 @@ fontSize: 13 × fs
 - Floating panel export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
 - Concept UI builder scene은 첫 렌더 시 Floating panel을 기본 캡처로 사용해 canvas 전체가 얇은 hero crop처럼 보이지 않게 한다. 사용자가 이후 Hero crop을 직접 선택하는 것은 허용한다.
 - Concept UI builder scene의 primary panel은 전체 scene 폭을 꽉 채우지 않고 compact 3-column 폭으로 렌더해 Product Visual 썸네일에서 가운데 canvas 공백이 과하게 보이지 않게 한다.
+- Concept UI builder scene의 같은 행 node들은 렌더 시 최소 가로 간격을 보장하도록 정규화해, LLM/sample 좌표가 촘촘해도 카드끼리 겹쳐 보이지 않게 한다.
 - Concept UI builder scene의 canvas node AI callout은 floating popover로 띄우지 않고, node는 하이라이트만 적용한 뒤 오른쪽 config panel에 inline 설명으로 렌더해 노드/엣지 텍스트와 겹치지 않게 한다.
 - Concept UI builder scene의 edge label은 작은 label chip으로 렌더하되, label bounds가 node bounds와 충돌하면 숨겨 노드 카드 위아래로 텍스트가 새어 보이지 않게 한다.
 - Concept UI builder scene의 우측 config panel 안 reusable block callout은 floating popover가 아니라 inline callout으로 렌더해 canvas node와 겹치거나 export 영역에서 잘리지 않게 한다.
@@ -271,7 +275,7 @@ fontSize: 13 × fs
 ## Infographic Blocks
 
 - Hub map subtitle은 최대 64자, 최대 2줄로 제한해 hub mark 아래 텍스트가 node list 영역이나 footnote 영역을 침범하지 않게 한다.
-- Hub map node card의 tag text는 설명문보다 진한 muted strong 토큰을 사용해 작은 chip 안에서도 읽히게 한다.
-- Product feature의 Comparison cards는 짧은 point를 여러 개 넣을 수 있게 최대 6 rows를 허용하되, 카드 padding은 20px로 고정하고 bullet gap은 최소 8px 아래로 줄이지 않는다. point가 많아지면 typography만 완만히 줄이며 각 point는 최대 5줄로 clamp해 fixed frame 밖으로 나가지 않게 한다.
-- Comparison cards의 table layout에서 row label은 before/after column과 같은 grid width를 유지하되 여러 줄 wrapping을 허용한다.
+- Hub map node card의 tag text는 설명문보다 진한 muted strong 토큰을 사용해 작은 chip 안에서도 읽히게 하며, 긴 tag/description은 ellipsis와 2줄 clamp로 고정 프레임을 보호한다.
+- Product feature의 Comparison cards는 짧은 point를 여러 개 넣을 수 있게 최대 6 rows를 허용하되, 카드 padding은 20px로 고정하고 body text size도 point 개수와 관계없이 일정하게 유지한다. bullet gap은 최소 8px 아래로 줄이지 않으며, 각 point는 최대 5줄로 clamp해 fixed frame 밖으로 나가지 않게 한다.
+- Comparison cards의 table layout에서 row label은 before/after column과 같은 grid width를 유지하되, Product feature에서는 row label/before/after cell을 최대 2줄로 clamp한다.
 - Blog/Perspective의 Orbit diagram hub shape은 Product feature보다 compact한 stage height를 사용해 title/footnote와 중앙 그래픽 사이의 위아래 간격을 좁힌다.

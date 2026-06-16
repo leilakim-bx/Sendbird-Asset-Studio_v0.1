@@ -60,10 +60,10 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 |---|---|
 | 목적 | 블로그/리포트/제품 메시지를 시각 자료로 변환 |
 | 포맷 | Product 866x660, Blog 664x가변 |
-| 블록 | stat, kpi-group, card-grid, bar-group, step, stack, node-list, compare, stacked-bar, line-chart, orbit |
+| 블록 | stat, kpi-group, card-grid, bar-group, step, process-loop, stack, node-list, compare, stacked-bar, line-chart, orbit |
 | 편집 | 제목, 푸트노트, 배경, accent color, 블록 추가/수정/삭제 |
 | 생성 | 붙여넣은 텍스트/데이터를 규칙 기반으로 인포그래픽 후보 추천 |
-| 소스 입력 | 텍스트, 차트 데이터, 이미지 노트 붙여넣기 |
+| 소스 입력 | 텍스트, 차트 데이터, source guidance 붙여넣기 |
 | 안전장치 | 블록별 항목/텍스트 상한을 둬 Product/Blog 포맷에서 export 가능한 구성을 유지 |
 
 ### 6.3 Product Visual
@@ -139,7 +139,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 저장 데이터 구조 변경 | `schemaVersion` 증가와 마이그레이션 함수 추가를 필수 변경 절차로 둔다 |
 | 로컬 생성 품질 한계 | 프리셋/규칙 registry와 validator 유지 |
 | Pexels 이미지 CORS | Pexels-only same-origin proxy와 export 전 이미지 inline 처리 |
-| URL import 미지원 | 본문/데이터/이미지 노트 붙여넣기로 처리 |
+| URL import 미지원 | 본문/데이터/source guidance 붙여넣기로 처리 |
 | 운영 인증 약함 | 배포 전 Vercel protection 또는 정식 인증 도입 |
 
 ## 13. 관련 문서

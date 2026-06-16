@@ -72,10 +72,10 @@ lib/
 | 자동 작업 스냅샷 | `asset-studio-work-backups-v1` localStorage + optional Vercel Blob | template 작업 단위별 최근 5개 보존. 메인 UI 노출 없음 |
 | Product Visual | transient + saved asset + 자동 작업 스냅샷 | draft autosave 없음, Save 시 snapshot 저장 |
 
-persist 키는 `sendbird-editor-v1`, 현재 version은 `4`다.
+persist 키는 `sendbird-editor-v1`, 현재 version은 `5`다.
 마이그레이션은 구 메시지 포맷 변환, retired template 제거, persisted 컬렉션 상한 정리, saved work `schemaVersion` 부여를 처리한다.
 
-저장되는 작업 데이터는 모두 `schemaVersion: 4`를 가진다. 현재 마이그레이션 레이어는 `lib/work-data-schema.ts`에 있으며 v1 -> v2, v2 -> v3, v3 -> v4는 Concept UI reusable block 확장에 따른 identity migration이다. 이후 구조 변경 시 `vN -> vN+1` 변환 함수를 추가하는 구조다.
+저장되는 작업 데이터는 모두 `schemaVersion: 5`를 가진다. 현재 마이그레이션 레이어는 `lib/work-data-schema.ts`에 있으며 구 메시지 포맷 정리, retired template 제거, persisted 컬렉션 상한 정리, saved work `schemaVersion` 부여를 거친 뒤 v4 -> v5에서 `process-loop` 타입 추가에 따른 구조 호환 migration을 수행한다. 이후 구조 변경 시 `vN -> vN+1` 변환 함수를 추가하는 구조다.
 
 ## 5. 저장/복원 흐름
 
@@ -187,6 +187,9 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - Settings 메뉴에서 restore/backup file 기능을 제공하되, main editing flow에는 노출하지 않는다.
 - `FormPanel`이 메시지/배경/레이아웃 편집을 담당한다.
 - `FeatureMockup`이 실제 export 캔버스를 렌더링한다.
+- Chat UI Create from brief는 외부 LLM 없이 `lib/ai/chat-scenario-generator.ts`의 점수 기반 intent router를 사용한다. 단일 키워드 선착순이 아니라 더 구체적인 intent를 우선하며, `call` 같은 넓은 단어는 `phone call`, `outbound call`, `voice`처럼 voice-specific 문맥에서만 Voice card로 라우팅한다.
+- Chat UI prompt helper는 가벼운 `Customer goal`, `Agent action`, `Outcome`, 선택적 `Avoid` guidance를 제공하고, router가 이 필드를 직접 파싱해 intent boost와 제외 조건으로 반영한다. 이전 `Scenario`, `User goal`, `Must show`, `Do not show` 필드도 붙여넣기 호환성을 위해 계속 읽는다.
+- `single interaction`, `without transfers`, `follow-ups`, `repeated calls`, `fragmented handoffs` 같은 문구는 handoff/voice preset보다 `single-interaction` resolution preset으로 우선 라우팅한다.
 - `itinerary` 블록은 bot sender header를 유지하고, 선택적 `intro`, 선택적 group `label`, row-level `badge`/`badgeTone`을 지원해 일정뿐 아니라 항공편 대안, 예약 옵션 카드로도 재사용한다.
 - 모바일 export는 콘텐츠 높이에 따라 가변 캡처한다.
 - 캔버스 overflow 시 단일 메시지 append는 rollback하고, 시나리오 교체 등은 경고만 표시한다.
@@ -197,9 +200,14 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - Settings 메뉴에서 restore/backup file 기능을 제공하되, source/create flow와 분리한다.
 - `InfographicSidebar`가 블록 편집과 source 기반 추천 UI를 담당한다.
 - Infographic 첫 진입 template seed는 title 없는 Orbit diagram으로 시작한다.
-- 붙여넣은 기사/데이터/이미지 노트는 `/api/source-content`에서 정규화 후 후보 생성에 사용한다.
+- 붙여넣은 기사/데이터/source guidance는 `/api/source-content`에서 정규화 후 후보 생성에 사용한다.
+- Infographic source helper는 가벼운 `Main message`, `Structure`, `Proof points`, 선택적 `Avoid` guidance를 제공하고, extractor가 이 필드를 직접 파싱해 block ranking, proof-point fallback, 제외 조건에 반영한다. 이전 `Main claim`, `Preferred block`, `Do not show` 필드도 붙여넣기 호환성을 위해 계속 읽는다.
 - rule-based 후보를 선택해 여러 이미지를 한 번에 export할 수 있다.
+- Source 후보 생성은 저장/렌더 가능한 기존 Infographic 블록 템플릿 안에서만 변주한다. 자연어/기사 입력은 `stat`, `kpi-group`, `card-grid`, `bar-group`, `step`, `process-loop`, `stack`, `node-list`, `compare`, `stacked-bar`, `line-chart`, `orbit` 후보로 랭킹되며, 별도 하드코딩 마케팅 배너 레이아웃을 만들지 않는다.
+- Source 후보 생성은 `lib/infographic-article-extractor.ts`에서 source intent를 먼저 점수화한 뒤 후보별 score를 정렬한다. 짧은 value prop copy도 숫자가 없다는 이유로 generic card에만 머물지 않게 하며, `single interaction`, `without transfers`, `follow-ups`, `repeated calls`, `fragmented handoffs` 계열은 compare/step/card 후보를 우선 생성한다.
+- 후보 목록은 같은 block type이 반복되어 보이지 않도록 우선 고유 block type 위주로 채우고, 부족할 때만 추가 후보로 보강한다.
 - 블록별 입력 상한은 `lib/infographic-block-limits.ts`가 source of truth다. 사이드바는 Add 버튼/입력 길이를 이 값으로 제한하고, 각 block renderer도 같은 값으로 slice해 저장 데이터가 과해도 export 프레임이 깨지지 않게 한다.
+- Process loop(`process-loop`)은 linear process와 dotted feedback return을 표현하는 library-only 블록이며 Product feature에서 최대 5개 step, Blog/Perspective에서 최대 6개 step으로 제한한다.
 - Layer diagram(`stack`)은 Product feature 고정 프레임에서 최대 3개 layer, Blog/Perspective에서 최대 4개 layer로 제한한다.
 
 ### Product Visual
