@@ -130,6 +130,19 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
   const [articleImages, setArticleImages] = useState<ArticleImageCandidate[]>([]);
   const [activeArticleImageId, setActiveArticleImageId] = useState<string | null>(null);
 
+  function focusSelectedImageEditor() {
+    window.setTimeout(() => {
+      const section = document.querySelector<HTMLElement>("[data-infographic-selected-editor='true']");
+      if (!section) return;
+
+      section.scrollIntoView({ block: "start", behavior: "smooth" });
+      window.setTimeout(() => {
+        const firstField = section.querySelector<HTMLElement>("input, textarea, button");
+        firstField?.focus({ preventScroll: true });
+      }, 160);
+    }, 0);
+  }
+
   useEffect(() => {
     return () => {
       exportDownloadsRef.current.forEach((download) => download.revoke());
@@ -532,7 +545,20 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
               both axes — transform:scale alone doesn't shrink layout size, so
               without this the wrapper keeps the canvas's full 866px width and a
               pane narrower than that clips the left edge under items-center. */}
-          <div style={{ width: previewW * scale, height: previewH * scale }}>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Edit the current infographic image"
+            title="Edit the current image"
+            className="cursor-pointer rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-studio-accent"
+            style={{ width: previewW * scale, height: previewH * scale }}
+            onClick={focusSelectedImageEditor}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              focusSelectedImageEditor();
+            }}
+          >
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}>
               <InfographicCanvas content={content} />
             </div>

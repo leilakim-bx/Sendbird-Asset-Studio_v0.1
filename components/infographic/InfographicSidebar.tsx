@@ -1748,14 +1748,16 @@ export function InfographicSidebar({
         </Section>
       )}
 
-      <Section title="Selected image">
-        <SelectedImageEditor content={content} onChange={setInfographicContent} />
-        {activeArticleImageId && (
-          <p className="mt-2 border-l-2 border-studio-border pl-2 text-[10.5px] italic leading-snug text-studio-muted">
-            {articleImages.find((candidate) => candidate.id === activeArticleImageId)?.sourceSnippet}
-          </p>
-        )}
-      </Section>
+      <div data-infographic-selected-editor="true">
+        <Section title="Selected image">
+          <SelectedImageEditor content={content} onChange={setInfographicContent} />
+          {activeArticleImageId && (
+            <p className="mt-2 border-l-2 border-studio-border pl-2 text-[10.5px] italic leading-snug text-studio-muted">
+              {articleImages.find((candidate) => candidate.id === activeArticleImageId)?.sourceSnippet}
+            </p>
+          )}
+        </Section>
+      </div>
 
       <Section
         title="Advanced settings"
