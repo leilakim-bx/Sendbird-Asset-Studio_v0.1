@@ -30,6 +30,17 @@ const AlertCircleSolid = ({ size = 13 }: { size?: number }) => (
 
 // 고정 예시 프롬프트 — 롤링 대신 가장 결과가 잘 나오는 대표 예시 하나로 고정
 const EXAMPLE_PROMPT = "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly";
+const CHAT_BRIEF_TEMPLATE = [
+  "Customer goal: ",
+  "Agent action: ",
+  "Outcome: ",
+].join("\n");
+const CHAT_BRIEF_APPEND_TEMPLATE = [
+  "Customer goal: ",
+  "Agent action: ",
+  "Outcome: ",
+  "Avoid: ",
+].join("\n");
 
 /** Search Pexels for a product photo matching the keyword.
  *  Returns a proxy-wrapped image URL, or empty string on failure. */
@@ -1152,6 +1163,16 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     }
   }
 
+  function handleAddGuidance() {
+    setGenPrompt((current) => {
+      const trimmed = current.trim();
+      if (!trimmed) return CHAT_BRIEF_TEMPLATE;
+      if (/(^|\n)\s*(Structured brief:|Scenario:|Customer goal:|Agent action:)/i.test(trimmed)) return current;
+      return `${trimmed}\n\n${CHAT_BRIEF_APPEND_TEMPLATE}`;
+    });
+    setGenError(null);
+  }
+
   // ── Drag-to-reorder ────────────────────────────────────
   const dragIndex = useRef<number | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -1239,13 +1260,13 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       </Section>
 
-      {/* AI MAGIC — generate a chat scenario from a description */}
+      {/* Generate a chat scenario from a short brief or guidance. */}
       <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
         <div className="flex items-center gap-1.5 mb-2.5">
           <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center bg-studio-hover">
             <Sparkles size={13} className="text-studio-text" fill="currentColor" />
           </span>
-          <span className="text-xs font-semibold text-studio-text tracking-tight">Create with AI</span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create from brief</span>
         </div>
         {/* Composer — borderless textarea with a bottom-right send button */}
         <div className="relative">
@@ -1267,9 +1288,17 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
             </p>
           )}
         </div>
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleAddGuidance}
+            disabled={genLoading}
+            className="text-[11px] font-medium text-studio-muted transition-colors hover:text-studio-text disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Add guidance
+          </button>
           <AiMagicButton
-            label="Create with AI"
+            label="Generate conversation"
             loading={genLoading}
             disabled={genLoading || !genPrompt.trim()}
             onClick={handleGenerate}

@@ -93,7 +93,7 @@ const GUIDE_SECTIONS: GuideSection[] = [
     steps: [
       {
         title: "Pick a scenario",
-        desc: "Choose a ready-made scenario, open the full library with +, or paste copy from Claude into Create with AI to turn it into message blocks.",
+        desc: "Choose a ready-made scenario, open the full library with +, or use Create from brief to turn structured notes into message blocks.",
       },
       {
         title: "Edit the conversation",
