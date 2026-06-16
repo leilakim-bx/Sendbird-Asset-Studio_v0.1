@@ -6,6 +6,7 @@ import { InfographicCanvas } from "@/components/infographic/InfographicCanvas";
 import {
   compareMaxRows,
   INFOGRAPHIC_BLOCK_LIMITS,
+  processLoopMaxSteps,
   stackMaxLayers,
   stepMaxItems,
   stackedBarMaxRows,
@@ -116,6 +117,19 @@ function productStressFixtures(): Array<[string, InfographicBlock]> {
           desc: longText(`단계 설명 ${index + 1}`),
           badge: `배지 ${index + 1}`,
         })),
+      },
+    ],
+    [
+      "process loop",
+      {
+        id: "stress-process-loop",
+        type: "process-loop",
+        title: longText("프로세스 루프 제목"),
+        steps: Array.from({ length: processLoopMaxSteps("product") }, (_, index) => ({
+          label: longText(`루프 ${index + 1}`),
+        })),
+        activeStepIndex: 2,
+        loopLabel: longText("피드백 루프"),
       },
     ],
     [
@@ -256,6 +270,19 @@ describe("infographic long text and max item stress", () => {
         },
         "Cell 3",
         "Cell 4",
+      ],
+      [
+        {
+          id: "over-process-loop",
+          type: "process-loop",
+          title: "Process loop",
+          steps: Array.from({ length: processLoopMaxSteps("product") + 2 }, (_, index) => ({
+            label: `Loop ${index + 1}`,
+          })),
+          activeStepIndex: 2,
+        },
+        "Loop 5",
+        "Loop 6",
       ],
       [
         {

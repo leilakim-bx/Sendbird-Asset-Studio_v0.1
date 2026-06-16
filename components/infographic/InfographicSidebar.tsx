@@ -21,7 +21,7 @@ import {
 } from "@/lib/types/infographic";
 import { createBlock } from "@/lib/infographic-presets";
 import { generatedTrendAxisLabel } from "@/lib/infographic-labels";
-import { compareCardPointMaxChars, compareMaxRows, stackMaxLayers } from "@/lib/infographic-block-limits";
+import { compareCardPointMaxChars, compareMaxRows, processLoopMaxSteps, stackMaxLayers } from "@/lib/infographic-block-limits";
 import { type ArticleImageCandidate } from "@/lib/infographic-article-extractor";
 import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
@@ -38,8 +38,21 @@ const FORMAT_OPTIONS: { id: InfographicFormat; label: string }[] = [
   { id: "blog", label: "Blog/Perspective" },
 ];
 
-const SOURCE_TEMPLATE = "Article:\n[paste article text, chart data, or key notes]\n\nImage notes:\n1. \n2. \n3. ";
-const IMAGE_NOTES_TEMPLATE = "Image notes:\n1. \n2. \n3. ";
+const SOURCE_GUIDANCE_TEMPLATE = [
+  "Main message: ",
+  "Structure: ",
+  "Proof points:",
+  "- ",
+  "- ",
+  "Avoid: ",
+].join("\n");
+const SOURCE_GUIDANCE_APPEND_TEMPLATE = [
+  "Main message: ",
+  "Structure: ",
+  "Proof points:",
+  "- ",
+  "Avoid: ",
+].join("\n");
 const HUB_ORBIT_DEFAULT_FOOTNOTE = "Channels orbit the agent";
 
 type BlockLibraryId = InfographicBlockType | "single-card" | "column-chart" | "compare-table";
@@ -56,6 +69,7 @@ const TYPE_OPTIONS: { id: BlockLibraryId; label: string; description: string }[]
   { id: "compare", label: "Comparison cards", description: "Before and after in two panels" },
   { id: "compare-table", label: "Comparison table", description: "Aligned before and after rows" },
   { id: "step", label: "Steps", description: "Flow, sequence, or process" },
+  { id: "process-loop", label: "Process loop", description: "Linear steps with a feedback return" },
   { id: "line-chart", label: "Trend", description: "Change over time" },
   { id: "node-list", label: "Hub map", description: "Central object with supporting items" },
   { id: "stack", label: "Layer diagram", description: "Nested layers or capabilities" },
@@ -298,6 +312,29 @@ const BLOCK_PREVIEW_CONTENT = {
       },
     ],
   },
+  "process-loop": {
+    schemaVersion: WORK_DATA_SCHEMA_VERSION,
+    format: "product",
+    bg: "warmgray",
+    accent: "lime",
+    showTitle: false,
+    blocks: [
+      {
+        id: "preview-process-loop",
+        type: "process-loop",
+        title: "Level 2: Human steers",
+        steps: [
+          { label: "Research" },
+          { label: "Hypothesize" },
+          { label: "Human Steer" },
+          { label: "Test" },
+          { label: "Deploy" },
+        ],
+        activeStepIndex: 2,
+        loopLabel: "Feedback loop: failures feed back into research",
+      },
+    ],
+  },
   "line-chart": {
     schemaVersion: WORK_DATA_SCHEMA_VERSION,
     format: "product",
@@ -438,7 +475,7 @@ function SourceTipsTooltip() {
           Protected URLs cannot be read. If a link requires login, paste the article text or use a share link Studio can access.
         </span>
         <span className="mt-1 block">
-          Use Add image notes to request specific charts, stats, or sections.
+          Use Add guidance to nudge the structure, proof points, or things to avoid.
         </span>
       </span>
     </span>
@@ -824,6 +861,12 @@ function rowsFromBlock(block: InfographicBlock): PortableRow[] {
         valueText: item.badge,
         desc: item.desc,
       }));
+    case "process-loop":
+      return block.steps.map((step, index) => ({
+        label: compactLabel(step.label, `Step ${index + 1}`),
+        value: index + 1,
+        highlight: index === block.activeStepIndex,
+      }));
     case "stack":
       return block.layers.map((layer, index) => ({
         label: compactLabel(layer.title, `Layer ${index + 1}`),
@@ -1105,6 +1148,19 @@ function convertBlock(
           desc: row.desc || formatPortableNumber(row.value, row.valueText),
         })),
       };
+    case "process-loop": {
+      const loopRows = rows.slice(0, processLoopMaxSteps(format));
+      const preview = previewBlockFor(libraryId, id);
+      if (loopRows.length < 2) return preview ?? createBlock(type);
+      return {
+        id,
+        type: "process-loop",
+        title: title?.trim() || "Level 2: Human steers",
+        steps: loopRows.map((row) => ({ label: row.label })),
+        activeStepIndex: Math.min(2, loopRows.length - 1),
+        loopLabel: "Feedback loop: failures feed back into research",
+      };
+    }
     case "line-chart":
       return {
         id,
@@ -1162,7 +1218,8 @@ function usesDetailedBlockEditor(type: InfographicBlockType): boolean {
     type === "node-list" ||
     type === "stack" ||
     type === "orbit" ||
-    type === "card-grid"
+    type === "card-grid" ||
+    type === "process-loop"
   );
 }
 
@@ -1573,19 +1630,19 @@ export function InfographicSidebar({
       const result = await onSuggestArticleImages(text);
       setArticleNotice(result.notice);
     } catch {
-      setArticleNotice("Could not read this source. Paste the article text, chart data, or image notes.");
+      setArticleNotice("Could not read this source. Paste article text, chart data, or add guidance.");
     } finally {
       setSourceLoading(false);
     }
   }
 
-  function handleUseTemplate() {
+  function handleAddGuidance() {
     dismissSourceCoach();
     setArticle((current) => {
       const trimmed = current.trim();
-      if (!trimmed) return SOURCE_TEMPLATE;
-      if (/(^|\n)\s*Image notes:/i.test(trimmed)) return current;
-      return `${trimmed}\n\n${IMAGE_NOTES_TEMPLATE}`;
+      if (!trimmed) return SOURCE_GUIDANCE_TEMPLATE;
+      if (/(^|\n)\s*(Structured brief:|Main message:|Structure:)/i.test(trimmed)) return current;
+      return `${trimmed}\n\n${SOURCE_GUIDANCE_APPEND_TEMPLATE}`;
     });
     setArticleNotice(null);
   }
@@ -1675,18 +1732,18 @@ export function InfographicSidebar({
             dismissSourceCoach();
             setArticle(event.target.value);
           }}
-          placeholder="Paste full article text, chart data, or image notes..."
+          placeholder="Paste article text, chart data, or add guidance..."
           rows={6}
           className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-app-placeholder min-h-[112px]"
         />
         <div className="mt-6 flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={handleUseTemplate}
+            onClick={handleAddGuidance}
             disabled={sourceLoading}
             className="text-[11px] font-medium text-studio-muted transition-colors hover:text-studio-text disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Add image notes
+            Add guidance
           </button>
           <AiMagicButton
             label="Generate images from source"

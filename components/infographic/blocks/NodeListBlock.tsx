@@ -138,6 +138,10 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
                     padding: "3px 8px",
                     borderRadius: 6,
                     color: brand.color.inkMutedStrong,
+                    maxWidth: Math.round(96 * scale),
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
                   {it.tag}
@@ -145,7 +149,21 @@ export function NodeListBlock({ block, scale = 1, format }: Props) {
               )}
             </div>
             {it.desc && (
-              <div style={{ marginTop: 3, fontSize: fs(12), color: INFOGRAPHIC_INK_MUTED, lineHeight: 1.4 }}>{it.desc}</div>
+              <div
+                style={{
+                  marginTop: 3,
+                  fontSize: fs(12),
+                  color: INFOGRAPHIC_INK_MUTED,
+                  lineHeight: 1.4,
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: 2,
+                  overflow: "hidden",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {it.desc}
+              </div>
             )}
           </div>
         ))}

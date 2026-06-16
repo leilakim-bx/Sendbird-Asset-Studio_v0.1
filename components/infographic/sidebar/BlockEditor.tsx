@@ -8,6 +8,7 @@ import {
   cardGridBodyMaxChars,
   compareCardPointMaxChars,
   compareMaxRows,
+  processLoopMaxSteps,
   stackedBarMaxRows,
   stackMaxLayers,
   stepMaxItems,
@@ -551,6 +552,91 @@ export function BlockEditor({ block, onChange, format }: EditorProps) {
           >
             Add step
           </AddRow>
+        </>
+      );
+    }
+
+    case "process-loop": {
+      const b = block;
+      const maxSteps = processLoopMaxSteps(format);
+      const steps = b.steps.slice(0, maxSteps);
+      const stepsAtLimit = b.steps.length >= maxSteps;
+      const activeStepIndex = Math.min(
+        Math.max(typeof b.activeStepIndex === "number" ? Math.round(b.activeStepIndex) : 0, 0),
+        Math.max(steps.length - 1, 0),
+      );
+      const set = (patch: Partial<typeof b>) => onChange({ ...b, ...patch });
+      const setSteps = (next: typeof b.steps, nextActiveStepIndex = activeStepIndex) => {
+        const capped = next.slice(0, maxSteps);
+        onChange({
+          ...b,
+          steps: capped,
+          activeStepIndex: Math.min(nextActiveStepIndex, Math.max(capped.length - 1, 0)),
+        });
+      };
+      return (
+        <>
+          <Field label={`Title (max ${INFOGRAPHIC_BLOCK_LIMITS.processLoopTitleChars})`}>
+            <input
+              className={inputCls}
+              value={b.title ?? ""}
+              maxLength={INFOGRAPHIC_BLOCK_LIMITS.processLoopTitleChars}
+              onChange={(event) => set({ title: event.target.value })}
+            />
+          </Field>
+          <Field label="Active step">
+            <SidebarDropdown
+              value={activeStepIndex}
+              options={steps.map((step, index) => ({
+                value: index,
+                label: step.label.trim() || `Step ${index + 1}`,
+              }))}
+              onChange={(value) => set({ activeStepIndex: value })}
+            />
+          </Field>
+          {steps.map((step, index) => (
+            <ItemCard
+              key={index}
+              idx={index}
+              onRemove={
+                steps.length > 2
+                  ? () => setSteps(steps.filter((_, itemIndex) => itemIndex !== index), index <= activeStepIndex ? activeStepIndex - 1 : activeStepIndex)
+                  : undefined
+              }
+            >
+              <input
+                className={inputCls}
+                placeholder="Step label"
+                maxLength={INFOGRAPHIC_BLOCK_LIMITS.processLoopStepChars}
+                value={step.label}
+                onChange={(event) =>
+                  setSteps(steps.map((item, itemIndex) => (itemIndex === index ? { ...item, label: event.target.value } : item)))
+                }
+              />
+            </ItemCard>
+          ))}
+          <AddRow
+            onClick={() => {
+              if (stepsAtLimit) return;
+              setSteps([...steps, { label: `Step ${steps.length + 1}` }]);
+            }}
+            disabled={stepsAtLimit}
+            title={
+              stepsAtLimit
+                ? `${format === "product" ? "Product feature" : "Blog"} process loops can have up to ${maxSteps} steps.`
+                : undefined
+            }
+          >
+            Add step
+          </AddRow>
+          <Field label={`Feedback label (max ${INFOGRAPHIC_BLOCK_LIMITS.processLoopLabelChars})`}>
+            <input
+              className={inputCls}
+              value={b.loopLabel ?? ""}
+              maxLength={INFOGRAPHIC_BLOCK_LIMITS.processLoopLabelChars}
+              onChange={(event) => set({ loopLabel: event.target.value })}
+            />
+          </Field>
         </>
       );
     }

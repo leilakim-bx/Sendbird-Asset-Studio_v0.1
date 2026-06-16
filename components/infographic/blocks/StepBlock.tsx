@@ -11,11 +11,23 @@ type Props = {
 
 /** Numbered process steps. Ports prototype .b-step (badge uses var(--ig-accent)). */
 export function StepBlock({ block, scale = 1, format }: Props) {
+  const isProduct = format === "product";
   const items = block.items.slice(0, stepMaxItems(format ?? "blog"));
   const fs = (n: number) => Math.round(n * scale);
   // All-or-nothing descriptions: show them only when every step has one, so the
   // cards never look uneven (some 2-line, some 1-line).
   const allHaveDesc = items.length > 0 && items.every((it) => !!it.desc?.trim());
+  const clampStyle = isProduct
+    ? {
+        display: "-webkit-box",
+        WebkitBoxOrient: "vertical" as const,
+        WebkitLineClamp: 2,
+        overflow: "hidden",
+        overflowWrap: "anywhere" as const,
+      }
+    : {
+        overflowWrap: "anywhere" as const,
+      };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {items.map((it, i) => (
@@ -29,6 +41,7 @@ export function StepBlock({ block, scale = 1, format }: Props) {
             background: brand.color.infographic.paper,
             padding: "14px 16px",
             borderRadius: 14,
+            overflow: "hidden",
           }}
         >
           <div
@@ -47,9 +60,30 @@ export function StepBlock({ block, scale = 1, format }: Props) {
           >
             {i + 1}
           </div>
-          <div>
-            <div style={{ fontSize: fs(14), fontWeight: 600, color: INFOGRAPHIC_INK }}>{it.title}</div>
-            {allHaveDesc && <div style={{ fontSize: fs(12), color: INFOGRAPHIC_INK_MUTED }}>{it.desc}</div>}
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: fs(14),
+                lineHeight: 1.28,
+                fontWeight: 600,
+                color: INFOGRAPHIC_INK,
+                ...clampStyle,
+              }}
+            >
+              {it.title}
+            </div>
+            {allHaveDesc && (
+              <div
+                style={{
+                  fontSize: fs(12),
+                  lineHeight: 1.35,
+                  color: INFOGRAPHIC_INK_MUTED,
+                  ...clampStyle,
+                }}
+              >
+                {it.desc}
+              </div>
+            )}
           </div>
           {it.badge && (
             <div
@@ -62,6 +96,10 @@ export function StepBlock({ block, scale = 1, format }: Props) {
                 borderRadius: 4,
                 textTransform: "uppercase",
                 color: INFOGRAPHIC_INK,
+                whiteSpace: "nowrap",
+                maxWidth: 110,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {it.badge}

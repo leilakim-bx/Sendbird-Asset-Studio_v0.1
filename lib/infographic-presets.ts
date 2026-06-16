@@ -371,6 +371,21 @@ export function createBlock(type: InfographicBlockType): InfographicBlock {
       };
     case "step":
       return { id, type: "step", items: [{ title: "Step", desc: "" }] };
+    case "process-loop":
+      return {
+        id,
+        type: "process-loop",
+        title: "Level 2: Human steers",
+        steps: [
+          { label: "Research" },
+          { label: "Hypothesize" },
+          { label: "Human Steer" },
+          { label: "Test" },
+          { label: "Deploy" },
+        ],
+        activeStepIndex: 2,
+        loopLabel: "Feedback loop: failures feed back into research",
+      };
     case "stack":
       return {
         id,

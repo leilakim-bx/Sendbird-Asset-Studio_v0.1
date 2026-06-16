@@ -436,10 +436,10 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       });
       data = (await response.json()) as SourceContentResponse;
       if (!response.ok && data.ok) {
-        return { count: 0, notice: "Could not read this source. Paste the article text, chart data, or image notes." };
+        return { count: 0, notice: "Could not read this source. Paste article text, chart data, or add guidance." };
       }
     } catch {
-      return { count: 0, notice: "Could not read this source. Paste the article text, chart data, or image notes." };
+      return { count: 0, notice: "Could not read this source. Paste article text, chart data, or add guidance." };
     }
 
     if (!data.ok) {
@@ -455,7 +455,7 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       notice:
         count > 0
           ? `Suggested ${count} image${count === 1 ? "" : "s"} from this source.`
-          : "No strong image candidates found. Paste chart data, image notes, or try a preset in Advanced settings.",
+          : "No strong image candidates found. Add a main message, structure, proof points, or things to avoid.",
     };
   }
 

@@ -140,7 +140,7 @@ export function LineChartBlock({ block }: Props) {
 
       {/* legend — only when comparing two lines */}
       {seriesB && (
-        <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: 24, justifyContent: "center", maxWidth: "100%", minWidth: 0 }}>
           <LegendItem color={INFOGRAPHIC_INK} label={seriesA.label} />
           <LegendItem color={SERIES_B_COLOR} label={seriesB.label} />
         </div>
@@ -151,9 +151,20 @@ export function LineChartBlock({ block }: Props) {
 
 function LegendItem({ color, label }: { color: string; label: string }) {
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <span style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
       <span style={{ width: 20, height: 3, borderRadius: 2, background: color, flexShrink: 0 }} />
-      <span style={{ fontSize: 14, color: INFOGRAPHIC_INK }}>{label}</span>
+      <span
+        style={{
+          fontSize: 14,
+          color: INFOGRAPHIC_INK,
+          maxWidth: 190,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+      >
+        {label}
+      </span>
     </span>
   );
 }

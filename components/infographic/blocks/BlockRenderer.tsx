@@ -5,6 +5,7 @@ import { CardGridBlock } from "./CardGridBlock";
 import { BarGroupBlock } from "./BarGroupBlock";
 import { StackedBarBlock } from "./StackedBarBlock";
 import { StepBlock } from "./StepBlock";
+import { ProcessLoopBlock } from "./ProcessLoopBlock";
 import { StackBlock } from "./StackBlock";
 import { NodeListBlock } from "./NodeListBlock";
 import { CompareBlock } from "./CompareBlock";
@@ -45,6 +46,8 @@ export function BlockRenderer({
       return <StackedBarBlock block={block} scale={scale} maxHeight={maxHeight} format={format} />;
     case "step":
       return <StepBlock block={block} scale={scale} format={format} />;
+    case "process-loop":
+      return <ProcessLoopBlock block={block} scale={scale} maxHeight={maxHeight} format={format} />;
     case "stack":
       return <StackBlock block={block} scale={scale} format={format} />;
     case "node-list":

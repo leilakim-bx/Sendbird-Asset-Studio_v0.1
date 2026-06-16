@@ -66,6 +66,16 @@ export type InfographicBlock =
     }
   | {
       id: string;
+      type: "process-loop";
+      title?: string;
+      steps: Array<{ label: string }>;
+      /** 0-based index of the emphasized step. */
+      activeStepIndex?: number;
+      /** Optional caption below the dotted return path. */
+      loopLabel?: string;
+    }
+  | {
+      id: string;
       type: "stack";
       /** Top-to-bottom layers (bands). Renders as a layered architecture diagram. */
       layers: Array<{

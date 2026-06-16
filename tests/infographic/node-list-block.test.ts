@@ -53,4 +53,26 @@ describe("NodeListBlock", () => {
     expect(html).toContain("Tag");
     expect(html).toContain(`color:${brand.color.inkMutedStrong}`);
   });
+
+  it("clamps Hub map node descriptions and long tags", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(NodeListBlock, {
+        block: {
+          ...nodeListBlock,
+          items: [
+            {
+              label: "Manual review queue",
+              tag: "Very long tag text",
+              desc: "Long node description ".repeat(10),
+            },
+          ],
+        },
+        format: "product",
+      }),
+    );
+
+    expect(html).toContain("-webkit-line-clamp:2");
+    expect(html).toContain("max-width:96px");
+    expect(html).toContain("text-overflow:ellipsis");
+  });
 });

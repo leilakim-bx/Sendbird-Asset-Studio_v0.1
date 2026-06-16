@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         code: "url_not_supported",
-        message: "URL import is disabled by security policy. Paste the article text, chart data, or image notes instead.",
+        message: "URL import is disabled by security policy. Paste article text, chart data, or source guidance instead.",
       } satisfies SourceFailure,
       { status: 400 },
     );

@@ -11,9 +11,16 @@ export const INFOGRAPHIC_BLOCK_LIMITS = {
   },
   barColumnsItems: 6,
   stepItems: {
-    product: 8,
+    product: 5,
     blog:    12,
   },
+  processLoopSteps: {
+    product: 5,
+    blog:    6,
+  },
+  processLoopTitleChars: 48,
+  processLoopStepChars: 18,
+  processLoopLabelChars: 72,
   stackLayers: {
     product: 3,
     blog:    4,
@@ -52,6 +59,10 @@ export function cardGridBodyMaxChars(cardCount: number) {
 
 export function stepMaxItems(format: InfographicFormat) {
   return INFOGRAPHIC_BLOCK_LIMITS.stepItems[format];
+}
+
+export function processLoopMaxSteps(format: InfographicFormat) {
+  return INFOGRAPHIC_BLOCK_LIMITS.processLoopSteps[format];
 }
 
 export function stackMaxLayers(format: InfographicFormat) {

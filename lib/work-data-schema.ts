@@ -1,4 +1,4 @@
-export const WORK_DATA_SCHEMA_VERSION = 4;
+export const WORK_DATA_SCHEMA_VERSION = 5;
 
 export type WorkDataKind = "chat" | "infographic" | "product-visual";
 
@@ -10,16 +10,19 @@ const MIGRATIONS: Record<WorkDataKind, Record<number, Migration>> = {
     1: (data) => data,
     2: (data) => data,
     3: (data) => data,
+    4: (data) => data,
   },
   infographic: {
     1: (data) => data,
     2: (data) => data,
     3: (data) => data,
+    4: (data) => data,
   },
   "product-visual": {
     1: (data) => data,
     2: (data) => data,
     3: (data) => data,
+    4: (data) => data,
   },
 };
 

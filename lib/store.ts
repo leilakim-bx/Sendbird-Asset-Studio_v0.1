@@ -495,10 +495,29 @@ function migrateV2toV3(raw: unknown): PersistedV1 {
 }
 
 // ── v3 → v4 마이그레이션 ──────────────────────────────────
-// Add schemaVersion to all saved work payloads. Current work schema is v4, so
+// Add schemaVersion to all saved work payloads. Current work schema was v4, so
 // old records are structurally unchanged aside from the explicit marker.
 
 function migrateV3toV4(raw: unknown): PersistedV1 {
+  const state = (raw ?? {}) as Record<string, unknown>;
+  const savedAssets = Array.isArray(state.savedAssets)
+    ? (state.savedAssets as SavedAsset[]).map(versionSavedAsset)
+    : [];
+
+  return trimPersistedCollections({
+    customBackgrounds: Array.isArray(state.customBackgrounds)
+      ? (state.customBackgrounds as Background[])
+      : [],
+    savedAssets,
+    drafts: versionDrafts(state.drafts as DraftState | undefined),
+  });
+}
+
+// ── v4 → v5 마이그레이션 ──────────────────────────────────
+// Add the infographic process-loop block type. Existing records are structurally
+// unchanged; re-version nested work data so future migrations have a clean base.
+
+function migrateV4toV5(raw: unknown): PersistedV1 {
   const state = (raw ?? {}) as Record<string, unknown>;
   const savedAssets = Array.isArray(state.savedAssets)
     ? (state.savedAssets as SavedAsset[]).map(versionSavedAsset)
@@ -709,7 +728,7 @@ export const useEditorStore = create<EditorState>()(
     }),
     {
       name:    "sendbird-editor-v1",
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) =>
         trimPersistedCollections({
@@ -724,6 +743,7 @@ export const useEditorStore = create<EditorState>()(
         if (version < 2) state = migrateV1toV2(state);
         if (version < 3) state = migrateV2toV3(state);
         if (version < 4) state = migrateV3toV4(state);
+        if (version < 5) state = migrateV4toV5(state);
         return state as PersistedV1;
       },
       onRehydrateStorage: () => (state) => {

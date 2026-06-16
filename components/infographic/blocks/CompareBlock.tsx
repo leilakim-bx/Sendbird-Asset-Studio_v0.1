@@ -1,4 +1,5 @@
 import type { InfographicBlock, InfographicFormat } from "@/lib/types/infographic";
+import type { CSSProperties } from "react";
 import { INFOGRAPHIC_INK, INFOGRAPHIC_INK_MUTED } from "@/lib/types/infographic";
 import { compareMaxRows } from "@/lib/infographic-block-limits";
 import { brand } from "@/lib/tokens/brand";
@@ -29,8 +30,26 @@ export function CompareBlock({ block, scale = 1, format, maxHeight }: Props) {
   const fs = (n: number) => Math.round(n * scale);
 
   if (layout === "table") {
+    const isProduct = format === "product";
+    const productTableClamp: CSSProperties = isProduct
+      ? {
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical",
+          WebkitLineClamp: 2,
+          overflow: "hidden",
+          overflowWrap: "anywhere",
+        }
+      : { overflowWrap: "anywhere" };
+
     return (
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          ...(isProduct && maxHeight ? { maxHeight, overflow: "hidden" } : {}),
+        }}
+      >
         <div
           style={{
             display: "grid",
@@ -60,16 +79,37 @@ export function CompareBlock({ block, scale = 1, format, maxHeight }: Props) {
               style={{
                 fontSize: fs(18),
                 fontWeight: 600,
+                lineHeight: 1.25,
                 color: INFOGRAPHIC_INK,
                 minWidth: 0,
-                whiteSpace: "normal",
-                overflowWrap: "anywhere",
+                ...productTableClamp,
               }}
             >
               {r.label}
             </span>
-            <span style={{ fontSize: fs(18), color: INFOGRAPHIC_INK_MUTED }}>{r.a}</span>
-            <span style={{ fontSize: fs(18), fontWeight: highlightB ? 600 : 400, color: INFOGRAPHIC_INK }}>{r.b}</span>
+            <span
+              style={{
+                fontSize: fs(18),
+                lineHeight: 1.25,
+                color: INFOGRAPHIC_INK_MUTED,
+                minWidth: 0,
+                ...productTableClamp,
+              }}
+            >
+              {r.a}
+            </span>
+            <span
+              style={{
+                fontSize: fs(18),
+                lineHeight: 1.25,
+                fontWeight: highlightB ? 600 : 400,
+                color: INFOGRAPHIC_INK,
+                minWidth: 0,
+                ...productTableClamp,
+              }}
+            >
+              {r.b}
+            </span>
           </div>
         ))}
       </div>
@@ -106,6 +146,10 @@ function ColHeader({ label, highlight, fs }: { label: string; highlight: boolean
         padding: "5px 12px",
         borderRadius: 8,
         background: highlight ? HL : CHIP_BG,
+        maxWidth: "100%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
       }}
     >
       {label}
@@ -130,11 +174,11 @@ function CompareCard({
 }) {
   // Item text metrics — used to vertically center the bullet on the first line.
   const isProduct = format === "product";
-  const itemBaseSize = isProduct ? (items.length >= 6 ? 14 : items.length >= 5 ? 15 : 16) : 17;
+  const itemBaseSize = isProduct ? 16 : 17;
   const itemFs = fs(itemBaseSize);
-  const itemLineHeight = isProduct ? (items.length >= 5 ? 1.35 : 1.38) : 1.45;
+  const itemLineHeight = isProduct ? 1.38 : 1.45;
   // Product feature can accept more short points, but never lets a single long
-  // point expand the fixed frame. Padding stays fixed; gap only tightens by 1px.
+  // point expand the fixed frame. Padding and text size stay fixed; gap only tightens by 1px.
   // Each point can read as a short paragraph, then clamps before it breaks export.
   const itemGap = isProduct && items.length >= 5 ? 8 : 9;
   const lineH = Math.round(itemFs * itemLineHeight);
