@@ -74,7 +74,7 @@ export function AvatarInitials({ name, size = 44 }: { name: string; size?: numbe
         alignItems: "center",
         justifyContent: "center",
         fontSize: Math.round(size * 0.38),
-        fontWeight: 700,
+        fontWeight: t.font.weight.semibold,
         flex: "0 0 auto",
       }}
     >
@@ -159,7 +159,7 @@ export function Pill({
         background: palette.background,
         color: palette.color,
         fontSize: t.control.pill.fontSize,
-        fontWeight: 700,
+        fontWeight: t.font.weight.semibold,
         lineHeight: t.control.pill.lineHeight,
         whiteSpace: "nowrap",
         ...style,
@@ -280,14 +280,14 @@ function AiPopover({ callout, popover }: { callout: AiCallout; popover: SlotPopo
             background: t.color.ink,
             color: t.color.inverse,
             fontSize: inline ? 10 : 13,
-            fontWeight: 800,
+            fontWeight: t.font.weight.semibold,
             letterSpacing: 0,
             flex: "0 0 auto",
           }}
         >
           AI
         </span>
-        <EllipsisText style={{ minWidth: 0, fontSize: inline ? 16 : 24, fontWeight: 800, color: t.color.text }}>
+        <EllipsisText style={{ minWidth: 0, fontSize: inline ? 16 : 24, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {callout.label}
         </EllipsisText>
       </div>

@@ -41,6 +41,10 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 4. 결과를 My files에 저장한다.
 5. PNG로 다운로드해 블로그, 웹, 슬라이드, 소셜 콘텐츠에 사용한다.
 
+보조 흐름으로, 사용자는 홈의 Create with Codex에 페이지 copy를 붙여넣어
+필요한 이미지 세트를 먼저 정리할 수 있다. 이 흐름은 Studio 안에서 이미지를
+자동 생성하지 않고, Codex skill에 넘길 planning prompt를 준비하는 용도다.
+
 ## 6. 템플릿 범위
 
 ### 6.1 Chat UI
@@ -72,7 +76,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 |---|---|
 | 목적 | 실제 제품 스크린샷을 릴리즈/블로그용 이미지로 정리 |
 | 포맷 | Feature Desktop, Feature Mobile, Release Thumbnail, Release Insert, Blog |
-| 입력 | 스크린샷 업로드, Concept UI 설명 입력 |
+| 입력 | 스크린샷 업로드, Concept UI brief 입력, 제한된 Feature Moment block 추천 |
 | 편집 | crop/highlight, 제목, 부제, 배경, 포맷별 레이아웃 |
 | Export | 포맷별 정확한 PNG 크기 또는 가변 높이 |
 
@@ -80,7 +84,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 
 | 기능 | 요구사항 |
 |---|---|
-| 홈 | 템플릿 갤러리와 My files 표시 |
+| 홈 | 템플릿 갤러리와 My files 표시. Create with Codex와 Codex skill 다운로드/설치 가이드는 홈 좌측 Sidebar에 보조 진입점으로 제공 |
 | My files | 저장한 에셋 검색, 리스트/그리드 보기, 이름 변경, 삭제, 재편집 |
 | 저장 | 썸네일과 편집 상태를 브라우저 localStorage에 저장. 용량 보호를 위해 최근 저장 에셋과 커스텀 배경은 상한을 둔다. |
 | Autosave | Chat UI, Infographic 작업 초안 자동 저장 |
@@ -100,6 +104,10 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | 안전장치 | 로컬 생성 결과도 validator로 스키마 검증 |
 | 편집 제한 | 추천/수동 입력 결과가 블록 상한을 넘으면 에디터와 렌더러에서 같은 기준으로 제한 |
 | 실패 처리 | 사용 가능한 결과가 없으면 텍스트/데이터 보강 안내 |
+
+Codex skill은 웹앱 내부 생성 API가 아니라 사용자가 로컬 Codex에서 실행하는
+선택적 제작 보조 도구다. Studio는 skill package 다운로드와 사용 가이드만
+제공하며, 앱 런타임에서 Codex/LLM을 호출하지 않는다.
 
 ## 9. 성공 기준
 

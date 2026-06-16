@@ -5,6 +5,7 @@ import {
   PRODUCT_VISUAL_BG_HEX,
   FORMAT_FIXED_BG,
   PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED,
+  PRODUCT_VISUAL_EXAMPLE_SCREENSHOT,
   isImageBgFormat,
   PRODUCT_VISUAL_SANS,
 } from "@/lib/types/product-visual";
@@ -16,9 +17,6 @@ import {
 import type { SceneSpec } from "@/lib/concept-ui/scene-spec";
 import { ScreenshotDisplay } from "./ScreenshotDisplay";
 import { brand, brandPx } from "@/lib/tokens/brand";
-import dashboardStarterSpec from "@/lib/concept-ui/samples/dashboard-ai-actions.en.json";
-
-const CONCEPT_STARTER_SPEC = dashboardStarterSpec as SceneSpec;
 
 type Props = {
   content: ProductVisualContent;
@@ -36,7 +34,7 @@ function paddingFor(format: ProductVisualContent["format"]): number {
 }
 
 function verticalPaddingFor(format: ProductVisualContent["format"], horizontalPadding: number): number {
-  if (format === "blog") return 60;
+  if (format === "blog") return brand.spacing[60];
   return horizontalPadding;
 }
 
@@ -76,6 +74,18 @@ function screenshotDisplayHeight(content: ProductVisualContent, maxWidth: number
     return maxWidth / aspect;
   }
   return Math.min(maxWidth, screenshot.naturalWidth) / aspect;
+}
+
+function isResponseCardConcept(spec: SceneSpec | undefined): boolean {
+  return spec?.archetype === "modal" && spec.content.modal.slotId === "moment-ai-response";
+}
+
+function isDetailsPanelConcept(spec: SceneSpec | undefined): boolean {
+  return spec?.archetype === "modal" && spec.content.modal.slotId === "moment-approval";
+}
+
+function responseCardMaxWidth(innerW: number): number {
+  return Math.min(innerW, Math.max(brand.spacing[170] * 2, innerW - brand.spacing[80] * 2));
 }
 
 function ConceptSceneDisplay({
@@ -141,17 +151,22 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
     sourceMode === "concept" && content.conceptScene && content.screenshot
       ? screenshotForFormat(content)
       : undefined;
+  const conceptUiScreenshot = sceneSourceMode && !!conceptRenderedScreenshot;
   const displayedScreenshot =
     sourceMode === "screenshot"
       ? screenshotForFormat(content)
       : conceptRenderedScreenshot;
   const displayedConceptScene = sceneSourceMode ? content.conceptScene : undefined;
+  const compactResponseCard =
+    sceneSourceMode &&
+    (isResponseCardConcept(displayedConceptScene) || (!displayedConceptScene && !conceptRenderedScreenshot));
+  const compactDetailsPanel = sceneSourceMode && isDetailsPanelConcept(displayedConceptScene);
   const fixedBg = FORMAT_FIXED_BG[format];
   const bgHex = fixedBg ?? PRODUCT_VISUAL_BG_HEX[bg];
 
-  // release-insert shows the dashboard full-bleed (almost no padding, height
-  // follows the image) whenever the WHOLE dashboard is visible — i.e. no crop,
-  // or highlight mode. Crop mode (only the cut-out region) keeps the normal fit.
+  // Screenshot release inserts can show full-dashboard captures nearly
+  // full-bleed. Concept UI blocks stay framed like editorial cards so their
+  // blog/insert exports keep enough breathing room.
   const hasValidCrop = !!(
     displayedScreenshot?.crop &&
     displayedScreenshot.crop.width > 0 &&
@@ -160,20 +175,27 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
     displayedScreenshot.naturalHeight
   );
   const fullDashboard = !hasValidCrop || displayedScreenshot?.displayMode === "highlight";
-  const fillMode = format === "release-insert" && !!displayedScreenshot?.url && fullDashboard;
+  const fillMode = format === "release-insert" && !!displayedScreenshot?.url && fullDashboard && !conceptUiScreenshot;
+  const conceptUiAutoFormat = conceptUiScreenshot && (format === "blog" || format === "release-insert");
 
-  const padX = fillMode ? 12 : paddingFor(format);
-  const padY = fillMode ? 12 : verticalPaddingFor(format, padX);
+  const padX = fillMode ? brand.spacing[12] : paddingFor(format);
+  const padY = fillMode
+    ? brand.spacing[12]
+    : Math.max(verticalPaddingFor(format, padX), conceptUiAutoFormat ? brand.spacing[60] : brand.spacing[0]);
+  const topOnlyConceptPadding = compactDetailsPanel && conceptUiAutoFormat;
+  const padTop = topOnlyConceptPadding ? brand.spacing[60] : padY;
+  const padBottom = topOnlyConceptPadding ? brand.spacing[0] : padY;
   const innerW = W - padX * 2;
-  const screenshotH = displayedScreenshot ? screenshotDisplayHeight(content, innerW) : null;
+  const screenshotMaxW = compactResponseCard ? responseCardMaxWidth(innerW) : innerW;
+  const screenshotH = displayedScreenshot ? screenshotDisplayHeight(content, screenshotMaxW) : null;
   const imageDrivenH =
-    (format === "feature-mobile" || format === "blog") && screenshotH
-      ? screenshotH + padY * 2
+    (format === "feature-mobile" || format === "blog" || (format === "release-insert" && conceptUiScreenshot)) && screenshotH
+      ? screenshotH + padTop + padBottom
       : null;
   const canvasH = fixedH ?? imageDrivenH ?? minH;
   // Vertical budget for the screenshot. Fill mode leaves it effectively
   // unbounded so the image fits to width and the auto-height canvas grows.
-  const contentH = fillMode ? 100000 : canvasH - padY * 2;
+  const contentH = fillMode ? 100000 : canvasH - padTop - padBottom;
 
   return (
     <div
@@ -205,9 +227,9 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
           zIndex: 1,
           minHeight: canvasH,
           display: "flex",
-          alignItems: "center",
+          alignItems: topOnlyConceptPadding ? "flex-start" : "center",
           justifyContent: "center",
-          padding: `${brandPx(padY)} ${brandPx(padX)}`,
+          padding: `${brandPx(padTop)} ${brandPx(padX)} ${brandPx(padBottom)}`,
           boxSizing: "border-box",
         }}
       >
@@ -215,7 +237,7 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
           sourceMode === "concept" && conceptRenderedScreenshot ? (
             <ScreenshotDisplay
               screenshot={conceptRenderedScreenshot}
-              maxWidth={innerW}
+              maxWidth={screenshotMaxW}
               maxHeight={contentH}
               polished={false}
               roundedCrop={hasValidCrop}
@@ -227,10 +249,11 @@ export function ProductVisualCanvas({ content, className, exportMode }: Props) {
               maxHeight={contentH}
             />
           ) : (
-            <ConceptSceneDisplay
-              spec={CONCEPT_STARTER_SPEC}
-              maxWidth={innerW}
+            <ScreenshotDisplay
+              screenshot={PRODUCT_VISUAL_EXAMPLE_SCREENSHOT}
+              maxWidth={screenshotMaxW}
               maxHeight={contentH}
+              polished={false}
             />
           )
         ) : (

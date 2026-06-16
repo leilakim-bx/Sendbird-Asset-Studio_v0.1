@@ -232,9 +232,18 @@ fontSize: 13 × fs
 
 ## Product Visual Concept UI
 
-- Concept UI 생성 전에는 텍스트 empty state 대신 샘플 대시보드를 캔버스에 표시해 결과물 형태를 먼저 이해할 수 있게 한다.
+- Concept UI 생성 전에는 텍스트 empty state 대신 `/preview/product_visual.png`의 light card 이미지를 캔버스에 표시해 결과물 형태를 먼저 이해할 수 있게 한다.
 - Concept UI는 한국어/영어 feature description을 받을 수 있지만, 렌더되는 product UI copy는 marketing asset 기준으로 영어를 사용한다.
+- Product Visual Concept UI의 dashboard/card/modal 안 product UI text는 `brand.font.productUi`를 사용한다. Apple 환경에서는 SF Pro 계열로 보이고, 그 외 환경에서는 Helvetica 계열 fallback을 사용한다.
 - Concept UI용 외부 AI chat prompt는 긴 마케팅 문단을 그대로 UI에 넣지 않고, delight.ai 도메인에 맞는 짧은 label/value/status/action copy로 요약하도록 안내한다.
+- Product Visual의 기본 생성 UX는 외부 AI 자유 생성이 아니라 제한된 Feature Moment block 추천이다. 마케터에게는 `Card`, `Details panel`처럼 결과물 형태가 바로 보이는 2개 선택지만 노출하고, dashboard/workspace/table/modal 같은 세부 archetype은 내부 변환으로 흡수한다.
+- Product Visual block selector thumbnail은 추상 placeholder drawing이 아니라 실제 기본 `Card`/`Details panel` 렌더를 축소한 preview image를 사용해 선택 전 결과물 형태와 맞춘다.
+- Conversation Search, keyword search, customer attribute filtering처럼 검색 자체가 피처인 경우도 별도 Search block을 노출하지 않고 `Card`의 title/main/source copy variation으로 표현한다.
+- Product Visual Concept UI는 실제 제품 화면 전체를 재현하기보다 마케팅 이미지로 이해되는 하나의 제품 순간을 만든다. Title, main content, source/evidence rows, CTA처럼 슬롯 단위 copy만 바꾸고 layout 자유도는 제한한다. `Card`는 1000×920 white card reference 비율, reviewer photo row, bordered response field, `#F7F7F7` solid evidence section, two CTA hierarchy를 유지하고, title은 extra-bold가 아니라 restrained semibold scale로 보여주며, card title token은 40px를 기본으로 해 preview 안에서 과하게 커지지 않게 한다. Provider는 brief별 source/evidence copy를 고정 rebooking 예시로 재사용하지 않는다. `Card`의 editable text slots는 title 34자, reviewer 24자, response 150자, source 36자, match 10자, CTA 12자로 제한해 긴 입력이 버튼/카드 레이아웃을 깨지 않게 한다.
+- `Card` screenshot은 Product Visual의 고정 thumbnail frame 안에서 CTA 버튼까지 항상 포함되도록 full-image contain 크기를 명시적으로 계산한다. Blog/insert canvas에서는 좌우 여백을 충분히 남기도록 다른 screenshot보다 작은 max width를 쓰며, 하단 CTA가 canvas crop 밖으로 밀리면 안 된다.
+- Concept UI source로 만든 `blog`/`release-insert` auto-height Product Visual은 screenshot source의 full-bleed fill mode를 쓰지 않고, 기본적으로 위아래 최소 60px 여백을 유지한다. `Details panel`만 예외적으로 top 60px 여백만 두고 bottom 여백 없이 cropped panel로 끝낸다.
+- `Details panel`은 floating modal shadow 문제를 피하기 위해 단일 white dashboard detail panel로 렌더한다. 상단에는 title과 close icon, 본문에는 `Information` label/value rows와 `Activity` timeline을 보여주며, Information row label은 muted medium weight로 가볍게 유지한다. `Show information=false`일 때는 Information 섹션과 Activity heading을 숨기고 timeline을 본문 상단으로 올려 case-history 이미지처럼 보이게 하며, timeline tag pill은 일반 details view보다 더 높은 vertical padding과 부드러운 radius를 쓰되 horizontal padding은 compact하게 유지한다. Timeline-only body text는 compact scale을 써서 긴 activity 문장이 과하게 커 보이지 않게 한다. 하단 activity는 panel 안에서 자연스럽게 cropped 된다. Editable slots는 title, Information 표시 switch, Information 값 4개, Activity tag/text 3줄로 제한하고 각 slot은 고정 글자수로 clamp한다. Product Visual block 내부의 큰 surface에는 beige fill을 쓰지 않고 white fill과 spacing 중심으로 계층을 만든다.
+- `Details panel` capture는 전체 대시보드 UI가 아니라 release/blog 이미지에 들어가는 outer border 없는 820×720 primary panel bounds만 캡처한다. 별도 floating shadow나 wrapper shadow를 추가하지 않고 panel overflow crop만 사용한다.
 - Concept UI에서 broad/ambiguous한 설명은 새로운 임의 layout을 만들지 않고 가장 구체적인 운영 화면(dashboard/table/inbox 등)과 reusable block 조합으로 흡수한다.
 - Workspace scene은 editor, preview, AI tester의 3-column 구조를 기본으로 하는 Concept UI kit 패턴이다.
 - Workspace preview label이 `Phone mockup`이면 preview card copy를 compact phone-frame chat preview로 렌더해 모바일 push/notification 흐름을 보여줄 수 있다.
@@ -245,13 +254,13 @@ fontSize: 13 × fs
 - AI action trail, action log, visible agent steps, approval gate, paused action 같은 패턴은 `actionTrails` reusable block으로 표현해 실행 내역과 human approval gate를 한 카드 안에 보여준다.
 - 공개 AI agent product에서 반복되는 knowledge/procedure, testing/QA/observability, data connector/action 패턴은 별도 preset으로 복제하지 않고 기존 reusable block의 provider 단서와 copy variant로만 흡수한다.
 - production signal 기반 improvement proposal과 self-validation/testing loop 패턴은 `improvementSignals`, `validationLoops` reusable block으로 표현하고, enterprise approval/governance는 `reviewQueues` variant로 처리한다.
-- Generic resolution/procedure/agent flow 설명은 Builder canvas로 고정하지 않고 Dashboard kit에 `actionTrails`, `instructionSections`, `reviewQueues`, `toolCallLists` 같은 reusable block을 조합해 표현한다. Builder는 workflow editor, canvas, actionbook, node/rule authoring이 명시된 경우에만 우선한다.
-- Hero crop으로 잘라낸 Concept UI 이미지는 외곽 corner radius를 유지한다.
-- Concept UI Hero crop은 전체 1600×1000 scene 배경을 캡처하지 않고 primary panel만 이미지로 만든 뒤 crop selector를 열어, Product Visual 배경 위에 솔리드 베이지 판이 한 겹 더 올라오지 않게 한다.
-- Floating panel에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 compact radius만 사용한다.
+- Generic resolution/procedure/agent flow 설명은 Builder canvas로 고정하지 않고 compact `Details panel` block에 operational information과 cropped activity history를 조합해 표현한다. 전체 workflow editor, canvas, actionbook, node/rule authoring은 developer/import 경로에서만 다루고 marketer-facing 기본 추천에는 노출하지 않는다.
+- Concept UI compact block은 frame 선택 없이 primary panel만 floating capture로 만든다.
+- Concept UI capture는 전체 1600×1000 scene 배경을 캡처하지 않고 primary panel만 이미지로 만들어, Product Visual 배경 위에 솔리드 베이지 판이 한 겹 더 올라오지 않게 한다.
+- Floating capture에는 별도 screenshot polish/shadow를 추가하지 않고, 렌더된 패널 자체의 compact radius만 사용한다.
 - Product Visual 안에서 live Concept UI scene을 보여줄 때도 별도 wrapper shadow를 추가하지 않는다.
-- Floating panel export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
-- Concept UI builder scene은 첫 렌더 시 Floating panel을 기본 캡처로 사용해 canvas 전체가 얇은 hero crop처럼 보이지 않게 한다. 사용자가 이후 Hero crop을 직접 선택하는 것은 허용한다.
+- Floating capture export는 고정 패널 높이가 아니라 실제 렌더된 content bounds를 캡처해 하단 카드나 대화가 잘리지 않게 한다.
+- Concept UI builder scene도 floating capture를 사용해 canvas 전체가 얇은 hero crop처럼 보이지 않게 한다.
 - Concept UI builder scene의 primary panel은 전체 scene 폭을 꽉 채우지 않고 compact 3-column 폭으로 렌더해 Product Visual 썸네일에서 가운데 canvas 공백이 과하게 보이지 않게 한다.
 - Concept UI builder scene의 같은 행 node들은 렌더 시 최소 가로 간격을 보장하도록 정규화해, LLM/sample 좌표가 촘촘해도 카드끼리 겹쳐 보이지 않게 한다.
 - Concept UI builder scene의 canvas node AI callout은 floating popover로 띄우지 않고, node는 하이라이트만 적용한 뒤 오른쪽 config panel에 inline 설명으로 렌더해 노드/엣지 텍스트와 겹치지 않게 한다.

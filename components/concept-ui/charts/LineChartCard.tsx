@@ -31,14 +31,14 @@ export function LineChartCard({ chart }: { chart: LineChart }) {
     <div style={{ padding: 18 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 14 }}>
         <div>
-          <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+          <EllipsisText style={{ fontSize: 20, fontWeight: t.font.weight.semibold, color: t.color.text }}>
             {chart.title}
           </EllipsisText>
           <EllipsisText style={{ marginTop: 4, fontSize: 13, color: t.color.muted }}>
             {chart.seriesName}
           </EllipsisText>
         </div>
-        <span style={{ fontSize: 25, fontWeight: 800, color: t.color.text }}>
+        <span style={{ fontSize: 25, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {last ? last.value : 0}
         </span>
       </div>
@@ -57,7 +57,7 @@ export function LineChartCard({ chart }: { chart: LineChart }) {
           return (
             <g key={`${index}-${point.label}`}>
               <circle cx={x} cy={y} r={6} fill={t.color.app} stroke={t.color.ink} strokeWidth={3} />
-              <text x={x} y={height - 5} textAnchor="middle" fontSize={12} fontWeight={700} fill={t.color.faint}>
+              <text x={x} y={height - 5} textAnchor="middle" fontSize={12} fontWeight={t.font.weight.semibold} fill={t.color.faint}>
                 {point.label}
               </text>
             </g>

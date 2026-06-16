@@ -34,10 +34,22 @@ export type ArchetypeChoice =
       confidence: 0;
     };
 
+export type ProductVisualRecipeId = "response-card" | "approval-modal";
+
+export type ProductVisualRecipe = {
+  id: ProductVisualRecipeId;
+  label: string;
+  description: string;
+  reason: string;
+  archetype: ConceptUiArchetype;
+  confidence: number;
+};
+
 export type GenerateSpecInput = {
   description: string;
   uiTextLanguage: UiTextLanguage;
   forcedArchetype?: ConceptUiArchetype;
+  recipeId?: ProductVisualRecipeId;
   previousSpec?: SceneSpec;
 };
 
@@ -479,11 +491,78 @@ const DASHBOARD_KIT_FLOW_PATTERNS = [
   /절차/,
 ];
 
+const CONVERSATION_SEARCH_PATTERNS = [
+  /conversation search/i,
+  /search(?:es|ing)? conversations?/i,
+  /find conversations?/i,
+  /conversation filters?/i,
+  /filter(?:ing|s)? .*conversations?/i,
+  /keywords?/i,
+  /customer attributes?/i,
+  /what customers said/i,
+  /who they are/i,
+  /buried insights?/i,
+  /검색/,
+  /필터/,
+  /고객 속성/,
+];
+
+const RESPONSE_CARD_PATTERNS = [
+  /prepared response/i,
+  /ai[-\s]?prepared/i,
+  /draft(?:ed)? repl(?:y|ies)/i,
+  /draft(?:ed)? response/i,
+  /suggest(?:ed)? response/i,
+  /reply draft/i,
+  /send as[-\s]?is/i,
+  /knowledge sources?/i,
+  /sources? used/i,
+  /reviewer/i,
+  /응답/,
+  /답변/,
+  /초안/,
+  /지식 소스/,
+];
+
+const APPROVAL_MOMENT_PATTERNS = [
+  /approval/i,
+  /approve/i,
+  /gate/i,
+  /paused/i,
+  /requires agent approval/i,
+  /action trails?/i,
+  /looked up/i,
+  /billing dispute/i,
+  /refund/i,
+  /승인/,
+  /게이트/,
+  /보류/,
+  /환불/,
+];
+
 function clampText(value: string, max: number): string {
   const cleaned = value.replace(/\s+/g, " ").trim();
   if (cleaned.length <= max) return cleaned;
   return `${cleaned.slice(0, max - 3).trimEnd()}...`;
 }
+
+const RESPONSE_CARD_COPY_LIMITS = {
+  title: 34,
+  reviewer: 24,
+  response: 150,
+  source: 36,
+  match: 10,
+  action: 12,
+} as const;
+
+const DETAILS_PANEL_COPY_LIMITS = {
+  detailType: 42,
+  detailName: 36,
+  detailStatus: 14,
+  detailTime: 16,
+  activityTag: 24,
+  activityText: 64,
+} as const;
 
 function needsLogicBlock(description: string): boolean {
   return LOGIC_PATTERNS.some((pattern) => pattern.test(description));
@@ -495,6 +574,18 @@ function matchesAny(description: string, patterns: RegExp[]): boolean {
 
 function prefersDashboardKitFlow(description: string): boolean {
   return matchesAny(description, DASHBOARD_KIT_FLOW_PATTERNS) && !matchesAny(description, EXPLICIT_BUILDER_PATTERNS);
+}
+
+function prefersConversationSearch(description: string): boolean {
+  return matchesAny(description, CONVERSATION_SEARCH_PATTERNS);
+}
+
+function prefersResponseCard(description: string): boolean {
+  return matchesAny(description, RESPONSE_CARD_PATTERNS);
+}
+
+function prefersApprovalMoment(description: string): boolean {
+  return matchesAny(description, APPROVAL_MOMENT_PATTERNS) || matchesAny(description, ACTION_TRAIL_PATTERNS);
 }
 
 function extractCondition(description: string): string {
@@ -1172,8 +1263,359 @@ function nextSample(archetype: ConceptUiArchetype, description: string, language
   return applyReusableBlocks(applyDescriptionToTitle(samples[index]?.spec ?? conceptUiSamples[0].spec, description), description);
 }
 
+function conversationSearchTitle(description: string): string {
+  const titleMatch = description.match(/^\s*([A-Z][A-Za-z0-9 ]{3,32}?)\s+(?:brings|lets|adds|helps|enables)\b/);
+  if (titleMatch?.[1]) return clampText(titleMatch[1], 56);
+  return "Conversation Search";
+}
+
+function conversationSearchSpec(description: string): SceneSpec {
+  return parseSceneSpec({
+    archetype: "table",
+    theme: "light",
+    content: {
+      productName: "delight.ai Search",
+      title: conversationSearchTitle(description),
+      subtitle: "Search what customers said and who they are, then turn the right conversations into action.",
+      toolbar: {
+        searchPlaceholder: "Search keywords or customer attributes",
+        filters: ["Keyword match", "Customer plan", "Segment", "Last 30 days"],
+        bulkSelect: true,
+      },
+      columns: [
+        { key: "conversation", label: "Conversation", width: 280 },
+        { key: "customer", label: "Customer", width: 210 },
+        { key: "attribute", label: "Attribute", width: 150 },
+        { key: "signal", label: "Signal", width: 190 },
+        { key: "updated", label: "Updated", width: 130 },
+      ],
+      rows: [
+        {
+          slotId: "conversation-search-1",
+          cells: [
+            { kind: "text", value: "Asked about refund timeline" },
+            { kind: "person", name: "Maya Chen", detail: "Enterprise plan" },
+            { kind: "badge", value: "VIP", tone: "ai" },
+            { kind: "text", value: "High-intent match" },
+            { kind: "date", value: "2m ago" },
+          ],
+        },
+        {
+          slotId: "conversation-search-2",
+          cells: [
+            { kind: "text", value: "Mentions renewal concern" },
+            { kind: "person", name: "Ava Brooks", detail: "At-risk segment" },
+            { kind: "badge", value: "At risk", tone: "warn" },
+            { kind: "text", value: "Retention signal" },
+            { kind: "date", value: "Today" },
+          ],
+        },
+        {
+          slotId: "conversation-search-3",
+          cells: [
+            { kind: "text", value: "Repeated login issue" },
+            { kind: "person", name: "Luis Easton", detail: "Admin user" },
+            { kind: "badge", value: "Admin", tone: "neutral" },
+            { kind: "text", value: "Support trend" },
+            { kind: "date", value: "Today" },
+          ],
+        },
+        {
+          slotId: "conversation-search-4",
+          cells: [
+            { kind: "text", value: "Compared competitor pricing" },
+            { kind: "person", name: "Nora Patel", detail: "Premium account" },
+            { kind: "badge", value: "Premium", tone: "good" },
+            { kind: "text", value: "Expansion cue" },
+            { kind: "date", value: "Yesterday" },
+          ],
+        },
+        {
+          slotId: "conversation-search-5",
+          cells: [
+            { kind: "text", value: "Positive onboarding feedback" },
+            { kind: "person", name: "Theo Park", detail: "Starter plan" },
+            { kind: "badge", value: "Starter", tone: "neutral" },
+            { kind: "text", value: "Advocacy lead" },
+            { kind: "date", value: "Jun 12" },
+          ],
+        },
+        {
+          slotId: "conversation-search-6",
+          cells: [
+            { kind: "text", value: "Shipping delay thread" },
+            { kind: "person", name: "Amara Stone", detail: "Loyalty member" },
+            { kind: "badge", value: "Loyalty", tone: "good" },
+            { kind: "text", value: "Escalation ready" },
+            { kind: "date", value: "Jun 11" },
+          ],
+        },
+      ],
+    },
+    modifiers: {
+      aiCallout: {
+        targetSlotId: "conversation-search-1",
+        label: "Matched result",
+        description: "Keyword and customer attributes combine to surface the exact conversation.",
+      },
+      highlightedSlotId: "conversation-search-1",
+    },
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractBriefField(description: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const pattern = new RegExp(`(?:^|\\n)\\s*${escapeRegExp(label)}\\s*:\\s*(.+)`, "i");
+    const match = description.match(pattern);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function extractSourceFields(description: string): string[] {
+  return Array.from(description.matchAll(/(?:^|\n)\s*Source(?:\s*\d+)?\s*:\s*(.+)/gi))
+    .map((match) => match[1]?.trim())
+    .filter((value): value is string => !!value)
+    .slice(0, 2);
+}
+
+function firstBriefSentence(description: string): string {
+  const guidanceCleaned = description
+    .replace(/^\s*(Feature|User|Product surface|Key proof|Avoid)\s*:\s*/gim, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const firstSentence = guidanceCleaned.split(/(?<=[.!?])\s+/)[0]?.trim() || guidanceCleaned;
+  return clampText(firstSentence, 130);
+}
+
+function sourceValue(label: string, index: number): string {
+  if (label.includes("|")) {
+    const [sourceLabel, match] = label.split("|").map((part) => part.trim());
+    return `${clampText(sourceLabel || label, RESPONSE_CARD_COPY_LIMITS.source)}|${clampText(match || `${index === 0 ? "98" : "95"}% match`, RESPONSE_CARD_COPY_LIMITS.match)}`;
+  }
+  return `${clampText(label, RESPONSE_CARD_COPY_LIMITS.source)}|${index === 0 ? "98" : "95"}% match`;
+}
+
+function responseCardSources(description: string): string[] {
+  const explicitSources = extractSourceFields(description);
+  if (explicitSources.length > 0) {
+    const normalized = explicitSources.map((source, index) => sourceValue(source, index));
+    return normalized.length === 1 ? [normalized[0], sourceValue("Customer context", 1)] : normalized;
+  }
+
+  if (prefersConversationSearch(description)) {
+    return ["Conversation filters|98% match", "Customer attributes|95% match"];
+  }
+
+  if (/booking|flight|rebook|reservation|itinerary|loyalty|예약|항공/i.test(description)) {
+    return ["Rebooking policy v3.2|98% match", "Loyalty tier benefits|95% match"];
+  }
+
+  if (/refund|billing dispute|charge|payment|invoice|환불|결제/i.test(description)) {
+    return ["Refund policy|98% match", "Billing dispute history|95% match"];
+  }
+
+  if (/cancel|membership|subscription|plan|해지|구독/i.test(description)) {
+    return ["Cancellation policy|98% match", "Customer subscription profile|95% match"];
+  }
+
+  if (/resolve needs|single interaction|handoff|follow[-\s]?ups?|repeated calls?/i.test(description)) {
+    return ["Resolution procedure|98% match", "Conversation context|95% match"];
+  }
+
+  if (/procedure|knowledge|source|training|guardrail|policy|지식|절차|정책/i.test(description)) {
+    return ["Knowledge source|98% match", "Policy guardrails|95% match"];
+  }
+
+  return ["Knowledge base article|98% match", "Customer context|95% match"];
+}
+
+function responseCardBody(description: string): string {
+  const explicitResponse = extractBriefField(description, ["Response", "Reply", "Message", "Draft", "Main content"]);
+  if (explicitResponse) return clampText(explicitResponse, RESPONSE_CARD_COPY_LIMITS.response);
+
+  const keyProof = extractBriefField(description, ["Key proof", "Proof point", "Outcome"]);
+  if (keyProof) {
+    return clampText(`I checked the relevant customer context and source evidence. ${keyProof}`, RESPONSE_CARD_COPY_LIMITS.response);
+  }
+
+  if (prefersConversationSearch(description)) {
+    return "I found the right conversations by matching what customers said with who they are, so the buried insight is ready for action.";
+  }
+
+  if (/booking|flight|rebook|reservation|itinerary|loyalty|예약|항공/i.test(description)) {
+    return "Hi Maria, great news. I've found a flight to LAX on March 18 at your preferred time. Since you're a Gold loyalty member, the change fee is waived.";
+  }
+
+  if (/refund|billing dispute|charge|payment|invoice|환불|결제/i.test(description)) {
+    return "I checked the refund policy and billing history, then prepared the safest next step for agent review before any customer-impacting action.";
+  }
+
+  if (/cancel|membership|subscription|plan|해지|구독/i.test(description)) {
+    return "I checked the cancellation policy and customer plan details, then prepared a response the agent can review before sending.";
+  }
+
+  if (/resolve needs|single interaction|handoff|follow[-\s]?ups?|repeated calls?/i.test(description)) {
+    return "I gathered the customer context, policy, and next action in one pass so the agent can resolve the request without another handoff.";
+  }
+
+  const summary = firstBriefSentence(description);
+  return clampText(`I reviewed the request and source evidence, then prepared a response for: ${summary}`, RESPONSE_CARD_COPY_LIMITS.response);
+}
+
+function responseCardTitle(description: string): string {
+  const explicitTitle = extractBriefField(description, ["Title", "Card title"]);
+  if (explicitTitle) return clampText(explicitTitle, RESPONSE_CARD_COPY_LIMITS.title);
+  if (/prepared response|draft(?:ed)? response|reply draft|suggest(?:ed)? response/i.test(description)) {
+    return "AI-prepared response";
+  }
+  const titleMatch = description.match(/^\s*([A-Z][A-Za-z0-9 -]{3,32}?)\s+(?:brings|lets|adds|helps|enables|uses)\b/);
+  if (titleMatch?.[1]) return clampText(`${titleMatch[1]} response`, RESPONSE_CARD_COPY_LIMITS.title);
+  return "AI-prepared response";
+}
+
+function aiResponseCardSpec(description: string): SceneSpec {
+  const title = responseCardTitle(description);
+  const responseText = responseCardBody(description);
+  const sources = responseCardSources(description);
+  const reviewer = extractBriefField(description, ["Reviewer", "Owner"]) ?? "Emily Choi";
+  const primaryCta = extractBriefField(description, ["Primary CTA", "Primary action"]) ?? "Send as-is";
+  const secondaryCta = extractBriefField(description, ["Secondary CTA", "Secondary action"]) ?? "Edit first";
+
+  return parseSceneSpec({
+    archetype: "modal",
+    theme: "light",
+    content: {
+      productName: "delight.ai",
+      title,
+      subtitle: "A compact review card with the generated answer, evidence, and final send action.",
+      background: {
+        type: "inbox",
+        title: "Conversation",
+        items: [
+          "Customer request",
+          "AI draft",
+          "Source check",
+          "Reviewer approval",
+        ],
+      },
+      modal: {
+        slotId: "moment-ai-response",
+        kind: "ai-result",
+        eyebrow: "Generated draft",
+        title,
+        description: "Review the generated response and source evidence before sending.",
+        fields: [
+          { slotId: "moment-reviewer", label: "Reviewer", value: clampText(reviewer, RESPONSE_CARD_COPY_LIMITS.reviewer) },
+          { slotId: "moment-response", label: "Response", value: clampText(responseText, RESPONSE_CARD_COPY_LIMITS.response) },
+          { slotId: "moment-source-1", label: "Source", value: sourceValue(sources[0] ?? "Knowledge base article", 0) },
+          { slotId: "moment-source-2", label: "Source", value: sourceValue(sources[1] ?? "Customer context", 1) },
+        ],
+        actions: [
+          { label: clampText(secondaryCta, RESPONSE_CARD_COPY_LIMITS.action), tone: "secondary" },
+          { label: clampText(primaryCta, RESPONSE_CARD_COPY_LIMITS.action), tone: "primary" },
+        ],
+      },
+    },
+    modifiers: {
+      aiCallout: {
+        targetSlotId: "moment-response",
+        label: "Ready to review",
+        description: "The card keeps only the generated response and source proof visible.",
+      },
+    },
+  });
+}
+
+function approvalMomentSpec(description: string): SceneSpec {
+  const trail = buildActionTrail(description);
+  const mentionsBooking = /booking|flight|rebook|예약|항공/i.test(description);
+  const mentionsBilling = /billing|refund|payment|charge|dispute|환불|결제/i.test(description);
+  const info = {
+    type: mentionsBooking
+      ? "Flight cancellation — multi-step"
+      : mentionsBilling
+        ? "Billing dispute — review"
+        : "Customer request — multi-step",
+    name: mentionsBooking || mentionsBilling ? "Refund Approval Request" : "Resolution Review Request",
+    status: "RESOLUTION",
+    time: mentionsBooking ? "12 minutes" : "8 minutes",
+  };
+  const activityRows = mentionsBooking
+    ? [
+        { tag: "Steward triggered", text: "Flight cancellation workflow initiated" },
+        { tag: "API call", text: "Booking system — reservation pulled, policy check..." },
+        { tag: "Voice call", text: "United Airlines rebooking desk — call duration 3:42" },
+        { tag: "Email sent", text: "Marriott Denver — extension confirmed for Jun 5" },
+      ]
+    : [
+        { tag: "Steward triggered", text: "Customer resolution workflow initiated" },
+        { tag: "Policy check", text: trail.steps[0]?.label ?? "Customer context and policy evidence reviewed" },
+        { tag: "AI prepared", text: trail.steps[1]?.label ?? "Next action prepared for review" },
+        { tag: "Agent review", text: "Final decision queued for a teammate" },
+      ];
+  return parseSceneSpec({
+    archetype: "modal",
+    theme: "light",
+    content: {
+      productName: "delight.ai Actions",
+      title: trail.gate?.title ?? "Approve proposed action?",
+      subtitle: "A compact approval moment with visible AI steps and a human gate.",
+      background: {
+        type: "inbox",
+        title: "Case context",
+        items: [
+          "Customer request",
+          "Tool lookup",
+          "Policy check",
+          "Drafted action",
+        ],
+      },
+      modal: {
+        slotId: "moment-approval",
+        kind: "confirmation",
+        eyebrow: "Steward details",
+        title: "Steward details",
+        description: "A cropped operational detail panel with information and activity history.",
+        fields: [
+          { slotId: "moment-show-information", label: "Show information", value: "true" },
+          { slotId: "moment-detail-type", label: "Detail type", value: clampText(info.type, DETAILS_PANEL_COPY_LIMITS.detailType) },
+          { slotId: "moment-detail-name", label: "Detail name", value: clampText(info.name, DETAILS_PANEL_COPY_LIMITS.detailName) },
+          { slotId: "moment-detail-status", label: "Detail status", value: clampText(info.status, DETAILS_PANEL_COPY_LIMITS.detailStatus) },
+          { slotId: "moment-detail-time", label: "Detail time", value: clampText(info.time, DETAILS_PANEL_COPY_LIMITS.detailTime) },
+          ...activityRows.slice(0, 3).flatMap((row, index) => [
+            { slotId: `moment-activity-${index + 1}-tag`, label: `Activity ${index + 1} tag`, value: clampText(row.tag, DETAILS_PANEL_COPY_LIMITS.activityTag) },
+            { slotId: `moment-activity-${index + 1}-text`, label: `Activity ${index + 1} text`, value: clampText(row.text, DETAILS_PANEL_COPY_LIMITS.activityText) },
+          ]),
+        ],
+        actions: [
+          { label: trail.gate?.primaryAction ?? "Approve", tone: "primary" },
+          { label: trail.gate?.secondaryAction ?? "Modify", tone: "secondary" },
+        ],
+      },
+      actionTrails: [trail],
+    },
+    modifiers: {
+      aiCallout: {
+        targetSlotId: trail.slotId,
+        label: "Human gate",
+        description: "Visible steps make the approval decision clear without showing a full dashboard.",
+      },
+    },
+  });
+}
+
 export function mapDescriptionToArchetype(text: string): ArchetypeChoice {
   const description = text.trim();
+  if (prefersConversationSearch(description)) {
+    return { kind: "resolved", archetype: "table", confidence: 0.9 };
+  }
+
   if (prefersDashboardKitFlow(description)) {
     return { kind: "resolved", archetype: "dashboard", confidence: 0.82 };
   }
@@ -1233,16 +1675,110 @@ export function mapDescriptionToArchetype(text: string): ArchetypeChoice {
   };
 }
 
+const PRODUCT_VISUAL_RECIPE_COPY: Record<ProductVisualRecipeId, Omit<ProductVisualRecipe, "confidence">> = {
+  "response-card": {
+    id: "response-card",
+    label: "Card",
+    description: "A single polished product card.",
+    reason: "Use for an AI answer, search result, or evidence-backed summary.",
+    archetype: "modal",
+  },
+  "approval-modal": {
+    id: "approval-modal",
+    label: "Details panel",
+    description: "A cropped dashboard detail view.",
+    reason: "Use for task history, approvals, gates, or operational details.",
+    archetype: "modal",
+  },
+};
+
+function recipeConfidence(score: number): number {
+  return Math.min(0.95, Math.max(0.42, Number((score / 100).toFixed(2))));
+}
+
+export function recommendProductVisualRecipes(text: string): ProductVisualRecipe[] {
+  const description = text.trim();
+  if (!description) {
+    return (["response-card", "approval-modal"] as ProductVisualRecipeId[]).map((id, index) => ({
+      ...PRODUCT_VISUAL_RECIPE_COPY[id],
+      confidence: recipeConfidence(index === 0 ? 54 : 22),
+    }));
+  }
+
+  const scores: Record<ProductVisualRecipeId, number> = {
+    "response-card": 54,
+    "approval-modal": 22,
+  };
+
+  if (prefersConversationSearch(description)) {
+    scores["response-card"] += 38;
+  }
+
+  if (prefersResponseCard(description)) {
+    scores["response-card"] += 58;
+  }
+
+  if (prefersApprovalMoment(description) || prefersDashboardKitFlow(description) || matchesAny(description, REVIEW_PATTERNS)) {
+    scores["approval-modal"] += 68;
+    scores["response-card"] -= 8;
+  }
+
+  if (
+    matchesAny(description, INSTRUCTION_PATTERNS) ||
+    matchesAny(description, TOOL_CALL_PATTERNS) ||
+    matchesAny(description, KNOWLEDGE_COVERAGE_PATTERNS) ||
+    /\b(reply|response|draft|source|knowledge|review)\b/i.test(description)
+  ) {
+    scores["response-card"] += 18;
+  }
+
+  if (matchesAny(description, EXPLICIT_BUILDER_PATTERNS)) {
+    scores["approval-modal"] += 58;
+  }
+
+  return (Object.keys(scores) as ProductVisualRecipeId[])
+    .map((id) => ({
+      ...PRODUCT_VISUAL_RECIPE_COPY[id],
+      confidence: recipeConfidence(scores[id]),
+    }))
+    .sort((a, b) => b.confidence - a.confidence);
+}
+
 export const ruleBasedSpecProvider: SpecProvider = {
   analyze(input) {
     return mapDescriptionToArchetype(input.description);
   },
 
   async generate(input) {
+    if (input.recipeId === "response-card") {
+      return {
+        spec: aiResponseCardSpec(input.description),
+        source: "sample",
+        provider: "rules",
+        notice: "Rendered a compact response card.",
+      };
+    }
+    if (input.recipeId === "approval-modal") {
+      return {
+        spec: approvalMomentSpec(input.description),
+        source: "sample",
+        provider: "rules",
+        notice: "Rendered a compact details panel.",
+      };
+    }
+
     const choice = input.forcedArchetype
       ? { kind: "resolved" as const, archetype: input.forcedArchetype, confidence: 1 }
       : mapDescriptionToArchetype(input.description);
     const archetype = choice.kind === "resolved" ? choice.archetype : "inbox";
+    if (archetype === "table" && prefersConversationSearch(input.description)) {
+      return {
+        spec: conversationSearchSpec(input.description),
+        source: "sample",
+        provider: "rules",
+        notice: "Rendered a search results recipe.",
+      };
+    }
     return {
       spec: nextSample(archetype, input.description, input.uiTextLanguage),
       source: "sample",

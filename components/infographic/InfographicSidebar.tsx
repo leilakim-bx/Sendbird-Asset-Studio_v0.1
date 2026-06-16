@@ -1231,7 +1231,6 @@ function SelectedImageEditor({
   onChange: (next: InfographicContent) => void;
 }) {
   const block = content.blocks[0];
-  const setTitle = (title: string) => onChange({ ...content, title });
   const setBlock = (next: InfographicBlock) => {
     const shouldSeedHubFootnote =
       next.type === "orbit" && next.variant === "hub-spoke" && !(content.footnote ?? "").trim();
@@ -1246,7 +1245,7 @@ function SelectedImageEditor({
     if (!block || libraryIdForBlock(block) === libraryId) return;
     onChange({
       ...content,
-      showTitle: type === "stat" ? false : content.showTitle,
+      showTitle: type === "stat" || type === "process-loop" ? false : content.showTitle,
       blocks: [convertBlock(block, libraryId, content.format, content.title)],
     });
   };
@@ -1257,10 +1256,6 @@ function SelectedImageEditor({
 
   return (
     <>
-      <SimpleField label="Title">
-        <input className={inputCls} value={content.title ?? ""} onChange={(event) => setTitle(event.target.value)} />
-      </SimpleField>
-
       <SimpleField label="Block">
         <BlockTypeSelector value={libraryIdForBlock(block)} onChange={setType} />
       </SimpleField>
@@ -1648,9 +1643,15 @@ export function InfographicSidebar({
   }
 
   const block = content.blocks[0];
-  // Stat is a centered, standalone big number — the title & footnote section is
-  // disabled for it (and forced off above whenever stat becomes the content).
-  const titleLocked = block?.type === "stat";
+  // Some blocks carry their own internal heading/caption, so the content-level
+  // title & footnote controls are disabled for them.
+  const titleLockReason =
+    block?.type === "stat"
+      ? "Not available for a centered Big number block."
+      : block?.type === "process-loop"
+        ? "Not available for a Process loop block."
+        : null;
+  const titleLocked = !!titleLockReason;
 
   function handleResizeStart(e: React.MouseEvent) {
     e.preventDefault();
@@ -1860,7 +1861,7 @@ export function InfographicSidebar({
                   <div>
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title & footnote</div>
                     <p className="text-[11px] text-studio-muted leading-relaxed">
-                      Not available for a centered Big number block.
+                      {titleLockReason}
                     </p>
                   </div>
                 );

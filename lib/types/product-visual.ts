@@ -188,20 +188,20 @@ export const isImageBgFormat = (f: ProductVisualFormat): boolean =>
 /** Seed background image for image-bg formats (mirrors the Chat default). */
 export const PRODUCT_VISUAL_DEFAULT_BG_IMAGE = "/background/bg-200.png";
 
-/** Example dashboard shown when a marketer first opens Product Visual. */
+/** Example card shown when a marketer first opens Product Visual. */
 export const PRODUCT_VISUAL_EXAMPLE_SCREENSHOT: ProductVisualScreenshot = {
-  url: "/preview/dashboard.png?v=20260611-2306",
+  url: "/preview/product_visual.png",
   displayMode: "crop",
-  naturalWidth: 1440,
-  naturalHeight: 1320,
+  naturalWidth: 1000,
+  naturalHeight: 920,
 };
 
 // Fonts — same brand stacks the rest of the studio uses (mirrors infographic;
 // declared locally to keep Product Visual decoupled from infographic types).
 /** Serif display stack (brand "Serrif") — titles. */
 export const PRODUCT_VISUAL_SERIF = brand.font.serif;
-/** Sans body stack (Helvetica Now Text) — subtitle + UI. */
-export const PRODUCT_VISUAL_SANS = brand.font.sans;
+/** Product UI stack — SF Pro on Apple platforms, Helvetica fallback elsewhere. */
+export const PRODUCT_VISUAL_SANS = brand.font.productUi;
 
 /** Ink colors for non-dark backgrounds (dark bg flips text to white). */
 export const PRODUCT_VISUAL_INK = brand.color.productVisual.ink;

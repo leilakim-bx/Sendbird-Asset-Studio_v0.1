@@ -16,7 +16,7 @@ export function BarChartCard({ chart }: { chart: BarChart }) {
   return (
     <div style={{ padding: 18 }}>
       <div>
-        <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+        <EllipsisText style={{ fontSize: 20, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {chart.title}
         </EllipsisText>
         <EllipsisText style={{ marginTop: 4, fontSize: 13, color: t.color.muted }}>
@@ -36,7 +36,7 @@ export function BarChartCard({ chart }: { chart: BarChart }) {
           return (
             <g key={`${index}-${bar.label}`}>
               <rect x={x} y={y} width={barW} height={h} rx={9} fill={index === 0 ? t.color.ink : t.color.surfaceStrong} />
-              <text x={x + barW / 2} y={height - 5} textAnchor="middle" fontSize={12} fontWeight={700} fill={t.color.faint}>
+              <text x={x + barW / 2} y={height - 5} textAnchor="middle" fontSize={12} fontWeight={t.font.weight.semibold} fill={t.color.faint}>
                 {bar.label}
               </text>
             </g>

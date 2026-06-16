@@ -42,7 +42,15 @@ const appColor = {
   studioCheckbox: "#5A5A5A",
   studioCheckboxHover: "#6B6B6B",
   studioCropSelector: "#CBFF4D",
+  studioCodexCtaBorder:
+    "linear-gradient(135deg, #55E06F 0%, #EED7A5 100%)",
   studioPreviewSurface: "#F7F5F0",
+  studioPreviewPaper: "#FFFFFF",
+  studioPreviewInk: "#292016",
+  studioPreviewMuted: "#8C867E",
+  studioPreviewLine: "#E4E1DB",
+  studioPreviewSubtle: "#EEEAE4",
+  studioPreviewShadow: "0 10px 26px rgba(28,25,23,0.12)",
   error: "#EF4444",
   placeholder: "#555555",
   overlayModal: "rgba(0,0,0,0.7)",
@@ -164,7 +172,14 @@ const cssVarNames = {
   studioCheckbox: "--studio-checkbox",
   studioCheckboxHover: "--studio-checkbox-hover",
   studioCropSelector: "--studio-crop-selector",
+  studioCodexCtaBorder: "--studio-codex-cta-border",
   studioPreviewSurface: "--studio-preview-surface",
+  studioPreviewPaper: "--studio-preview-paper",
+  studioPreviewInk: "--studio-preview-ink",
+  studioPreviewMuted: "--studio-preview-muted",
+  studioPreviewLine: "--studio-preview-line",
+  studioPreviewSubtle: "--studio-preview-subtle",
+  studioPreviewShadow: "--studio-preview-shadow",
   error: "--app-error",
   placeholder: "--app-placeholder",
   overlayModal: "--app-overlay-modal",
@@ -191,6 +206,7 @@ ${declarations(app.color)}
   --font-app-mono: ${app.font.mono};
   --font-app-heading: ${app.font.heading};
   --app-checkbox-radius: ${app.radius.controlSm};
+  --app-sidebar-action-radius: ${app.radius.controlLg};
   --app-checkbox-size: ${app.spacing.checkboxSize};
   --app-checkbox-icon-size: ${app.spacing.checkboxIconSize};
   --app-checkbox-check-icon: ${app.checkboxCheckIcon};

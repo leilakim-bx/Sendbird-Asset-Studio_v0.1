@@ -27,7 +27,8 @@ describe("editor sidebars", () => {
     );
 
     expect(html).toContain("Format");
-    expect(html).toContain("Concept UI");
+    expect(html).toContain("Create from brief");
+    expect(html).toContain("Show Product Visual blocks");
   });
 
   it("renders Infographic controls from fallback content before store hydration", () => {

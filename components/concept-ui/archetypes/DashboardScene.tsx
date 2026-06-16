@@ -52,7 +52,7 @@ export function DashboardScene({ spec }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <DelightMark size={38} />
           <div>
-            <EllipsisText style={{ fontSize: 26, fontWeight: 800, color: t.color.text }}>{content.title}</EllipsisText>
+            <EllipsisText style={{ fontSize: 26, fontWeight: t.font.weight.semibold, color: t.color.text }}>{content.title}</EllipsisText>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -68,7 +68,7 @@ export function DashboardScene({ spec }: Props) {
               alignItems: "center",
               color: t.color.text,
               fontSize: 14,
-              fontWeight: 800,
+              fontWeight: t.font.weight.semibold,
             }}
           >
             Export
@@ -152,9 +152,9 @@ export function DashboardScene({ spec }: Props) {
                 minHeight: 88,
               }}
             >
-              <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.muted }}>{kpi.label}</EllipsisText>
+              <EllipsisText style={{ fontSize: 13, fontWeight: t.font.weight.semibold, color: t.color.muted }}>{kpi.label}</EllipsisText>
               <div style={{ display: "flex", alignItems: "end", gap: 10, marginTop: 12 }}>
-                <EllipsisText style={{ fontSize: 31, fontWeight: 800, color: t.color.text }}>{kpi.value}</EllipsisText>
+                <EllipsisText style={{ fontSize: 31, fontWeight: t.font.weight.semibold, color: t.color.text }}>{kpi.value}</EllipsisText>
                 {kpi.delta ? (
                   <Pill tone={kpiTone(kpi.tone)} style={{ marginBottom: 4, minHeight: 24, fontSize: 12 }}>
                     {kpi.delta}
@@ -220,7 +220,7 @@ export function DashboardScene({ spec }: Props) {
             }}
           >
             <div style={{ padding: "14px 22px 6px" }}>
-              <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 20, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {content.table.title}
               </EllipsisText>
             </div>
@@ -241,12 +241,12 @@ export function DashboardScene({ spec }: Props) {
                     borderTop: index === 0 ? undefined : `1px solid ${t.color.border}`,
                   }}
                 >
-                  <EllipsisText style={{ fontSize: 14, fontWeight: 800, color: t.color.text }}>{row.name}</EllipsisText>
+                  <EllipsisText style={{ fontSize: 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>{row.name}</EllipsisText>
                   <EllipsisText style={{ fontSize: 13, color: t.color.muted }}>{row.volume}</EllipsisText>
                   <Pill tone={row.status.toLowerCase().includes("review") || row.status.includes("검토") ? "warn" : "good"} style={{ justifySelf: "start", minHeight: 24, fontSize: 11 }}>
                     {row.status}
                   </Pill>
-                  <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.text }}>{row.trend}</EllipsisText>
+                  <EllipsisText style={{ fontSize: 13, fontWeight: t.font.weight.semibold, color: t.color.text }}>{row.trend}</EllipsisText>
                 </Slot>
               ))}
             </div>

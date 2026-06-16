@@ -37,16 +37,19 @@ export function InfographicCanvas({ content, className, exportMode }: Props) {
   // Product format always uses the fixed warm background token,
   // regardless of the stored bg (which only applies to the blog format).
   const effectiveBg = isProduct ? "warmgray" : bg;
-  // Stat is a centered standalone number — it never carries a title/footnote.
+  // Stat and process-loop blocks carry their own internal heading/caption, so
+  // the content-level title/footnote chrome stays off for both formats.
   const primaryBlock = blocks[0];
   const isStat = primaryBlock?.type === "stat";
+  const isProcessLoop = primaryBlock?.type === "process-loop";
+  const suppressContentChrome = isStat || isProcessLoop;
   const isHubOrbit = primaryBlock?.type === "orbit" && primaryBlock.variant === "hub-spoke";
   const renderedFootnote = footnote?.trim() || (isHubOrbit ? HUB_ORBIT_DEFAULT_FOOTNOTE : "");
   // Product format keeps title hidden, but may carry a compact footnote.
   // Blog format can show both title and footnote when the section is enabled.
-  const showBlogHeader = !isProduct && content.showTitle !== false && !isStat;
+  const showBlogHeader = !isProduct && content.showTitle !== false && !suppressContentChrome;
   const showTitle = showBlogHeader && !!title;
-  const showFootnote = !!renderedFootnote && !isStat && (isProduct || showBlogHeader);
+  const showFootnote = !!renderedFootnote && !suppressContentChrome && (isProduct || showBlogHeader);
   const blockCount = Math.max(blocks.length, 1);
   const productAvailableBlockHeight = isProduct
     ? Math.max(

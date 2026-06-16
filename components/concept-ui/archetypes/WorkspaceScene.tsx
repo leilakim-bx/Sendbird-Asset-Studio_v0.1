@@ -26,7 +26,7 @@ function ToolButton({ children, wide = false }: { children: ReactNode; wide?: bo
         justifyContent: "center",
         color: t.color.muted,
         fontSize: t.control.toolbarButton.fontSize,
-        fontWeight: 800,
+        fontWeight: t.font.weight.semibold,
         boxSizing: "border-box",
       }}
     >
@@ -80,7 +80,7 @@ function PhonePreviewMockup({ cards }: { cards: string[] }) {
                 boxSizing: "border-box",
               }}
             >
-              <EllipsisText lines={2} style={{ fontSize: 12, lineHeight: 1.3, fontWeight: 760, color: t.color.text }}>
+              <EllipsisText lines={2} style={{ fontSize: 12, lineHeight: 1.3, fontWeight: t.font.weight.medium, color: t.color.text }}>
                 {card}
               </EllipsisText>
             </div>
@@ -99,7 +99,7 @@ function PhonePreviewMockup({ cards }: { cards: string[] }) {
           padding: "0 11px",
           color: t.color.faint,
           fontSize: 12,
-          fontWeight: 760,
+          fontWeight: t.font.weight.medium,
         }}
       >
         Push sent
@@ -141,7 +141,7 @@ export function WorkspaceScene({ spec }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 17, minWidth: 0 }}>
           <DelightMark size={44} />
           <div style={{ minWidth: 0 }}>
-            <EllipsisText style={{ fontSize: 29, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 29, fontWeight: t.font.weight.semibold, color: t.color.text }}>
               {content.title}
             </EllipsisText>
             {showSubtitle ? (
@@ -164,7 +164,7 @@ export function WorkspaceScene({ spec }: Props) {
         }}
       >
         <ArrowLeft size={24} color={t.color.muted} />
-        <EllipsisText style={{ fontSize: 24, fontWeight: 800, color: t.color.text }}>
+        <EllipsisText style={{ fontSize: 24, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {content.editor.title}
         </EllipsisText>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
@@ -183,7 +183,7 @@ export function WorkspaceScene({ spec }: Props) {
               minHeight: t.control.actionButton.minHeight,
               padding: `0 ${t.control.actionButton.paddingX}px`,
               fontSize: 18,
-              fontWeight: 800,
+              fontWeight: t.font.weight.semibold,
             }}
           >
             Save
@@ -224,7 +224,7 @@ export function WorkspaceScene({ spec }: Props) {
           </div>
 
           <div style={{ marginTop: 26 }}>
-            <EllipsisText style={{ fontSize: 17, fontWeight: 850, letterSpacing: "0.12em", color: t.color.faint }}>
+            <EllipsisText style={{ fontSize: 17, fontWeight: t.font.weight.semibold, letterSpacing: "0.12em", color: t.color.faint }}>
               {content.editor.eyebrow}
             </EllipsisText>
             <div
@@ -242,7 +242,7 @@ export function WorkspaceScene({ spec }: Props) {
             </div>
 
             <div style={{ marginTop: 22, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <EllipsisText style={{ fontSize: 24, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 24, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 Key points
               </EllipsisText>
               {content.editor.tags.map((tag, index) => (
@@ -277,7 +277,7 @@ export function WorkspaceScene({ spec }: Props) {
           }}
         >
           <div style={{ width: "100%", maxWidth: 340 }}>
-            <EllipsisText style={{ textAlign: "center", fontSize: 23, fontWeight: 800, color: t.color.faint }}>
+            <EllipsisText style={{ textAlign: "center", fontSize: 23, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
               {content.preview.emptyLabel}
             </EllipsisText>
             {hasBlocks ? (
@@ -303,7 +303,7 @@ export function WorkspaceScene({ spec }: Props) {
                       padding: 16,
                       color: t.color.muted,
                       fontSize: 15,
-                      fontWeight: 700,
+                      fontWeight: t.font.weight.semibold,
                     }}
                   >
                     <EllipsisText>{card}</EllipsisText>
@@ -322,7 +322,7 @@ export function WorkspaceScene({ spec }: Props) {
           style={{ minWidth: 0, padding: "26px 28px", overflow: "hidden" }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
-            <EllipsisText style={{ fontSize: 20, fontWeight: 850, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 20, fontWeight: t.font.weight.semibold, color: t.color.text }}>
               Tester
             </EllipsisText>
             <Pill tone="neutral" style={{ minHeight: t.control.pill.menuMinHeight, fontSize: t.control.pill.fontSize }}>
@@ -334,7 +334,7 @@ export function WorkspaceScene({ spec }: Props) {
             <span aria-hidden style={{ width: 36, height: 36, borderRadius: 999, background: t.color.ink, display: "inline-flex", alignItems: "center", justifyContent: "center", color: t.color.ai, fontWeight: 900 }}>
               <Check size={18} />
             </span>
-            <EllipsisText style={{ fontSize: 18, fontWeight: 850, color: t.color.muted }}>
+            <EllipsisText style={{ fontSize: 18, fontWeight: t.font.weight.semibold, color: t.color.muted }}>
               {content.tester.agentName}
             </EllipsisText>
           </div>
@@ -372,7 +372,7 @@ export function WorkspaceScene({ spec }: Props) {
                   padding: "0 14px",
                   color: t.color.muted,
                   fontSize: 14,
-                  fontWeight: 800,
+                  fontWeight: t.font.weight.semibold,
                 }}
               >
                 <EllipsisText>{reply}</EllipsisText>

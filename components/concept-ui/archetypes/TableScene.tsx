@@ -45,7 +45,7 @@ function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][num
       cell.tone === "good" ? t.color.goodText : cell.tone === "warn" ? t.color.warnText : t.color.muted;
     return (
       <div style={{ minWidth: 0 }}>
-        <EllipsisText style={{ fontSize: 17, fontWeight: 700, color: t.color.text }}>
+        <EllipsisText style={{ fontSize: 17, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {cell.value}
         </EllipsisText>
         {cell.delta ? (
@@ -61,10 +61,145 @@ function renderCell(cell: TableSceneSpec["content"]["rows"][number]["cells"][num
     return <EllipsisText style={{ fontSize: 14, fontWeight: 600, color: t.color.muted }}>{cell.value}</EllipsisText>;
   }
 
-  return <EllipsisText style={{ fontSize: 16, fontWeight: 700, color: t.color.text }}>{cell.value}</EllipsisText>;
+  return <EllipsisText style={{ fontSize: 16, fontWeight: t.font.weight.semibold, color: t.color.text }}>{cell.value}</EllipsisText>;
+}
+
+function isConversationSearchSpec(spec: TableSceneSpec): boolean {
+  return /conversation search|delight\.ai search/i.test(`${spec.content.productName} ${spec.content.title}`);
+}
+
+function cellText(cell: TableSceneSpec["content"]["rows"][number]["cells"][number] | undefined): string {
+  if (!cell) return "";
+  if (cell.kind === "person") return cell.name;
+  if (cell.kind === "number") return cell.value;
+  return cell.value;
+}
+
+function cellDetail(cell: TableSceneSpec["content"]["rows"][number]["cells"][number] | undefined): string {
+  if (!cell) return "";
+  if (cell.kind === "person") return cell.detail ?? "";
+  if (cell.kind === "number") return cell.delta ?? "";
+  return "";
+}
+
+function CompactSearchCard({ spec }: Props) {
+  const { content } = spec;
+  const rows = content.rows.slice(0, 3);
+  const filters = content.toolbar.filters.slice(0, 3);
+  const cursor = spec.modifiers.cursor;
+  const highlightedSlotId = spec.modifiers.highlightedSlotId;
+
+  return (
+    <Card
+      primaryPanel
+      style={{
+        width: 900,
+        borderRadius: 34,
+        overflow: "hidden",
+        boxShadow: t.shadow.float,
+      }}
+    >
+      <div style={{ padding: "34px 38px 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <DelightMark size={38} />
+          <div style={{ minWidth: 0 }}>
+            <EllipsisText style={{ fontSize: 31, fontWeight: t.font.weight.semibold, color: t.color.text }}>
+              {content.title}
+            </EllipsisText>
+            <EllipsisText style={{ marginTop: 5, fontSize: 14, color: t.color.muted }}>
+              {content.productName}
+            </EllipsisText>
+          </div>
+          <Pill tone="ai" style={{ marginLeft: "auto", minHeight: 30, fontSize: 12 }}>
+            Matched
+          </Pill>
+        </div>
+
+        <div
+          style={{
+            marginTop: 28,
+            minHeight: 60,
+            borderRadius: 18,
+            border: `1px solid ${t.color.borderStrong}`,
+            background: t.color.app,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: "0 18px",
+            color: t.color.text,
+            fontSize: 18,
+            fontWeight: t.font.weight.medium,
+          }}
+        >
+          <Search size={21} color={t.color.muted} />
+          <EllipsisText>{content.toolbar.searchPlaceholder}</EllipsisText>
+        </div>
+
+        <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {filters.map((filter, index) => (
+            <Pill key={`${index}-${filter}`} tone={index === 0 ? "ai" : "neutral"} style={{ minHeight: 31, fontSize: 12 }}>
+              {filter}
+            </Pill>
+          ))}
+        </div>
+
+        <div style={{ marginTop: 24, display: "grid", gap: 10 }}>
+          {rows.map((row, index) => {
+            const highlighted = row.slotId === highlightedSlotId || index === 0;
+            return (
+              <Slot
+                key={row.slotId}
+                id={row.slotId}
+                cursor={cursor}
+                highlighted={highlighted}
+                popover="right"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "minmax(0, 1fr) auto",
+                  gap: 16,
+                  alignItems: "center",
+                  borderRadius: 18,
+                  border: `1px solid ${highlighted ? t.color.borderStrong : t.color.border}`,
+                  background: highlighted ? t.color.aiSoft : t.color.surface,
+                  padding: "15px 16px",
+                  minWidth: 0,
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <EllipsisText style={{ fontSize: 17, fontWeight: t.font.weight.semibold, color: t.color.text }}>
+                    {cellText(row.cells[0])}
+                  </EllipsisText>
+                  <EllipsisText style={{ marginTop: 5, fontSize: 13, color: t.color.muted }}>
+                    {[cellText(row.cells[1]), cellDetail(row.cells[1])].filter(Boolean).join(" · ")}
+                  </EllipsisText>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  {row.cells[2]?.kind === "badge" ? (
+                    <Pill tone={row.cells[2].tone} style={{ minHeight: 27, fontSize: 11 }}>
+                      {row.cells[2].value}
+                    </Pill>
+                  ) : null}
+                  <EllipsisText style={{ maxWidth: 170, fontSize: 13, fontWeight: t.font.weight.medium, color: t.color.muted }}>
+                    {cellText(row.cells[3])}
+                  </EllipsisText>
+                </div>
+              </Slot>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 9, color: t.color.muted, fontSize: 14 }}>
+          <SlidersHorizontal size={16} />
+          <EllipsisText>{content.subtitle}</EllipsisText>
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export function TableScene({ spec }: Props) {
+  if (isConversationSearchSpec(spec)) return <CompactSearchCard spec={spec} />;
+
   const { content } = spec;
   const callout = spec.modifiers.aiCallout;
   const cursor = spec.modifiers.cursor;
@@ -103,7 +238,7 @@ export function TableScene({ spec }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <DelightMark size={46} />
           <div>
-            <EllipsisText style={{ fontSize: 29, fontWeight: 700, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 29, fontWeight: t.font.weight.semibold, color: t.color.text }}>
               {content.title}
             </EllipsisText>
           </div>

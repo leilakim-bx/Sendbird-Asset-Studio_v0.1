@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, CheckCircle2, Sparkles } from "lucide-react";
+import { Bot, CheckCircle2, FileText, Sparkles, X } from "lucide-react";
 import type { ModalSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
 import { hasReusableBlocks, ReusableBlockStack } from "../blocks/ReusableBlockCards";
@@ -23,8 +23,414 @@ function productCallout(callout: ModalSceneSpec["modifiers"]["aiCallout"]) {
   };
 }
 
+function fieldValue(content: ModalSceneSpec["content"], label: string): string {
+  return content.modal.fields.find((field) => field.label.toLowerCase() === label.toLowerCase())?.value ?? "";
+}
+
+function fieldSlotValue(content: ModalSceneSpec["content"], slotId: string): string {
+  return content.modal.fields.find((field) => field.slotId === slotId)?.value ?? "";
+}
+
+function sourceParts(value: string): { label: string; match: string } {
+  const [label, match] = value.split("|").map((part) => part.trim());
+  return { label: label || value, match: match || "" };
+}
+
+function isResponseMoment(content: ModalSceneSpec["content"]): boolean {
+  return content.modal.slotId === "moment-ai-response";
+}
+
+function isApprovalMoment(content: ModalSceneSpec["content"]): boolean {
+  return content.modal.slotId === "moment-approval";
+}
+
+function MomentResponseCard({ spec }: Props) {
+  const { content } = spec;
+  const reviewer = fieldValue(content, "Reviewer") || "Reviewer";
+  const response = fieldValue(content, "Response") || content.modal.description;
+  const sources = content.modal.fields.filter((field) => field.label.toLowerCase() === "source").map((field) => sourceParts(field.value));
+  const cardType = t.momentResponse;
+  const study = cardType.study;
+
+  return (
+    <Card
+      primaryPanel
+      style={{
+        width: study.frame.width,
+        minHeight: study.frame.height,
+        boxSizing: "border-box",
+        border: 0,
+        borderRadius: study.card.radius,
+        overflow: "hidden",
+        boxShadow: t.shadow.none,
+      }}
+    >
+      <div
+        style={{
+          padding: `${study.card.paddingTop}px ${study.card.paddingX}px ${study.card.paddingBottom}px`,
+        }}
+      >
+        <EllipsisText style={{ ...cardType.title, color: t.color.text }}>
+          {content.modal.title}
+        </EllipsisText>
+
+        <div
+          style={{
+            marginTop: study.meta.top,
+            display: "flex",
+            alignItems: "center",
+            gap: study.meta.gap,
+            color: t.color.text,
+          }}
+        >
+          <EllipsisText style={cardType.metaLabel}>Reviewer</EllipsisText>
+          <div
+            aria-hidden
+            style={{
+              width: study.meta.avatar,
+              height: study.meta.avatar,
+              borderRadius: t.radius.full,
+              background: t.color.surfaceStrong,
+              boxShadow: `0 0 0 1px ${t.color.border}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flex: "0 0 auto",
+              overflow: "hidden",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/preview/Avatar/Woman-08.png"
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "block",
+                objectFit: "cover",
+              }}
+            />
+          </div>
+          <EllipsisText style={{ ...cardType.metaValue, color: t.color.text }}>
+            {reviewer}
+          </EllipsisText>
+        </div>
+
+        <Slot
+          id="moment-response"
+          highlighted={spec.modifiers.highlightedSlotId === "moment-response"}
+          style={{
+            marginTop: study.responseBox.top,
+            minHeight: study.responseBox.minHeight,
+            borderRadius: study.responseBox.radius,
+            border: `${study.responseBox.borderWidth}px solid ${t.color.border}`,
+            background: t.color.app,
+            boxSizing: "border-box",
+            padding: `${study.responseBox.paddingY}px ${study.responseBox.paddingX}px`,
+          }}
+        >
+          <EllipsisText lines={3} style={{ ...cardType.response, color: t.color.text }}>
+            {response}
+          </EllipsisText>
+        </Slot>
+
+        <div
+          style={{
+            marginTop: study.evidence.top,
+            borderRadius: study.evidence.radius,
+            background: t.color.evidenceSurface,
+            padding: `${study.evidence.paddingTop}px ${study.evidence.paddingX}px ${study.evidence.paddingBottom}px`,
+          }}
+        >
+          <EllipsisText style={{ ...cardType.evidenceHeading, color: t.color.text }}>
+            Knowledge sources used
+          </EllipsisText>
+          <div style={{ marginTop: study.evidence.rowsTop, display: "grid", gap: study.evidence.rowGap }}>
+            {sources.slice(0, 2).map((source, index) => (
+              <div key={`${index}-${source.label}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 24, alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+                  <FileText size={study.evidence.iconSize} color={t.color.text} strokeWidth={1.9} />
+                  <EllipsisText style={{ ...cardType.evidenceLabel, color: t.color.text, textDecoration: "underline" }}>
+                    {source.label}
+                  </EllipsisText>
+                </div>
+                {source.match ? (
+                  <EllipsisText style={{ ...cardType.evidenceMatch, color: t.color.success }}>
+                    {source.match}
+                  </EllipsisText>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: study.actions.top, display: "flex", justifyContent: "flex-end", gap: study.actions.gap }}>
+          {content.modal.actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              style={{
+                border: action.tone === "primary" ? 0 : `2px solid ${t.color.borderStrong}`,
+                borderRadius: study.actions.radius,
+                background: action.tone === "primary" ? t.color.ink : t.color.app,
+                color: action.tone === "primary" ? t.color.inverse : t.color.text,
+                minHeight: study.actions.height,
+                padding: `0 ${study.actions.paddingX}px`,
+                fontSize: cardType.button.fontSize,
+                fontWeight: action.tone === "primary" ? cardType.button.primaryWeight : cardType.button.secondaryWeight,
+                lineHeight: cardType.button.lineHeight,
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function MomentApprovalCard({ spec }: Props) {
+  const { content } = spec;
+  const actionTrail = content.actionTrails?.[0];
+  const approvalType = t.momentApproval;
+  const details = approvalType.details;
+  const signal = [
+    content.title,
+    content.modal.title,
+    content.modal.description,
+    actionTrail?.steps.map((step) => step.label).join(" "),
+    actionTrail?.gate?.title,
+  ].filter(Boolean).join(" ");
+  const isBooking = /booking|flight|rebook|reservation|itinerary|항공|예약/i.test(signal);
+  const isBilling = /billing|refund|payment|charge|dispute|환불|결제/i.test(signal);
+  const panelTitle = /^(action approval|#\d+\s+billing dispute)$/i.test(content.modal.title)
+    ? "Steward details"
+    : content.modal.title;
+  const defaultInfoRows = {
+    type: isBooking ? "Flight cancellation — multi-step" : isBilling ? "Billing dispute — review" : "Customer request — multi-step",
+    name: isBooking || isBilling ? "Refund Approval Request" : "Resolution Review Request",
+    status: "RESOLUTION",
+    time: isBooking ? "12 minutes" : "8 minutes",
+  };
+  const infoRows = [
+    {
+      label: "Type",
+      value: fieldSlotValue(content, "moment-detail-type") || defaultInfoRows.type,
+    },
+    {
+      label: "Name",
+      value: fieldSlotValue(content, "moment-detail-name") || defaultInfoRows.name,
+    },
+    {
+      label: "Status",
+      value: fieldSlotValue(content, "moment-detail-status") || defaultInfoRows.status,
+      badge: true,
+    },
+    {
+      label: "Task handling time",
+      value: fieldSlotValue(content, "moment-detail-time") || defaultInfoRows.time,
+    },
+  ];
+  const defaultActivityRows = isBooking
+    ? [
+        { tag: "Steward triggered", text: "Flight cancellation workflow initiated" },
+        { tag: "API call", text: "Booking system — reservation pulled, policy check..." },
+        { tag: "Voice call", text: "United Airlines rebooking desk — call duration 3:42" },
+        { tag: "Email sent", text: "Marriott Denver — extension confirmed for Jun 5", muted: true },
+      ]
+    : [
+        { tag: "Steward triggered", text: "Customer resolution workflow initiated" },
+        { tag: "Policy check", text: actionTrail?.steps[0]?.label ?? "Customer context and policy evidence reviewed" },
+        { tag: "AI prepared", text: actionTrail?.steps[1]?.label ?? "Next action prepared for review" },
+        { tag: "Agent review", text: "Final decision queued for a teammate", muted: true },
+      ];
+  const activityRows = defaultActivityRows.map((row, index) => {
+    const slotIndex = index + 1;
+    return {
+      ...row,
+      tag: fieldSlotValue(content, `moment-activity-${slotIndex}-tag`) || row.tag,
+      text: fieldSlotValue(content, `moment-activity-${slotIndex}-text`) || row.text,
+    };
+  });
+  const showInformation = fieldSlotValue(content, "moment-show-information") !== "false";
+  const activityMetrics = showInformation
+    ? details.activity
+    : { ...details.activity, ...details.activity.timelineOnly };
+  const timelineMetrics = showInformation
+    ? details.timeline
+    : { ...details.timeline, ...details.timeline.timelineOnly };
+
+  return (
+    <div
+      data-concept-primary-panel="true"
+      data-concept-crop-bounds="true"
+      style={{
+        width: details.frame.width,
+        height: details.frame.height,
+        overflow: "hidden",
+        borderRadius: details.panel.radius,
+        background: t.color.app,
+        boxShadow: t.shadow.none,
+        fontFamily: t.font.sans,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: details.header.gap,
+          padding: `${details.header.paddingTop}px ${details.panel.paddingX}px ${details.header.paddingBottom}px`,
+        }}
+      >
+        <EllipsisText style={{ ...details.header.title, color: t.color.text }}>
+          {panelTitle}
+        </EllipsisText>
+        <X aria-hidden size={details.header.iconSize} color={t.color.text} strokeWidth={details.header.iconStrokeWidth} />
+      </div>
+      <div
+        style={{
+          height: 1,
+          background: t.color.border,
+        }}
+      />
+      <div style={{ padding: `${details.content.paddingTop}px ${details.panel.paddingX}px ${details.panel.paddingBottom}px` }}>
+        {showInformation ? (
+          <section>
+            <EllipsisText style={{ ...details.sectionTitle, color: t.color.text }}>
+              Information
+            </EllipsisText>
+            <div style={{ marginTop: details.info.top, display: "grid", gap: details.info.rowGap }}>
+              {infoRows.map((row) => (
+                <div key={row.label} style={{ display: "grid", gridTemplateColumns: `${details.info.labelWidth}px minmax(0, 1fr)`, gap: details.info.gap, alignItems: "center" }}>
+                  <EllipsisText style={{ ...details.info.label, color: t.color.muted }}>
+                    {row.label}
+                  </EllipsisText>
+                  {row.badge ? (
+                    <span
+                      style={{
+                        justifySelf: "start",
+                        borderRadius: details.badge.radius,
+                        background: t.color.goodSoft,
+                        color: t.color.goodText,
+                        minHeight: details.badge.height,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        padding: `0 ${details.badge.paddingX}px`,
+                        fontSize: details.badge.fontSize,
+                        fontWeight: details.badge.fontWeight,
+                        lineHeight: t.typography.lineHeight.compact,
+                        letterSpacing: details.badge.letterSpacing,
+                      }}
+                    >
+                      {row.value}
+                    </span>
+                  ) : (
+                    <EllipsisText style={{ ...details.info.value, color: t.color.text }}>
+                      {row.value}
+                    </EllipsisText>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <section style={{ marginTop: activityMetrics.sectionTop }}>
+          {showInformation ? (
+            <EllipsisText style={{ ...details.sectionTitle, color: t.color.text }}>
+              Activity
+            </EllipsisText>
+          ) : null}
+          <Slot
+            id={actionTrail?.slotId ?? "moment-action-trail"}
+            style={{
+              marginTop: showInformation ? activityMetrics.top : 0,
+              display: "grid",
+              gap: activityMetrics.rowGap,
+            }}
+          >
+            {activityRows.map((row, index) => (
+              <div
+                key={`${index}-${row.tag}`}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `${timelineMetrics.columnWidth}px minmax(0, 1fr)`,
+                  gap: timelineMetrics.gap,
+                  minHeight: activityMetrics.rowMinHeight,
+                  opacity: row.muted ? activityMetrics.mutedOpacity : 1,
+                }}
+              >
+                <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      marginTop: timelineMetrics.dotTop,
+                      width: timelineMetrics.dot,
+                      height: timelineMetrics.dot,
+                      borderRadius: t.radius.full,
+                      background: row.muted ? t.color.borderStrong : t.color.ink,
+                    }}
+                  />
+                  {index < activityRows.length - 1 ? (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        top: timelineMetrics.lineTop,
+                        bottom: -activityMetrics.rowGap,
+                        borderLeft: `1px dashed ${t.color.borderStrong}`,
+                      }}
+                    />
+                  ) : null}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      minHeight: activityMetrics.tagHeight,
+                      borderRadius: activityMetrics.tagRadius,
+                      background: t.color.surfaceStrong,
+                      color: t.color.text,
+                      padding: `0 ${activityMetrics.tagPaddingX}px`,
+                      fontSize: activityMetrics.tagFontSize,
+                      fontWeight: activityMetrics.tagWeight,
+                      lineHeight: t.typography.lineHeight.compact,
+                    }}
+                  >
+                    {row.tag}
+                  </span>
+                  <EllipsisText
+                    lines={2}
+                    style={{
+                      marginTop: activityMetrics.textTop,
+                      fontSize: activityMetrics.textFontSize,
+                      fontWeight: activityMetrics.textWeight,
+                      lineHeight: activityMetrics.textLineHeight,
+                      color: t.color.text,
+                    }}
+                  >
+                    {row.text}
+                  </EllipsisText>
+                </div>
+              </div>
+            ))}
+          </Slot>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export function ModalScene({ spec }: Props) {
   const { content } = spec;
+  if (isResponseMoment(content)) return <MomentResponseCard spec={spec} />;
+  if (isApprovalMoment(content)) return <MomentApprovalCard spec={spec} />;
+
   const callout = productCallout(spec.modifiers.aiCallout);
   const cursor = spec.modifiers.cursor;
   const hasBlocks = hasReusableBlocks(content);
@@ -148,7 +554,7 @@ export function ModalScene({ spec }: Props) {
                 {content.modal.kind === "confirmation" ? <CheckCircle2 size={22} /> : <Sparkles size={22} />}
               </div>
             </div>
-            <EllipsisText style={{ marginTop: 22, fontSize: 36, fontWeight: 850, color: t.color.text }}>
+            <EllipsisText style={{ marginTop: 22, fontSize: 36, fontWeight: t.font.weight.semibold, color: t.color.text }}>
               {content.modal.title}
             </EllipsisText>
             <EllipsisText lines={3} style={{ marginTop: 13, fontSize: 20, lineHeight: 1.42, color: t.color.muted }}>
@@ -184,10 +590,10 @@ export function ModalScene({ spec }: Props) {
                       padding: "15px 18px",
                     }}
                   >
-                    <EllipsisText style={{ fontSize: 14, fontWeight: 800, color: t.color.faint }}>
+                    <EllipsisText style={{ fontSize: 14, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
                       {field.label}
                     </EllipsisText>
-                    <EllipsisText style={{ fontSize: 17, fontWeight: 800, color: t.color.text }}>
+                    <EllipsisText style={{ fontSize: 17, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                       {field.value}
                     </EllipsisText>
                   </Slot>
@@ -209,7 +615,7 @@ export function ModalScene({ spec }: Props) {
                     minHeight: 48,
                     padding: "0 18px",
                     fontSize: 16,
-                    fontWeight: 850,
+                    fontWeight: t.font.weight.semibold,
                   }}
                 >
                   {action.label}

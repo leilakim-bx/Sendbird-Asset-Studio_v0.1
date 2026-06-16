@@ -384,7 +384,7 @@ export const readableSceneSpecSchema = {
           eyebrow: "shortText",
           title: "mediumText",
           description: "bodyText",
-          fields: "array, min 2, max 5, each { slotId, label: shortText, value: string 1-80 chars }",
+          fields: "array, min 2, max 5, each { slotId, label: shortText, value: string 1-180 chars }",
           actions: "array, min 1, max 2, each { label: shortText, tone: primary | secondary }",
         },
         logicBlocks: "optional reusableBlocks.logicBlocks",

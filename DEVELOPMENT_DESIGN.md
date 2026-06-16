@@ -37,8 +37,8 @@ lib/
 
 | Route | 역할 |
 |---|---|
-| `/` | 템플릿 선택, My files 표시 |
-| `/open?type=chat\|infographic\|product-visual` | 저장 에셋을 Chat UI / Infographic / Product Visual 탭으로 분류. 홈 좌측 Finder 링크는 이 query로 1-depth 진입한다 |
+| `/` | 템플릿 선택, My files 표시. 좌측 Sidebar에서 Create asset, Create with Codex, Codex skill 설치 진입점을 제공한다 |
+| `/open?type=chat\|infographic\|product-visual` | 저장 에셋을 Chat UI / Infographic / Product Visual 탭으로 분류. 홈 좌측 `Asset finder` 버튼은 `/open`으로 진입하고 세부 분류는 화면 내부 탭으로 전환한다 |
 | `/editor/[templateId]` | 템플릿 id 조회 후 Shell 렌더링 |
 | `/api/generate-scenario` | Chat UI 로컬 프리셋 시나리오 생성 |
 | `/api/analyze-article` | Infographic 로컬 추천 생성 |
@@ -218,13 +218,30 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - 포맷별 크기/레이아웃 제약은 `FORMAT_SIZES`, `FORMAT_LAYOUTS`에 둔다.
 - Product Feature 포맷은 Concept UI source만 허용하며 Screenshot upload/source는 비활성화한다.
 - `concept` 모드는 현재 deterministic UI builder로 제품 UI 느낌의 가상 화면을 만든다.
+- Product Visual Create from brief는 외부 AI를 기본 경로로 두지 않고, 첫 진입부터 `Card`, `Details panel` 2개의 Feature Moment block 추천을 보여준다. Brief composer의 arrow submit은 추천 영역을 여는 unlock 동작이 아니라 입력한 brief로 추천/생성 흐름을 갱신하는 보조 액션이다. 추천 카드는 `lib/concept-ui/provider.ts`의 `recommendProductVisualRecipes`가 만들며, 선택 시 rule-based `SceneSpec` provider에 recipe id와 forced archetype을 전달한다.
+- Product Visual block 추천 thumbnail은 CSS placeholder가 아니라 `/preview/productvisual_card.png`, `/preview/productvisual_floatingmodal.png`의 실제 기본 렌더 기반 이미지를 사용한다.
+- Product Visual의 rule-based 출력은 전체 대시보드 재현보다 compact card/modal을 우선한다. Conversation Search, keyword search, customer attribute filtering 같은 검색/필터 brief도 별도 Search block으로 노출하지 않고 `Card`의 response/source copy variation으로 흡수한다. `Card`는 brief의 검색/환불/예약/해지/one-interaction 단서를 읽어 response/source copy를 다르게 만들고, `Title:`, `Reviewer:`, `Response:`, `Source 1:`, `Primary CTA:` 같은 structured line도 직접 반영한다. 생성 provider와 `Edit block copy`는 동일한 Card copy limit을 적용해 긴 marketer 입력이 final rendered image를 깨지 않게 한다.
+- 생성된 compact block은 `ProductVisualSidebar`의 `Edit block copy`에서 기존 SceneSpec slot 값만 수정한다. `Details panel`은 기존 `approval-modal` recipe id와 `moment-approval` slot을 재사용하지만, 사용자-facing output은 white dashboard detail panel과 cropped activity history로 고정한다. 편집은 title, `Show information` switch, Information 값 4개, Activity tag/text 3줄까지만 노출하고 layout/row count/body variant는 고정한다. `Show information=false`는 `moment-show-information` field로 저장하며 Information 섹션과 Activity heading을 숨겨 timeline-only detail panel을 만든다. Copy edit은 별도 update 버튼 없이 debounce된 `content.conceptScene` 갱신과 recapture로 프리뷰에 반영하고, `Show information` switch는 즉시 recapture한다. 새 저장 필드를 만들지 않고 `content.conceptScene`과 rendered screenshot을 갱신하므로 work data schema migration은 필요 없다.
+- Concept UI screenshot export는 primary panel DOM을 SVG로 직렬화하기 전에 same-origin `<img>` 자산을 data URL로 inline한다. Product Visual `Card` reviewer avatar처럼 `/public` preview 이미지를 쓰는 block도 캡처 결과에서 누락되면 안 된다.
 - `reference` 모드는 archived 상태다. 기존 저장본이 `reference`를 가지고 있어도 런타임에서는 Concept UI scene처럼 렌더한다.
 - Concept UI scene spec은 Dashboard/Workspace/Builder/Modal 안에 optional reusable blocks를 받을 수 있다. `logicBlocks`, `controlPanels`, `autonomyMatrices`, `knowledgeCoverages`, `evaluationScorecards`, `integrationHealths`, `channelMatrices`, `instructionSections`, `reviewQueues`, `toolCallLists`, `actionTrails`, `improvementSignals`, `validationLoops`는 if/else, self-service control, autonomy/permission, knowledge coverage, evaluation, integration health, channel performance, policy, approval, tool/function call, visible agent action log, production signal, self-validation 단서에 따라 새 source/structure 선택지를 만들지 않고 삽입된다.
-- Generic resolution/procedure/agent flow 단서는 Builder canvas로 고정하지 않고 Dashboard kit + reusable blocks로 라우팅한다. Builder는 workflow editor/canvas/actionbook/node/rule authoring이 명시된 경우에 우선한다.
-- Product Visual 첫 진입은 저장 데이터에 샘플을 seed하지 않고, 왼쪽 preview에 Concept UI 샘플 대시보드만 placeholder로 보여준다.
-- Concept UI export는 Hero crop/Floating panel 모두 전체 scene 배경이 아니라 primary panel만 screenshot pipeline으로 넘긴다. Hero crop은 이후 crop selector를 여는 UX 차이만 가진다.
+- Generic resolution/procedure/agent flow 단서는 marketer-facing Product Visual 추천에서는 full Builder/Dashboard로 고정하지 않고 cropped `Details panel` block으로 라우팅한다. Low-level SceneSpec import나 reference rebuild 경로에서는 기존 Builder/Dashboard archetype을 계속 지원한다.
+- Product Visual 첫 진입은 Blog format을 기본값으로 사용한다. 저장 데이터에 샘플을 seed하지 않고, 왼쪽 preview에 `/preview/product_visual.png`의 light card 이미지만 placeholder로 보여준다.
+- Product Visual canvas의 release-insert full-bleed fill mode는 screenshot source 전용이다. Concept UI source로 캡처된 blog/release-insert auto-height visual은 이미지 높이 기반으로 canvas height를 늘리되 기본적으로 위아래 최소 60px padding을 유지한다. 단, `Details panel`은 cropped panel 자체가 하단에서 끝나는 구성이므로 top 60px만 두고 bottom padding은 0으로 둔다.
+- Concept UI export는 sidebar frame selector 없이 항상 primary panel만 floating screenshot pipeline으로 넘긴다. Hero crop/crop selector는 Concept UI compact block 생성 경로에 노출하지 않는다.
+- Product Visual `Card`와 `Details panel` compact capture는 dashboard 내부의 큰 content panels에 beige fill을 쓰지 않고 white fill과 spacing 중심으로 계층을 만든다. `Details panel`은 floating shadow modal 대신 outer border 없는 820×720 white dashboard detail panel을 primary panel bounds로 캡처하고, 하단 activity history가 panel 안에서 자연스럽게 잘리는 형태를 사용한다.
+- 기존 1600×840/1600×1000 approval capture가 저장된 work와 현재 열린 approval capture는 Product Visual sidebar가 hidden renderer로 한 번 재캡처해 최신 details panel renderer를 적용한다. 이는 `conceptScene` 기반 screenshot만 갱신하므로 work data schema migration은 필요 없다.
+- 현재 열린 Product Visual `Card` capture도 hidden renderer로 한 번 재캡처해 최신 card title scale token을 적용한다. 저장 구조는 동일하게 `conceptScene` 기반 screenshot만 갱신한다.
+- Product Visual `Card` compact capture는 blog/release-insert canvas에서 전체 inner width를 채우지 않고 card-specific max width로 축소해 좌우 여백을 남긴다. Height 계산도 축소된 card width 기준으로 해야 auto-height canvas가 과하게 커지지 않는다.
 - 외부 AI chat으로 만든 Concept UI 답변은 서버 API 없이 클라이언트에서 JSON을 추출/검증한다. Studio SceneSpec과 다른 구조라도 archetype 의도가 명확하면 가장 가까운 지원 layout sample로 변환하고, table cell의 `kind`처럼 누락이 잦은 필드는 column 정보로 보정한다. 의도 자체를 알 수 없는 구조만 에러로 처리한다.
 - SceneSpec JSON 직접 import/export는 일반 Concept UI 플로우와 분리해 `Developer tools` 섹션에 둔다.
+
+### Home / Codex skill entry
+
+- 홈 좌측 Sidebar의 `Create with Codex`는 페이지 copy를 입력받고 `Get image suggestions` 클릭 후 필요한 asset set을 로컬 규칙으로 정리한다. 사용자는 추천 asset set을 확인한 뒤 Codex의 `delight-asset-studio` skill에 넘길 planning prompt를 클립보드에 복사한다.
+- `Create with Codex` planning prompt는 Product Visual 항목을 최신 compact Feature Moment 기준으로 안내한다. Product Visual은 기본적으로 `Card` 또는 `Details panel`을 사용하고, 예전 full dashboard/workspace/mock scene은 low-level SceneSpec 테스트 요청이 있을 때만 사용한다.
+- `Create asset`은 기존 수동 템플릿 선택 모달을 그대로 유지한다.
+- Codex skill 다운로드와 설치 가이드, `Guides`는 Sidebar 최하단의 유틸리티 링크로 제공한다. 앱 런타임에서 Codex를 직접 호출하지 않으며, 기존 Studio 편집/저장/export 파이프라인과 분리된다.
 
 ## 11. 환경 변수
 

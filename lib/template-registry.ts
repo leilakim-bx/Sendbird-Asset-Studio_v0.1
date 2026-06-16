@@ -171,13 +171,13 @@ export const TEMPLATES: Template[] = [
       { id: "release-insert",    label: "Product Release — Insert (840×var)",  width: 840, height: 0 },
       { id: "blog",              label: "Blog (664×var)",                      width: 664, height: 0 },
     ],
-    // Initial seed = release-thumbnail's per-format default (kept in sync with
+    // Initial seed = blog's per-format default (kept in sync with
     // FORMAT_DEFAULTS in types/product-visual so first-entry == switch-back).
     defaultContent: {
       schemaVersion: WORK_DATA_SCHEMA_VERSION,
-      format: "release-thumbnail", // most-used format first
-      layout: "side-by-side",      // satisfies FORMAT_LAYOUTS["release-thumbnail"]
-      bg: "warmgray",
+      format: "blog",
+      layout: "center",
+      bg: "stone",
       sourceMode: "concept",
       title: "Product UI mock",
       subtitle: "Describe a feature to generate a polished product visual.",

@@ -66,7 +66,7 @@ export function LogicBlockCard({ block, callout, cursor, compact = false, popove
           <GitBranch size={compact ? 15 : 18} />
         </span>
         <div style={{ minWidth: 0 }}>
-          <EllipsisText style={{ fontSize: titleSize, fontWeight: 850, color: t.color.text }}>
+          <EllipsisText style={{ fontSize: titleSize, fontWeight: t.font.weight.semibold, color: t.color.text }}>
             {block.title}
           </EllipsisText>
           {block.description ? (
@@ -90,7 +90,7 @@ export function LogicBlockCard({ block, callout, cursor, compact = false, popove
           <Pill tone="neutral" style={{ minHeight: compact ? t.control.pill.compactMinHeight : t.control.pill.denseMinHeight, fontSize: compact ? t.control.pill.compactFontSize : 12 }}>
             {block.conditionLabel}
           </Pill>
-          <EllipsisText lines={2} style={{ minWidth: 0, fontSize: compact ? 13 : 15, fontWeight: 850, color: t.color.text }}>
+          <EllipsisText lines={2} style={{ minWidth: 0, fontSize: compact ? 13 : 15, fontWeight: t.font.weight.semibold, color: t.color.text }}>
             {block.condition}
           </EllipsisText>
         </div>

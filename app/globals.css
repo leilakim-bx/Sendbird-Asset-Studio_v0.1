@@ -163,3 +163,8 @@
   background-position: center;
   background-size: var(--app-checkbox-icon-size) var(--app-checkbox-icon-size);
 }
+
+.codex-gradient-cta:hover {
+  background-image: var(--studio-codex-cta-border);
+  color: var(--studio-accent-fg);
+}

@@ -51,16 +51,19 @@ export function ScreenshotDisplay({ screenshot, maxWidth, maxHeight, polished = 
 
   // ── Full image (no crop / missing dims) — STEP 2 behavior ──
   if (!hasCrop) {
+    const box = naturalWidth && naturalHeight
+      ? fitContain(naturalWidth / naturalHeight, maxWidth, maxHeight)
+      : undefined;
     return (
       /* eslint-disable-next-line @next/next/no-img-element */
       <img
         src={url}
         alt="Product screenshot"
         style={{
-          maxWidth,
-          maxHeight,
-          width: "auto",
-          height: "auto",
+          maxWidth: box ? undefined : maxWidth,
+          maxHeight: box ? undefined : maxHeight,
+          width: box?.w ?? "auto",
+          height: box?.h ?? "auto",
           objectFit: "contain",
           borderRadius: frameRadius,
           boxShadow: frameShadow,

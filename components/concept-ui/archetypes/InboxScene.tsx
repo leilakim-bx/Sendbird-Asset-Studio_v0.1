@@ -37,7 +37,7 @@ export function InboxScene({ spec }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <DelightMark size={46} />
           <div>
-            <EllipsisText style={{ fontSize: 28, fontWeight: 800, color: t.color.text }}>{content.title}</EllipsisText>
+            <EllipsisText style={{ fontSize: 28, fontWeight: t.font.weight.semibold, color: t.color.text }}>{content.title}</EllipsisText>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
@@ -97,7 +97,7 @@ export function InboxScene({ spec }: Props) {
                   <AvatarInitials name={conversation.customer} size={42} />
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <EllipsisText style={{ fontSize: 18, fontWeight: 800, color: t.color.text }}>
+                      <EllipsisText style={{ fontSize: 18, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                         {conversation.title}
                       </EllipsisText>
                       <span style={{ marginLeft: "auto", fontSize: 13, color: t.color.faint }}>{conversation.time}</span>
@@ -133,7 +133,7 @@ export function InboxScene({ spec }: Props) {
         <main style={{ padding: 30, minWidth: 0, background: t.color.surface }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18 }}>
             <div>
-              <EllipsisText style={{ fontSize: 30, fontWeight: 800, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 30, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {content.thread.customerName}
               </EllipsisText>
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 8, color: t.color.muted, fontSize: 16 }}>
@@ -150,7 +150,7 @@ export function InboxScene({ spec }: Props) {
                 color: t.color.inverse,
                 padding: "13px 20px",
                 fontSize: 17,
-                fontWeight: 800,
+                fontWeight: t.font.weight.semibold,
               }}
             >
               Approve reply
@@ -193,7 +193,7 @@ export function InboxScene({ spec }: Props) {
                             }}
                           />
                         ) : null}
-                        <EllipsisText style={{ fontSize: 15, fontWeight: 800, color: t.color.text }}>
+                        <EllipsisText style={{ fontSize: 15, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                           {message.name}
                         </EllipsisText>
                         <span style={{ fontSize: 13, color: t.color.faint }}>{message.timestamp}</span>
@@ -233,7 +233,7 @@ export function InboxScene({ spec }: Props) {
           <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
             <AvatarInitials name={content.context.customerName} size={48} />
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: 23, fontWeight: 800, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 23, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {content.context.customerName}
               </EllipsisText>
               <EllipsisText style={{ marginTop: 5, fontSize: 15, color: t.color.muted }}>
@@ -260,14 +260,14 @@ export function InboxScene({ spec }: Props) {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <EllipsisText style={{ fontSize: 18, fontWeight: 800, color: t.color.text }}>{section.title}</EllipsisText>
+                  <EllipsisText style={{ fontSize: 18, fontWeight: t.font.weight.semibold, color: t.color.text }}>{section.title}</EllipsisText>
                   <ChevronRight size={17} color={t.color.faint} style={{ marginLeft: "auto" }} />
                 </div>
                 <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
                   {section.items.map((item, index) => (
                     <div key={`${section.slotId}-${index}`} style={{ display: "grid", gridTemplateColumns: "96px 1fr", gap: 10 }}>
                       <EllipsisText style={{ fontSize: 14, color: t.color.faint }}>{item.label}</EllipsisText>
-                      <EllipsisText style={{ fontSize: 15, fontWeight: 700, color: t.color.text }}>{item.value}</EllipsisText>
+                      <EllipsisText style={{ fontSize: 15, fontWeight: t.font.weight.semibold, color: t.color.text }}>{item.value}</EllipsisText>
                     </div>
                   ))}
                 </div>

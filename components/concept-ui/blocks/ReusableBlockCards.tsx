@@ -133,7 +133,7 @@ function BlockShell({
         >
           {icon}
         </span>
-        <EllipsisText style={{ minWidth: 0, fontSize: compact ? 16 : 20, fontWeight: 850, color: t.color.text }}>
+        <EllipsisText style={{ minWidth: 0, fontSize: compact ? 16 : 20, fontWeight: t.font.weight.semibold, color: t.color.text }}>
           {title}
         </EllipsisText>
       </div>
@@ -228,7 +228,7 @@ export function ReviewQueueCard({ block, callout, cursor, compact = false, popov
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 13 : 15, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 13 : 15, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {item.label}
               </EllipsisText>
               <EllipsisText lines={2} style={{ marginTop: 4, fontSize: compact ? 11 : 12, lineHeight: 1.35, color: t.color.muted }}>
@@ -275,7 +275,7 @@ export function ToolCallListCard({ block, callout, cursor, compact = false, popo
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-              <EllipsisText style={{ minWidth: 0, fontSize: compact ? 13 : 15, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ minWidth: 0, fontSize: compact ? 13 : 15, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {call.name}
               </EllipsisText>
               <Pill tone={tone(call.tone)} style={{ marginLeft: "auto", minHeight: compact ? 22 : 24, fontSize: compact ? 10 : 11 }}>
@@ -344,7 +344,7 @@ export function ActionTrailCard({ block, callout, cursor, compact = false, popov
                 {isGate ? <CirclePause size={compact ? 13 : 15} /> : <CheckCircle2 size={compact ? 13 : 15} />}
               </span>
               <div style={{ minWidth: 0 }}>
-                <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+                <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                   {step.label}
                 </EllipsisText>
                 {!compact && step.detail ? (
@@ -355,7 +355,7 @@ export function ActionTrailCard({ block, callout, cursor, compact = false, popov
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
                 {step.duration ? (
-                  <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: 750, color: t.color.faint }}>
+                  <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: t.font.weight.medium, color: t.color.faint }}>
                     {step.duration}
                   </EllipsisText>
                 ) : null}
@@ -383,7 +383,7 @@ export function ActionTrailCard({ block, callout, cursor, compact = false, popov
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <EllipsisText style={{ fontSize: compact ? 13 : 16, fontWeight: 850, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: compact ? 13 : 16, fontWeight: t.font.weight.semibold, color: t.color.text }}>
               {block.gate.title}
             </EllipsisText>
             <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 12, color: t.color.muted }}>
@@ -400,7 +400,7 @@ export function ActionTrailCard({ block, callout, cursor, compact = false, popov
               minHeight: compact ? 30 : 36,
               padding: compact ? "0 12px" : "0 15px",
               fontSize: compact ? 11 : 13,
-              fontWeight: 850,
+              fontWeight: t.font.weight.semibold,
             }}
           >
             {block.gate.primaryAction}
@@ -415,7 +415,7 @@ export function ActionTrailCard({ block, callout, cursor, compact = false, popov
               minHeight: compact ? 30 : 36,
               padding: compact ? "0 12px" : "0 15px",
               fontSize: compact ? 11 : 13,
-              fontWeight: 850,
+              fontWeight: t.font.weight.semibold,
             }}
           >
             {block.gate.secondaryAction}
@@ -451,7 +451,7 @@ export function ImprovementSignalCard({ block, callout, cursor, compact = false,
           <Pill tone={tone(block.tone)} style={{ minHeight: compact ? 22 : 24, fontSize: compact ? 10 : 11 }}>
             {block.status}
           </Pill>
-          <EllipsisText lines={2} style={{ marginTop: 7, fontSize: compact ? 13 : 15, fontWeight: 850, lineHeight: 1.3, color: t.color.text }}>
+          <EllipsisText lines={2} style={{ marginTop: 7, fontSize: compact ? 13 : 15, fontWeight: t.font.weight.semibold, lineHeight: 1.3, color: t.color.text }}>
             {block.signal}
           </EllipsisText>
         </div>
@@ -469,7 +469,7 @@ export function ImprovementSignalCard({ block, callout, cursor, compact = false,
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <EllipsisText style={{ fontSize: compact ? 11 : 12, fontWeight: 800, color: t.color.faint }}>
+            <EllipsisText style={{ fontSize: compact ? 11 : 12, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
               Proposed update
             </EllipsisText>
             <EllipsisText lines={2} style={{ marginTop: 5, fontSize: compact ? 12 : 13, lineHeight: 1.35, color: t.color.text }}>
@@ -543,13 +543,13 @@ export function ValidationLoopCard({ block, callout, cursor, compact = false, po
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: compact ? 10 : 11,
-                fontWeight: 850,
+                fontWeight: t.font.weight.semibold,
               }}
             >
               {index + 1}
             </span>
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 13, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 13, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {step.label}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
@@ -598,10 +598,10 @@ export function ControlPanelCard({ block, callout, cursor, compact = false, popo
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: t.color.faint }}>
+              <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
                 {item.label}
               </EllipsisText>
-              <EllipsisText style={{ marginTop: 3, fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ marginTop: 3, fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {item.value}
               </EllipsisText>
             </div>
@@ -676,13 +676,13 @@ export function AutonomyMatrixCard({ block, callout, cursor, compact = false, po
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: compact ? 10 : 11,
-                fontWeight: 850,
+                fontWeight: t.font.weight.semibold,
               }}
             >
               {index + 1}
             </span>
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {level.label}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
@@ -739,7 +739,7 @@ export function KnowledgeCoverageCard({ block, callout, cursor, compact = false,
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {topic.label}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
@@ -796,7 +796,7 @@ export function EvaluationScorecardCard({ block, callout, cursor, compact = fals
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {check.label}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
@@ -853,14 +853,14 @@ export function IntegrationHealthCard({ block, callout, cursor, compact = false,
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {system.name}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
                 {system.detail}
               </EllipsisText>
             </div>
-            <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: t.color.faint }}>
+            <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
               {system.metric}
             </EllipsisText>
             <Pill tone={tone(system.tone)} style={{ minHeight: compact ? 21 : 23, fontSize: compact ? 9 : 10 }}>
@@ -910,7 +910,7 @@ export function ChannelMatrixCard({ block, callout, cursor, compact = false, pop
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: 850, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: compact ? 12 : 14, fontWeight: t.font.weight.semibold, color: t.color.text }}>
                 {channel.channel}
               </EllipsisText>
               <EllipsisText lines={1} style={{ marginTop: 3, fontSize: compact ? 10 : 11, color: t.color.muted }}>
@@ -920,7 +920,7 @@ export function ChannelMatrixCard({ block, callout, cursor, compact = false, pop
             <Pill tone={tone(channel.tone)} style={{ minHeight: compact ? 21 : 23, fontSize: compact ? 9 : 10 }}>
               {channel.resolution}
             </Pill>
-            <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: 800, color: t.color.faint }}>
+            <EllipsisText style={{ fontSize: compact ? 10 : 11, fontWeight: t.font.weight.semibold, color: t.color.faint }}>
               {channel.latency}
             </EllipsisText>
           </div>

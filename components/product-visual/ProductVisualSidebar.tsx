@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Copy, ExternalLink, Sparkles, Info } from "lucide-react";
+import { ChevronDown, Upload, RefreshCw, Trash2, Check, Plus, Lightbulb, Sparkles, Info } from "lucide-react";
 import { Menu } from "@base-ui/react/menu";
 import { ZodError } from "zod";
 import { useEditorStore } from "@/lib/store";
@@ -22,16 +22,26 @@ import { Section } from "./Section";
 import { CropSelector } from "./CropSelector";
 import { BackgroundPickerModal } from "@/components/editor/BackgroundPickerModal";
 import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
 import { SceneRenderer } from "@/components/concept-ui/SceneRenderer";
 import {
   conceptSceneToProductScreenshot,
   exportConceptSceneElement,
   type FramingPreset,
 } from "@/lib/concept-ui/export-scene";
-import { ruleBasedSpecProvider } from "@/lib/concept-ui/provider";
-import { parseSceneSpec, type ConceptUiArchetype, type SceneSpec } from "@/lib/concept-ui/scene-spec";
-import { buildAiChatPrompt } from "@/lib/concept-ui/promptTemplates";
-import { parseLlmSceneSpecResponse } from "@/lib/concept-ui/llm-response";
+import {
+  recommendProductVisualRecipes,
+  ruleBasedSpecProvider,
+  type ProductVisualRecipe,
+  type ProductVisualRecipeId,
+} from "@/lib/concept-ui/provider";
+import {
+  parseSceneSpec,
+  type ConceptUiArchetype,
+  type ModalSceneSpec,
+  type SceneSpec,
+  type TableSceneSpec,
+} from "@/lib/concept-ui/scene-spec";
 import { useOnceFlag } from "@/lib/use-once-flag";
 
 const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
@@ -45,12 +55,26 @@ const MAX_PANEL_W = 520;
 const CONCEPT_UI_PLACEHOLDER = "Example: AI suggests the next best reply using customer memory and recent conversation history.";
 const CONCEPT_UI_COACHMARK_COPY = "Describe the product screen you need, then generate a polished visual with Delight.ai components.";
 const CONCEPT_UI_TEXT_LANGUAGE = "en" as const;
+const CONCEPT_GUIDANCE_TEMPLATE = [
+  "Feature: ",
+  "User: ",
+  "Product surface: ",
+  "Key proof: ",
+  "Avoid: ",
+].join("\n");
+const CONCEPT_GUIDANCE_APPEND_TEMPLATE = [
+  "Feature: ",
+  "Product surface: ",
+  "Key proof: ",
+  "Avoid: ",
+].join("\n");
 const PRODUCT_FEATURE_SCREENSHOT_RESTRICTION = "This format is restricted to maintain quality.";
 const SOURCE_OPTIONS: { id: ProductVisualSourceMode; label: string }[] = [
   { id: "concept", label: "Concept UI" },
   ...(PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? [] : [{ id: "reference" as const, label: "Rebuild" }]),
   { id: "screenshot", label: "Screenshot" },
 ];
+const LEGACY_APPROVAL_CAPTURE = { width: 1600, height: 840 } as const;
 const REFERENCE_LAYOUT_OPTIONS: { id: ProductVisualReferenceLayout; label: string; archetype?: ConceptUiArchetype }[] = [
   { id: "auto", label: "Auto" },
   { id: "workspace", label: "Workspace", archetype: "workspace" },
@@ -60,11 +84,6 @@ const REFERENCE_LAYOUT_OPTIONS: { id: ProductVisualReferenceLayout; label: strin
   { id: "table", label: "Table", archetype: "table" },
   { id: "modal", label: "Modal", archetype: "modal" },
 ];
-const FRAMING_PRESETS: { id: FramingPreset; label: string; description: string }[] = [
-  { id: "hero-crop", label: "Hero crop", description: "Manually crop the generated scene" },
-  { id: "floating-panel", label: "Floating panel", description: "Panel only, transparent" },
-];
-
 function prettySpec(spec: SceneSpec): string {
   return JSON.stringify(spec, null, 2);
 }
@@ -76,38 +95,6 @@ function formatSpecError(error: unknown): string {
   if (error instanceof SyntaxError) return "Invalid spec syntax.";
   if (error instanceof Error) return error.message;
   return String(error);
-}
-
-async function copyTextToClipboard(text: string): Promise<"clipboard" | "legacy" | "manual"> {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return "clipboard";
-    }
-  } catch {
-    // Fall through to the legacy path for embedded browser contexts.
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.left = "-9999px";
-    textarea.style.top = "0";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    textarea.setSelectionRange(0, text.length);
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    if (copied) return "legacy";
-  } catch {
-    // Manual copy UI below is the final fallback.
-  }
-
-  return "manual";
 }
 
 function IconTooltip({ label }: { label: string }) {
@@ -156,6 +143,245 @@ function StepLabel({
       </span>
     </div>
   );
+}
+
+function RecipePreviewThumb({
+  id,
+  className = "w-full",
+}: {
+  id: ProductVisualRecipeId;
+  className?: string;
+}) {
+  const isFloating = id === "approval-modal";
+  const src = isFloating ? "/preview/productvisual_floatingmodal.png" : "/preview/productvisual_card.png";
+
+  return (
+    <span
+      className={`relative block h-[84px] overflow-hidden rounded-md bg-studio-preview-surface ${className}`}
+      aria-hidden="true"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className="absolute inset-0 size-full object-contain"
+        draggable={false}
+      />
+    </span>
+  );
+}
+
+type ProductMomentDraft = Record<string, string>;
+
+const RESPONSE_CARD_COPY_LIMITS = {
+  title: 34,
+  reviewer: 24,
+  response: 150,
+  source1: 36,
+  source2: 36,
+  source1Match: 10,
+  source2Match: 10,
+  primaryAction: 12,
+  secondaryAction: 12,
+} as const satisfies Record<string, number>;
+
+const DETAILS_PANEL_COPY_LIMITS = {
+  title: 40,
+  detailType: 42,
+  detailName: 36,
+  detailStatus: 14,
+  detailTime: 16,
+  activity1Tag: 24,
+  activity1Text: 64,
+  activity2Tag: 24,
+  activity2Text: 64,
+  activity3Tag: 24,
+  activity3Text: 64,
+} as const satisfies Record<string, number>;
+
+const DETAILS_PANEL_ACTIVITY_ROWS = [1, 2, 3] as const;
+
+function detailsPanelShowInformation(draft: ProductMomentDraft): boolean {
+  return draft.showInformation !== "false";
+}
+
+function isResponseMomentSpec(spec: SceneSpec | null): boolean {
+  return spec?.archetype === "modal" && spec.content.modal.slotId === "moment-ai-response";
+}
+
+function isApprovalMomentSpec(spec: SceneSpec | null): boolean {
+  return spec?.archetype === "modal" && spec.content.modal.slotId === "moment-approval";
+}
+
+function isSearchMomentSpec(spec: SceneSpec | null): spec is TableSceneSpec {
+  return spec?.archetype === "table" && /conversation search|delight\.ai search/i.test(`${spec.content.productName} ${spec.content.title}`);
+}
+
+function modalFieldValue(spec: ModalSceneSpec, label: string): string {
+  return spec.content.modal.fields.find((field) => field.label.toLowerCase() === label.toLowerCase())?.value ?? "";
+}
+
+function modalSlotValue(spec: ModalSceneSpec, slotId: string): string {
+  return spec.content.modal.fields.find((field) => field.slotId === slotId)?.value ?? "";
+}
+
+function splitSourceValue(value: string): { label: string; match: string } {
+  const [label, match] = value.split("|").map((part) => part.trim());
+  return { label: label || value, match: match || "" };
+}
+
+function combineSourceValue(label: string, match: string): string {
+  return match.trim() ? `${label.trim()}|${match.trim()}` : label.trim();
+}
+
+function draftText(draft: ProductMomentDraft, key: string, fallback: string, max: number): string {
+  const cleaned = (draft[key] ?? "").replace(/\s+/g, " ").trim();
+  const value = cleaned || fallback;
+  return value.length <= max ? value : `${value.slice(0, max - 3).trimEnd()}...`;
+}
+
+function responseCardLimit(key: string): number | undefined {
+  return RESPONSE_CARD_COPY_LIMITS[key as keyof typeof RESPONSE_CARD_COPY_LIMITS];
+}
+
+function responseCardDraftText(draft: ProductMomentDraft, key: keyof typeof RESPONSE_CARD_COPY_LIMITS, fallback: string): string {
+  return draftText(draft, key, fallback, RESPONSE_CARD_COPY_LIMITS[key]);
+}
+
+function detailsPanelLimit(key: string): number | undefined {
+  return DETAILS_PANEL_COPY_LIMITS[key as keyof typeof DETAILS_PANEL_COPY_LIMITS];
+}
+
+function detailsPanelDraftText(draft: ProductMomentDraft, key: keyof typeof DETAILS_PANEL_COPY_LIMITS, fallback: string): string {
+  return draftText(draft, key, fallback, DETAILS_PANEL_COPY_LIMITS[key]);
+}
+
+function approvalMomentDefaults(spec: ModalSceneSpec): ProductMomentDraft {
+  const actionTrail = spec.content.actionTrails?.[0];
+  const signal = [
+    spec.content.title,
+    spec.content.modal.title,
+    spec.content.modal.description,
+    actionTrail?.steps.map((step) => step.label).join(" "),
+    actionTrail?.gate?.title,
+  ].filter(Boolean).join(" ");
+  const isBooking = /booking|flight|rebook|reservation|itinerary|항공|예약/i.test(signal);
+  const isBilling = /billing|refund|payment|charge|dispute|환불|결제/i.test(signal);
+  const activityRows = isBooking
+    ? [
+        { tag: "Steward triggered", text: "Flight cancellation workflow initiated" },
+        { tag: "API call", text: "Booking system — reservation pulled, policy check..." },
+        { tag: "Voice call", text: "United Airlines rebooking desk — call duration 3:42" },
+        { tag: "Email sent", text: "Marriott Denver — extension confirmed for Jun 5" },
+      ]
+    : [
+        { tag: "Steward triggered", text: "Customer resolution workflow initiated" },
+        { tag: "Policy check", text: actionTrail?.steps[0]?.label ?? "Customer context and policy evidence reviewed" },
+        { tag: "AI prepared", text: actionTrail?.steps[1]?.label ?? "Next action prepared for review" },
+        { tag: "Agent review", text: "Final decision queued for a teammate" },
+      ];
+
+  return {
+    title: spec.content.modal.title,
+    detailType: isBooking ? "Flight cancellation — multi-step" : isBilling ? "Billing dispute — review" : "Customer request — multi-step",
+    detailName: isBooking || isBilling ? "Refund Approval Request" : "Resolution Review Request",
+    detailStatus: "RESOLUTION",
+    detailTime: isBooking ? "12 minutes" : "8 minutes",
+    activity1Tag: activityRows[0]?.tag ?? "",
+    activity1Text: activityRows[0]?.text ?? "",
+    activity2Tag: activityRows[1]?.tag ?? "",
+    activity2Text: activityRows[1]?.text ?? "",
+    activity3Tag: activityRows[2]?.tag ?? "",
+    activity3Text: activityRows[2]?.text ?? "",
+  };
+}
+
+function detailsPanelFields(draft: ProductMomentDraft, defaults: ProductMomentDraft): ModalSceneSpec["content"]["modal"]["fields"] {
+  return [
+    {
+      slotId: "moment-show-information",
+      label: "Show information",
+      value: detailsPanelShowInformation(draft) ? "true" : "false",
+    },
+    { slotId: "moment-detail-type", label: "Detail type", value: detailsPanelDraftText(draft, "detailType", defaults.detailType ?? "") },
+    { slotId: "moment-detail-name", label: "Detail name", value: detailsPanelDraftText(draft, "detailName", defaults.detailName ?? "") },
+    { slotId: "moment-detail-status", label: "Detail status", value: detailsPanelDraftText(draft, "detailStatus", defaults.detailStatus ?? "") },
+    { slotId: "moment-detail-time", label: "Detail time", value: detailsPanelDraftText(draft, "detailTime", defaults.detailTime ?? "") },
+    ...DETAILS_PANEL_ACTIVITY_ROWS.flatMap((index) => [
+      {
+        slotId: `moment-activity-${index}-tag`,
+        label: `Activity ${index} tag`,
+        value: detailsPanelDraftText(draft, `activity${index}Tag`, defaults[`activity${index}Tag`] ?? ""),
+      },
+      {
+        slotId: `moment-activity-${index}-text`,
+        label: `Activity ${index} text`,
+        value: detailsPanelDraftText(draft, `activity${index}Text`, defaults[`activity${index}Text`] ?? ""),
+      },
+    ]),
+  ];
+}
+
+function textCellValue(row: TableSceneSpec["content"]["rows"][number] | undefined): string {
+  const cell = row?.cells[0];
+  if (!cell) return "";
+  if (cell.kind === "person") return cell.name;
+  if (cell.kind === "number") return cell.value;
+  return cell.value;
+}
+
+function buildProductMomentDraft(spec: SceneSpec | null): ProductMomentDraft {
+  if (spec?.archetype === "modal" && isResponseMomentSpec(spec)) {
+    const sources = spec.content.modal.fields
+      .filter((field) => field.label.toLowerCase() === "source")
+      .map((field) => splitSourceValue(field.value));
+    const primaryAction = spec.content.modal.actions.find((action) => action.tone === "primary") ?? spec.content.modal.actions.at(-1);
+    const secondaryAction = spec.content.modal.actions.find((action) => action.tone === "secondary") ?? spec.content.modal.actions[0];
+    return {
+      title: spec.content.modal.title,
+      reviewer: modalFieldValue(spec, "Reviewer"),
+      response: modalFieldValue(spec, "Response"),
+      source1: sources[0]?.label ?? "",
+      source1Match: sources[0]?.match ?? "",
+      source2: sources[1]?.label ?? "",
+      source2Match: sources[1]?.match ?? "",
+      secondaryAction: secondaryAction?.label ?? "",
+      primaryAction: primaryAction?.label ?? "",
+    };
+  }
+
+  if (isSearchMomentSpec(spec)) {
+    return {
+      title: spec.content.title,
+      search: spec.content.toolbar.searchPlaceholder,
+      filter1: spec.content.toolbar.filters[0] ?? "",
+      filter2: spec.content.toolbar.filters[1] ?? "",
+      filter3: spec.content.toolbar.filters[2] ?? "",
+      result1: textCellValue(spec.content.rows[0]),
+      result2: textCellValue(spec.content.rows[1]),
+      result3: textCellValue(spec.content.rows[2]),
+    };
+  }
+
+  if (spec?.archetype === "modal" && isApprovalMomentSpec(spec)) {
+    const defaults = approvalMomentDefaults(spec);
+    return {
+      title: spec.content.modal.title,
+      showInformation: modalSlotValue(spec, "moment-show-information") === "false" ? "false" : "true",
+      detailType: modalSlotValue(spec, "moment-detail-type") || defaults.detailType,
+      detailName: modalSlotValue(spec, "moment-detail-name") || defaults.detailName,
+      detailStatus: modalSlotValue(spec, "moment-detail-status") || defaults.detailStatus,
+      detailTime: modalSlotValue(spec, "moment-detail-time") || defaults.detailTime,
+      activity1Tag: modalSlotValue(spec, "moment-activity-1-tag") || defaults.activity1Tag,
+      activity1Text: modalSlotValue(spec, "moment-activity-1-text") || defaults.activity1Text,
+      activity2Tag: modalSlotValue(spec, "moment-activity-2-tag") || defaults.activity2Tag,
+      activity2Text: modalSlotValue(spec, "moment-activity-2-text") || defaults.activity2Text,
+      activity3Tag: modalSlotValue(spec, "moment-activity-3-tag") || defaults.activity3Tag,
+      activity3Text: modalSlotValue(spec, "moment-activity-3-text") || defaults.activity3Text,
+    };
+  }
+
+  return {};
 }
 
 // ── Static option tables ──────────────────────────────────
@@ -219,23 +445,21 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   const [conceptScene, setConceptScene] = useState<SceneSpec | null>(null);
   const [conceptGenerating, setConceptGenerating] = useState(false);
   const [conceptError, setConceptError] = useState<string | null>(null);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<ProductVisualRecipeId | null>(null);
+  const [conceptBlockPickerOpen, setConceptBlockPickerOpen] = useState(true);
   const [conceptCaptureId, setConceptCaptureId] = useState(0);
-  const [framingPreset, setFramingPreset] = useState<FramingPreset>("floating-panel");
   const [conceptCapturePreset, setConceptCapturePreset] = useState<FramingPreset>("floating-panel");
   const [lastConceptSpec, setLastConceptSpec] = useState<SceneSpec | null>(null);
   const [specJsonDraft, setSpecJsonDraft] = useState("");
+  const [blockCopyDraft, setBlockCopyDraft] = useState<ProductMomentDraft>(() => buildProductMomentDraft(content.conceptScene ?? null));
   const [specPasteError, setSpecPasteError] = useState<string | null>(null);
   const [specNotice, setSpecNotice] = useState<string | null>(null);
-  const [aiChatPromptCopied, setAiChatPromptCopied] = useState(false);
-  const [aiChatPromptDraft, setAiChatPromptDraft] = useState("");
-  const [aiChatReplyDraft, setAiChatReplyDraft] = useState("");
-  const [aiChatError, setAiChatError] = useState<string | null>(null);
-  const [aiChatNotice, setAiChatNotice] = useState<string | null>(null);
-  const [copyFeedbackTick, setCopyFeedbackTick] = useState(0);
   const [developerToolsOpen, setDeveloperToolsOpen] = useState(false);
   const [showConceptCoach, dismissConceptCoach] = useOnceFlag("coach-product-visual-concept-v2");
   const conceptCaptureRef = useRef<HTMLDivElement>(null);
-  const manualPromptRef = useRef<HTMLTextAreaElement>(null);
+  const momentCaptureRefreshRef = useRef(new Set<string>());
+  const pendingBlockDraftRef = useRef<ProductMomentDraft | null>(null);
+  const blockDraftApplyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!content?.screenshot || !isImageBgFormat(content.format) || content.screenshot.displayMode === "crop") return;
@@ -257,19 +481,10 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   }, [referenceImage]);
 
   useEffect(() => {
-    if (!aiChatError?.startsWith("Copy is blocked") || !aiChatPromptDraft) return;
-    const timer = window.setTimeout(() => {
-      manualPromptRef.current?.focus();
-      manualPromptRef.current?.select();
-    }, 80);
-    return () => window.clearTimeout(timer);
-  }, [aiChatError, aiChatPromptDraft]);
-
-  useEffect(() => {
-    if (!copyFeedbackTick) return;
-    const timer = window.setTimeout(() => setCopyFeedbackTick(0), 2000);
-    return () => window.clearTimeout(timer);
-  }, [copyFeedbackTick]);
+    return () => {
+      if (blockDraftApplyTimerRef.current) window.clearTimeout(blockDraftApplyTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!conceptGenerating || !conceptScene) return;
@@ -327,6 +542,68 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
     };
   }, [conceptCaptureId, conceptCapturePreset, conceptGenerating, conceptScene, setProductVisualContent]);
 
+  useEffect(() => {
+    if (conceptGenerating || conceptScene) return;
+    const storedSpec = content.conceptScene ?? null;
+    const screenshot = content.screenshot;
+    const storedSourceMode = content.sourceMode ?? (storedSpec ? "concept" : "screenshot");
+    if (storedSpec?.archetype !== "modal") return;
+    const refreshableMoment = isApprovalMomentSpec(storedSpec) || isResponseMomentSpec(storedSpec);
+    if (storedSourceMode !== "concept" || !refreshableMoment || !screenshot?.url) return;
+    const legacyCapture =
+      screenshot.naturalWidth === LEGACY_APPROVAL_CAPTURE.width &&
+      screenshot.naturalHeight === LEGACY_APPROVAL_CAPTURE.height;
+    const currentApprovalCapture =
+      isApprovalMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 1600 &&
+      screenshot.naturalHeight === 1000;
+    const staleDetailsPanelCapture =
+      isApprovalMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 980 &&
+      screenshot.naturalHeight !== 720;
+    const staleDetailsPanelWidth =
+      isApprovalMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 980 &&
+      screenshot.naturalHeight === 720;
+    const staleDetailsPanelSpacing =
+      isApprovalMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 980 &&
+      screenshot.naturalHeight === 720 &&
+      (screenshot.url.includes("margin-top%3A38px") || screenshot.url.includes("margin-top:38px"));
+    const staleDetailsPanelLabelWeight =
+      isApprovalMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 980 &&
+      screenshot.naturalHeight === 720 &&
+      (
+        screenshot.url.includes("font-size%3A18px%3Bfont-weight%3A600") ||
+        screenshot.url.includes("font-size:18px;font-weight:600")
+      );
+    const currentResponseCapture =
+      isResponseMomentSpec(storedSpec) &&
+      screenshot.naturalWidth === 1000 &&
+      screenshot.naturalHeight === 920;
+    if (!legacyCapture && !currentApprovalCapture && !staleDetailsPanelCapture && !staleDetailsPanelWidth && !staleDetailsPanelSpacing && !staleDetailsPanelLabelWeight && !currentResponseCapture) {
+      return;
+    }
+    const refreshKey = `${storedSpec.content.modal.slotId}:${screenshot.naturalWidth ?? 0}x${screenshot.naturalHeight ?? 0}`;
+    if (momentCaptureRefreshRef.current.has(refreshKey)) return;
+    momentCaptureRefreshRef.current.add(refreshKey);
+    const timer = window.setTimeout(() => {
+      setConceptError(null);
+      setConceptCapturePreset("floating-panel");
+      setConceptScene(storedSpec);
+      setConceptGenerating(true);
+      setConceptCaptureId((id) => id + 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [
+    content.conceptScene,
+    content.screenshot,
+    content.sourceMode,
+    conceptGenerating,
+    conceptScene,
+  ]);
+
   function update(patch: Partial<NonNullable<typeof content>>) {
     setProductVisualContent({ ...content, ...patch });
   }
@@ -353,19 +630,39 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   function updateConceptPrompt(prompt: string) {
     dismissConceptCoach();
     setConceptPrompt(prompt);
+    setSelectedRecipeId(null);
+    setConceptBlockPickerOpen(true);
     setSpecNotice(null);
-    setAiChatPromptCopied(false);
-    setAiChatPromptDraft("");
-    setAiChatError(null);
-    setAiChatNotice(null);
-    setCopyFeedbackTick(0);
+  }
+
+  function handleAddConceptGuidance() {
+    dismissConceptCoach();
+    setConceptPrompt((current) => {
+      const trimmed = (current || content.concept?.prompt || content.title || "").trim();
+      if (!trimmed) return CONCEPT_GUIDANCE_TEMPLATE;
+      if (/(^|\n)\s*(Feature:|Product surface:|Key proof:|Avoid:)/i.test(trimmed)) return current;
+      return `${trimmed}\n\n${CONCEPT_GUIDANCE_APPEND_TEMPLATE}`;
+    });
+    setConceptBlockPickerOpen(true);
+    setConceptError(null);
+    setSpecNotice(null);
+  }
+
+  function revealConceptBlocks() {
+    const prompt = effectiveConceptPrompt.trim();
+    if (!prompt || conceptGenerating) return;
+    dismissConceptCoach();
+    setConceptBlockPickerOpen(true);
+    setConceptError(null);
+    setSpecNotice(null);
   }
 
   function startConceptSpec(spec: SceneSpec, notice?: string) {
-    const initialPreset = spec.archetype === "builder" ? "floating-panel" : framingPreset;
-    setFramingPreset(initialPreset);
-    setConceptCapturePreset(initialPreset);
+    setConceptCapturePreset("floating-panel");
     setLastConceptSpec(spec);
+    if (blockDraftApplyTimerRef.current) window.clearTimeout(blockDraftApplyTimerRef.current);
+    pendingBlockDraftRef.current = null;
+    setBlockCopyDraft(buildProductMomentDraft(spec));
     setSpecJsonDraft(prettySpec(spec));
     setSpecNotice(notice ?? null);
     setConceptError(null);
@@ -374,48 +671,26 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
     setConceptCaptureId((id) => id + 1);
   }
 
-  async function copyPromptForAiChat() {
+  async function generateConceptFromRecipe(recipe: ProductVisualRecipe) {
     const prompt = effectiveConceptPrompt.trim();
-    if (!prompt) return;
+    if (!prompt || conceptGenerating) return;
     dismissConceptCoach();
-    const text = buildAiChatPrompt({
-      description: prompt,
-      uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
-      choice: analyzedChoice,
-    });
-    setAiChatPromptDraft(text);
-    setAiChatError(null);
-    setAiChatNotice(null);
-    const copyResult = await copyTextToClipboard(text);
-    if (copyResult === "manual") {
-      setAiChatPromptCopied(false);
-      setAiChatError("Copy is blocked in this browser. The prompt below is selected; press Cmd+C to copy it.");
-      window.setTimeout(() => {
-        manualPromptRef.current?.focus();
-        manualPromptRef.current?.select();
-      }, 120);
-    } else {
-      setAiChatPromptCopied(true);
-      setSpecNotice(null);
-      setCopyFeedbackTick((tick) => tick + 1);
-    }
-  }
-
-  function useAiChatReply() {
-    const result = parseLlmSceneSpecResponse(aiChatReplyDraft);
-    if (!result.ok) {
-      console.info("[concept-ui] AI chat reply parse failed", {
-        rawLength: aiChatReplyDraft.length,
-        errorType: result.errorType,
+    setSelectedRecipeId(recipe.id);
+    setConceptGenerating(true);
+    setConceptError(null);
+    setSpecNotice(null);
+    try {
+      const result = await ruleBasedSpecProvider.generate({
+        description: prompt,
+        uiTextLanguage: CONCEPT_UI_TEXT_LANGUAGE,
+        forcedArchetype: recipe.archetype,
+        recipeId: recipe.id,
       });
-      setAiChatError(result.message);
-      setAiChatNotice(null);
-      return;
+      startConceptSpec(result.spec, `Rendered ${recipe.label.toLowerCase()} recipe.`);
+    } catch (err) {
+      setConceptGenerating(false);
+      setConceptError(err instanceof Error ? err.message : "Could not generate Concept UI.");
     }
-
-    setAiChatError(null);
-    setAiChatNotice("AI reply imported.");
-    startConceptSpec(result.spec, result.notice ?? undefined);
   }
 
   async function copySpecJson() {
@@ -555,10 +830,8 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   const screenshotSourceDisabled = imageBg;
   const effectiveConceptPrompt = conceptPrompt || content.concept?.prompt || content.title || "";
   const effectiveReferenceBrief = referenceBrief || content.reference?.brief || content.title || "";
-  const analyzedChoice = ruleBasedSpecProvider.analyze({ description: effectiveConceptPrompt });
+  const conceptRecipes = recommendProductVisualRecipes(effectiveConceptPrompt);
   const activeConceptSpec = lastConceptSpec ?? content.conceptScene ?? null;
-  const showManualPrompt = aiChatError?.startsWith("Copy is blocked") && !!aiChatPromptDraft;
-  const copyFeedbackVisible = copyFeedbackTick > 0;
   const displayModes = cropOnly ? DISPLAY_MODES.filter((m) => m.id === "crop") : DISPLAY_MODES;
   // Solid-color swatches: hidden for image-bg formats and for formats whose
   // background is locked to a fixed hex (canvas ignores `bg` there).
@@ -567,8 +840,15 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
   const selectedBgId = bgList.find((b) => b.url === content.bgImage)?.id ?? "";
   const current = FORMAT_FLAT.find((f) => f.id === content.format);
   const sceneSourceMode = sourceMode === "concept" || sourceMode === "reference";
+  const editableMomentKind = activeConceptSpec?.archetype === "modal" && isResponseMomentSpec(activeConceptSpec)
+    ? "response"
+    : isSearchMomentSpec(activeConceptSpec)
+      ? "search"
+      : activeConceptSpec?.archetype === "modal" && isApprovalMomentSpec(activeConceptSpec)
+        ? "approval"
+        : null;
 
-  function recaptureConceptSpec(spec: SceneSpec | null = activeConceptSpec, preset: FramingPreset = framingPreset) {
+  function recaptureConceptSpec(spec: SceneSpec | null = activeConceptSpec, preset: FramingPreset = "floating-panel") {
     const nextSpec = spec ?? activeConceptSpec;
     if (!sceneSourceMode || !nextSpec) return;
     setConceptError(null);
@@ -578,9 +858,122 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
     setConceptCaptureId((id) => id + 1);
   }
 
-  function handleFramingPresetChange(preset: FramingPreset) {
-    setFramingPreset(preset);
-    recaptureConceptSpec(undefined, preset);
+  function buildProductMomentSpecFromDraft(
+    spec: SceneSpec,
+    kind: "response" | "search" | "approval",
+    draft: ProductMomentDraft,
+  ) {
+    const next = structuredClone(spec) as SceneSpec;
+
+    if (kind === "response" && next.archetype === "modal" && isResponseMomentSpec(next)) {
+      const title = responseCardDraftText(draft, "title", next.content.modal.title);
+      next.content.title = title;
+      next.content.modal.title = title;
+      next.content.modal.fields = next.content.modal.fields.map((field) => {
+        if (field.label === "Reviewer") {
+          return { ...field, value: responseCardDraftText(draft, "reviewer", field.value) };
+        }
+        if (field.label === "Response") {
+          return { ...field, value: responseCardDraftText(draft, "response", field.value) };
+        }
+        if (field.slotId === "moment-source-1") {
+          return {
+            ...field,
+            value: combineSourceValue(
+              responseCardDraftText(draft, "source1", splitSourceValue(field.value).label),
+              responseCardDraftText(draft, "source1Match", splitSourceValue(field.value).match),
+            ),
+          };
+        }
+        if (field.slotId === "moment-source-2") {
+          return {
+            ...field,
+            value: combineSourceValue(
+              responseCardDraftText(draft, "source2", splitSourceValue(field.value).label),
+              responseCardDraftText(draft, "source2Match", splitSourceValue(field.value).match),
+            ),
+          };
+        }
+        return field;
+      });
+      next.content.modal.actions = next.content.modal.actions.map((action) => {
+        if (action.tone === "primary") {
+          return { ...action, label: responseCardDraftText(draft, "primaryAction", action.label) };
+        }
+        return { ...action, label: responseCardDraftText(draft, "secondaryAction", action.label) };
+      });
+    } else if (kind === "search" && isSearchMomentSpec(next)) {
+      next.content.title = draftText(draft, "title", next.content.title, 56);
+      next.content.toolbar.searchPlaceholder = draftText(draft, "search", next.content.toolbar.searchPlaceholder, 40);
+      next.content.toolbar.filters = next.content.toolbar.filters.map((filter, index) =>
+        draftText(draft, `filter${index + 1}`, filter, 24),
+      );
+      next.content.rows = next.content.rows.map((row, index) => {
+        if (index > 2) return row;
+        const firstCell = row.cells[0];
+        if (!firstCell || firstCell.kind !== "text") return row;
+        return {
+          ...row,
+          cells: [
+            { ...firstCell, value: draftText(draft, `result${index + 1}`, firstCell.value, 56) },
+            ...row.cells.slice(1),
+          ],
+        };
+      });
+    } else if (kind === "approval" && next.archetype === "modal" && isApprovalMomentSpec(next)) {
+      const defaults = approvalMomentDefaults(next);
+      const title = detailsPanelDraftText(draft, "title", next.content.modal.title);
+      next.content.title = title;
+      next.content.modal.title = title;
+      next.content.modal.fields = detailsPanelFields(draft, defaults);
+    }
+
+    return parseSceneSpec(next);
+  }
+
+  function applyProductMomentDraftFrom(draft: ProductMomentDraft, notice = "Preview updated.") {
+    if (!activeConceptSpec || !editableMomentKind) return;
+    try {
+      const parsed = buildProductMomentSpecFromDraft(activeConceptSpec, editableMomentKind, draft);
+      setLastConceptSpec(parsed);
+      setBlockCopyDraft(buildProductMomentDraft(parsed));
+      setSpecJsonDraft(prettySpec(parsed));
+      setSpecPasteError(null);
+      setConceptError(null);
+      const latest = useEditorStore.getState().productVisualContent;
+      if (latest) {
+        setProductVisualContent({
+          ...latest,
+          sourceMode: sourceMode === "reference" && !PRODUCT_VISUAL_REFERENCE_REBUILD_ARCHIVED ? "reference" : "concept",
+          conceptScene: parsed,
+        });
+      }
+      recaptureConceptSpec(parsed);
+      setSpecNotice(notice);
+    } catch (err) {
+      setConceptError(formatSpecError(err));
+    }
+  }
+
+  function updateBlockDraft(key: string, value: string, options?: { immediate?: boolean }) {
+    const nextDraft = { ...blockCopyDraft, [key]: value };
+    setBlockCopyDraft(nextDraft);
+    setConceptError(null);
+    pendingBlockDraftRef.current = nextDraft;
+    if (options?.immediate) {
+      if (blockDraftApplyTimerRef.current) window.clearTimeout(blockDraftApplyTimerRef.current);
+      pendingBlockDraftRef.current = null;
+      applyProductMomentDraftFrom(nextDraft, "Preview updated.");
+      return;
+    }
+    setSpecNotice("Updating preview...");
+    if (blockDraftApplyTimerRef.current) window.clearTimeout(blockDraftApplyTimerRef.current);
+    blockDraftApplyTimerRef.current = window.setTimeout(() => {
+      const draft = pendingBlockDraftRef.current;
+      pendingBlockDraftRef.current = null;
+      blockDraftApplyTimerRef.current = null;
+      if (draft) applyProductMomentDraftFrom(draft, "Preview updated.");
+    }, 450);
   }
 
   function handleResizeStart(e: React.MouseEvent) {
@@ -1010,7 +1403,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
         )}
 
         {sourceMode === "concept" && (<>
-          <Section title="Concept UI">
+          <Section title="Create from brief">
             <div className="relative space-y-3">
               {showConceptCoach && (
                 <CoachmarkBubble
@@ -1020,35 +1413,80 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
               )}
               <StepLabel
                 number={1}
-                title="Describe the feature"
-                description="This becomes the brief for the product UI mock."
+                title="Describe the product surface"
+                description="Keep it to the feature, user, proof point, and anything to avoid."
               />
-              <textarea
-                value={effectiveConceptPrompt}
-                onFocus={dismissConceptCoach}
-                onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
-                placeholder={CONCEPT_UI_PLACEHOLDER}
-                rows={5}
-                className="w-full resize-none rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 focus:border-studio-muted"
-              />
+              <div className="rounded-lg border border-studio-border bg-studio-input p-3 transition-colors focus-within:border-studio-muted">
+                <textarea
+                  value={effectiveConceptPrompt}
+                  onFocus={dismissConceptCoach}
+                  onChange={(e) => updateConceptPrompt(e.currentTarget.value)}
+                  placeholder={CONCEPT_UI_PLACEHOLDER}
+                  rows={5}
+                  className="w-full min-h-[104px] resize-none border-0 bg-transparent p-0 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/70 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAddConceptGuidance}
+                    disabled={conceptGenerating}
+                    className="text-[11px] font-medium text-studio-muted transition-colors hover:text-studio-text disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Add guidance
+                  </button>
+                  <AiMagicButton
+                    label="Show Product Visual blocks"
+                    loading={false}
+                    disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
+                    onClick={revealConceptBlocks}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="mt-4 space-y-3">
+            {conceptBlockPickerOpen ? (<div className="mt-4 space-y-3">
               <StepLabel
                 number={2}
-                title="Create the UI"
-                description="Copy the prompt, run it in Claude or Gemini, then paste the reply back here."
+                title="Choose a block"
+                description="Studio keeps Product Visuals to compact, editable UI moments."
               />
-              <button
-                type="button"
-                onClick={copyPromptForAiChat}
-                disabled={!effectiveConceptPrompt.trim()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2.5 text-xs font-semibold text-studio-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
-              >
-                {copyFeedbackVisible ? <Check size={14} /> : <Copy size={14} />}
-                {copyFeedbackVisible ? "Copied!" : "Copy prompt for Claude / Gemini"}
-              </button>
-            </div>
+              {conceptRecipes.length > 0 ? (
+                <div className="space-y-2 rounded-xl border border-studio-border bg-studio-sidebar p-2">
+                  {conceptRecipes.map((recipe) => {
+                    const active = selectedRecipeId === recipe.id;
+                    const loading = active && conceptGenerating;
+                    return (
+                      <button
+                        key={recipe.id}
+                        type="button"
+                        onClick={() => generateConceptFromRecipe(recipe)}
+                        disabled={conceptGenerating || !effectiveConceptPrompt.trim()}
+                        aria-pressed={active}
+                        className={[
+                          "flex w-full items-center gap-2 rounded-lg border p-1.5 text-left transition-colors focus:outline-none focus:ring-1 focus:ring-studio-accent disabled:cursor-not-allowed disabled:opacity-55",
+                          active
+                            ? "border-2 border-studio-accent bg-studio-accent/[0.06]"
+                            : "border-studio-border bg-studio-bg hover:border-studio-muted hover:bg-white/[0.04]",
+                        ].join(" ")}
+                      >
+                        <RecipePreviewThumb id={recipe.id} className="w-[112px] shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-1.5">
+                            <span className="truncate text-[12px] font-semibold text-studio-text">{recipe.label}</span>
+                            {loading ? <RefreshCw size={13} className="animate-spin text-studio-muted" /> : null}
+                          </span>
+                          <span className="mt-0.5 line-clamp-2 block text-[10.5px] leading-snug text-studio-muted">{recipe.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-studio-border bg-studio-input px-3 py-2 text-[11px] leading-snug text-studio-muted">
+                  Add a short feature brief to see two stable blocks.
+                </p>
+              )}
+            </div>) : null}
 
             {conceptError ? (
               <p className="mt-2 text-[11px] leading-snug text-red-400">{conceptError}</p>
@@ -1056,126 +1494,219 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
             {specNotice ? (
               <p className="mt-2 text-[11px] leading-snug text-studio-muted">{specNotice}</p>
             ) : null}
-            {aiChatError ? (
-              <div className="mt-2 rounded-lg border border-red-400/30 bg-red-400/10 p-2">
-                <p className="text-[11px] leading-snug text-red-300">{aiChatError}</p>
-                {showManualPrompt ? (
-                  <textarea
-                    ref={manualPromptRef}
-                    value={aiChatPromptDraft}
-                    readOnly
-                    rows={6}
-                    onFocus={(event) => event.currentTarget.select()}
-                    className="mt-2 w-full resize-none rounded-md border border-red-300/30 bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-red-50 outline-none"
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  onClick={copyPromptForAiChat}
-                  className="mt-2 rounded-md border border-red-300/40 px-2 py-1 text-[10px] font-semibold text-red-200 hover:bg-red-300/10"
-                >
-                  Copy prompt again
-                </button>
-              </div>
-            ) : null}
-            {(aiChatPromptCopied || aiChatPromptDraft) ? (
+            {editableMomentKind ? (
               <div className="mt-4 rounded-xl border border-studio-border bg-studio-input p-3">
                 <StepLabel
                   number={3}
-                  title="Paste the AI reply"
-                  description="Copy the full chat response and paste it here."
+                  title="Edit block copy"
+                  description="Keep the layout fixed; change only the high-signal text slots."
                 />
-                <div className="mt-3 flex gap-1.5">
-                  <a
-                    href="https://claude.ai/new"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-studio-border px-2 py-1.5 text-[11px] font-semibold text-studio-muted hover:text-studio-text"
-                  >
-                    Claude <ExternalLink size={11} />
-                  </a>
-                  <a
-                    href="https://gemini.google.com/app"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-md border border-studio-border px-2 py-1.5 text-[11px] font-semibold text-studio-muted hover:text-studio-text"
-                  >
-                    Gemini <ExternalLink size={11} />
-                  </a>
-                </div>
-                {aiChatPromptDraft && !aiChatPromptCopied ? (
-                  <textarea
-                    value={aiChatPromptDraft}
-                    readOnly
-                    rows={4}
-                    className="mt-3 w-full resize-none rounded-md border border-studio-border bg-black/30 p-2 font-mono text-[10px] leading-relaxed text-studio-text outline-none"
-                  />
-                ) : null}
-                <textarea
-                  value={aiChatReplyDraft}
-                  onChange={(e) => {
-                    setAiChatReplyDraft(e.currentTarget.value);
-                    setAiChatError(null);
-                    setAiChatNotice(null);
-                  }}
-                  placeholder="Paste the AI reply here"
-                  rows={6}
-                  spellCheck={false}
-                  className="mt-3 w-full resize-none rounded-lg border border-studio-border bg-black/30 p-2 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
-                />
-                <button
-                  type="button"
-                  onClick={useAiChatReply}
-                  disabled={!aiChatReplyDraft.trim() || conceptGenerating}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-studio-accent px-3 py-2 text-xs font-semibold text-studio-accent-fg disabled:opacity-40"
-                >
-                  {conceptGenerating ? (
-                    <RefreshCw size={14} className="animate-spin" />
-                  ) : aiChatNotice ? (
-                    <Check size={14} />
+                <div className="mt-3 space-y-2.5">
+                  <label className="block">
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title</span>
+                    <input
+                      value={blockCopyDraft.title ?? ""}
+                      maxLength={
+                        editableMomentKind === "response"
+                          ? responseCardLimit("title")
+                          : editableMomentKind === "approval"
+                            ? detailsPanelLimit("title")
+                            : undefined
+                      }
+                      onChange={(e) => updateBlockDraft("title", e.currentTarget.value)}
+                      className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                    />
+                  </label>
+
+                  {editableMomentKind === "response" ? (
+                    <>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Reviewer</span>
+                        <input
+                          value={blockCopyDraft.reviewer ?? ""}
+                          maxLength={responseCardLimit("reviewer")}
+                          onChange={(e) => updateBlockDraft("reviewer", e.currentTarget.value)}
+                          className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Response</span>
+                        <textarea
+                          value={blockCopyDraft.response ?? ""}
+                          maxLength={responseCardLimit("response")}
+                          onChange={(e) => updateBlockDraft("response", e.currentTarget.value)}
+                          rows={4}
+                          className="w-full resize-none rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                        />
+                      </label>
+                      {[1, 2].map((index) => (
+                        <div key={index} className="grid grid-cols-[minmax(0,1fr)_76px] gap-1.5">
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Source {index}</span>
+                            <input
+                              value={blockCopyDraft[`source${index}`] ?? ""}
+                              maxLength={responseCardLimit(`source${index}`)}
+                              onChange={(e) => updateBlockDraft(`source${index}`, e.currentTarget.value)}
+                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Match</span>
+                            <input
+                              value={blockCopyDraft[`source${index}Match`] ?? ""}
+                              maxLength={responseCardLimit(`source${index}Match`)}
+                              onChange={(e) => updateBlockDraft(`source${index}Match`, e.currentTarget.value)}
+                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            />
+                          </label>
+                        </div>
+                      ))}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Secondary CTA</span>
+                          <input
+                            value={blockCopyDraft.secondaryAction ?? ""}
+                            maxLength={responseCardLimit("secondaryAction")}
+                            onChange={(e) => updateBlockDraft("secondaryAction", e.currentTarget.value)}
+                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Primary CTA</span>
+                          <input
+                            value={blockCopyDraft.primaryAction ?? ""}
+                            maxLength={responseCardLimit("primaryAction")}
+                            onChange={(e) => updateBlockDraft("primaryAction", e.currentTarget.value)}
+                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          />
+                        </label>
+                      </div>
+                    </>
                   ) : null}
-                  {conceptGenerating ? "Rendering..." : aiChatNotice ? "AI reply imported" : "Render AI reply"}
-                </button>
+
+                  {editableMomentKind === "approval" ? (
+                    <>
+                      <div className="flex items-center justify-between gap-3 rounded-lg border border-studio-border bg-black/20 px-2.5 py-2">
+                        <span>
+                          <span className="block text-[11px] font-semibold text-studio-text">Show information</span>
+                          <span className="mt-0.5 block text-[10px] leading-snug text-studio-muted">Hide for a timeline-only detail panel.</span>
+                        </span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={detailsPanelShowInformation(blockCopyDraft)}
+                          onClick={() =>
+                            updateBlockDraft(
+                              "showInformation",
+                              detailsPanelShowInformation(blockCopyDraft) ? "false" : "true",
+                              { immediate: true },
+                            )
+                          }
+                          className={[
+                            "relative h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-studio-accent",
+                            detailsPanelShowInformation(blockCopyDraft) ? "bg-studio-accent" : "bg-studio-hover",
+                          ].join(" ")}
+                        >
+                          <span
+                            className={[
+                              "block size-4 rounded-full transition-transform",
+                              detailsPanelShowInformation(blockCopyDraft)
+                                ? "translate-x-4 bg-studio-accent-fg"
+                                : "translate-x-0 bg-studio-muted",
+                            ].join(" ")}
+                          />
+                        </button>
+                      </div>
+                      {detailsPanelShowInformation(blockCopyDraft) ? (
+                        <div>
+                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Information</span>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                              ["detailType", "Type"],
+                              ["detailName", "Name"],
+                              ["detailStatus", "Status"],
+                              ["detailTime", "Time"],
+                            ].map(([key, label]) => (
+                              <label key={key} className="block">
+                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">{label}</span>
+                                <input
+                                  value={blockCopyDraft[key] ?? ""}
+                                  maxLength={detailsPanelLimit(key)}
+                                  onChange={(e) => updateBlockDraft(key, e.currentTarget.value)}
+                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      <div>
+                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Activity</span>
+                        <div className="space-y-2">
+                          {DETAILS_PANEL_ACTIVITY_ROWS.map((index) => (
+                            <div key={index} className="grid grid-cols-[90px_minmax(0,1fr)] gap-1.5">
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">Tag {index}</span>
+                                <input
+                                  value={blockCopyDraft[`activity${index}Tag`] ?? ""}
+                                  maxLength={detailsPanelLimit(`activity${index}Tag`)}
+                                  onChange={(e) => updateBlockDraft(`activity${index}Tag`, e.currentTarget.value)}
+                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                />
+                              </label>
+                              <label className="block">
+                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">Text {index}</span>
+                                <input
+                                  value={blockCopyDraft[`activity${index}Text`] ?? ""}
+                                  maxLength={detailsPanelLimit(`activity${index}Text`)}
+                                  onChange={(e) => updateBlockDraft(`activity${index}Text`, e.currentTarget.value)}
+                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                />
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+
+                  {editableMomentKind === "search" ? (
+                    <>
+                      <label className="block">
+                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Search field</span>
+                        <input
+                          value={blockCopyDraft.search ?? ""}
+                          onChange={(e) => updateBlockDraft("search", e.currentTarget.value)}
+                          className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                        />
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[1, 2, 3].map((index) => (
+                          <label key={index} className="block">
+                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Filter</span>
+                            <input
+                              value={blockCopyDraft[`filter${index}`] ?? ""}
+                              onChange={(e) => updateBlockDraft(`filter${index}`, e.currentTarget.value)}
+                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      {[1, 2, 3].map((index) => (
+                        <label key={index} className="block">
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Result {index}</span>
+                          <input
+                            value={blockCopyDraft[`result${index}`] ?? ""}
+                            onChange={(e) => updateBlockDraft(`result${index}`, e.currentTarget.value)}
+                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          />
+                        </label>
+                      ))}
+                    </>
+                  ) : null}
+                </div>
               </div>
             ) : null}
-            <div className="mt-4 space-y-3">
-              <StepLabel
-                number={4}
-                title="Choose the frame"
-                description="This controls what part of the mock becomes the image."
-              />
-              <div className="grid grid-cols-2 gap-1.5">
-                {FRAMING_PRESETS.map((preset) => {
-                  const active = framingPreset === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleFramingPresetChange(preset.id)}
-                      title={preset.description}
-                      className={[
-                        "rounded-lg border p-1.5 text-left transition-colors",
-                        active
-                          ? "border-studio-accent bg-studio-accent/[0.08] text-studio-text"
-                          : "border-studio-border text-studio-muted hover:text-studio-text hover:bg-white/[0.04]",
-                      ].join(" ")}
-                    >
-                      <span className="block h-9 rounded-md border border-current/20 bg-studio-input p-1">
-                        <span
-                          className={[
-                            "block bg-current/70",
-                            preset.id === "hero-crop"
-                                ? "h-full w-2/3 rounded-sm"
-                                : "mx-auto mt-1 h-5 w-8 rounded-sm shadow-sm",
-                          ].join(" ")}
-                        />
-                      </span>
-                      <span className="mt-1 block truncate text-[10px] font-semibold">{preset.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </Section>
 
           <Section

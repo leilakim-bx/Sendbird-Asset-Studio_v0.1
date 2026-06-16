@@ -688,12 +688,12 @@ const modalSceneSpecSchema = z
                   .object({
                     slotId,
                     label: shortText,
-                    value: z.string().trim().min(1).max(80),
+                    value: z.string().trim().min(1).max(180),
                   })
                   .strict(),
               )
               .min(2)
-              .max(5),
+              .max(12),
             actions: z
               .array(
                 z

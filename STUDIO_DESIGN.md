@@ -54,8 +54,14 @@ Studio가 **만들어내는** 목업 디자인 규칙은 `ASSET_DESIGN.md` 참�
 ### Left Sidebar
 
 - 홈/최근 에셋 네비게이션은 상단에 둔다.
-- 저장 에셋 찾기는 `Chat UI Finder`, `Infographic Finder`, `Product Visual Finder` 3개 링크로 1-depth 노출한다. 각 링크는 `/open?type=...`으로 해당 카테고리의 저장 파일 목록을 바로 연다.
-- 새 작업 시작은 `Create asset` 기본 액션 하나만 노출한다.
+- 새 작업 시작 영역은 `Create asset` -> `Create with Codex` 순서로 둔다.
+  - `Create asset`은 기존 수동 템플릿 선택 flow를 그대로 연다.
+  - `Create with Codex`는 페이지 copy를 붙여넣고 textarea 우하단의 compact `Get image suggestions`를 눌러 필요한 이미지 세트를 먼저 정리한 뒤 Codex planning prompt를 복사하는 홈 전용 planning entry이며, 보조 CTA로 그라데이션 테두리를 사용하고 hover 시 같은 gradient fill로 전환한다.
+  - `Create with Codex` 모달의 추천 결과는 기본 3개 asset set으로 고정하고 1단 리스트로 보여준다. Studio 안에서는 교체 후보를 노출하지 않고, 대체 가능한 후보는 복사되는 Codex prompt 안에만 포함해 Codex에서 말로 조정하게 한다. 결과 카드는 기존 Studio preview 썸네일, 짧은 고정 제목, 템플릿 pill, 사용 위치 1줄, brief 최대 2줄만 보여준다.
+  - Codex에서 전체 asset set을 렌더하면 10-20분 걸릴 수 있으므로, planning prompt 복사 버튼 근처에 짧은 소요 시간 안내를 노출한다.
+- 저장 에셋 찾기는 `Create with Codex` 아래의 `Asset finder` 단일 버튼으로 노출한다. 버튼은 `/open`을 열고, 세부 카테고리 전환은 열린 화면의 Chat UI / Infographic / Product Visual 탭에서 처리한다.
+- `Create asset`, `Create with Codex`, `Asset finder`는 같은 compact corner radius(`--app-sidebar-action-radius`, `controlLg`)를 사용해 하나의 action group처럼 보이게 한다.
+- Codex 관련 액션과 `Guides`는 사이드바 최하단에 아이콘+텍스트 유틸리티 링크로 둔다. 박스형 버튼이나 설명 문구는 노출하지 않고, 필요한 설명은 hover tooltip으로 제공한다. `Download Codex Skill`은 정적 zip 파일을 직접 내려받는 버튼으로 동작하며 준비/완료/실패 상태를 inline으로 표시한다.
 
 ### Right Panel
 
@@ -136,6 +142,11 @@ Item:   px-3 py-1.5 text-xs text-studio-text hover:bg-studio-hover cursor-defaul
 
 - Source segmented control은 Concept UI / Screenshot 두 가지를 제공한다.
 - Product Feature 포맷에서는 Screenshot을 비활성화하고 Concept UI를 기본 source로 사용한다.
+- Concept UI source의 기본 입력 섹션은 `Create from brief`이며, `Add guidance`로 짧은 feature/user/surface/proof/avoid 힌트를 붙일 수 있다. Brief composer는 Chat UI/Infographic과 같은 라임색 arrow submit 버튼을 우측 하단에 두되, `Card`와 `Details panel` block 선택지는 첫 진입부터 바로 노출한다.
+- Product Visual 생성 액션은 자유로운 archetype 선택 대신 2개의 compact block 카드(`Card`, `Details panel`)를 보여준다. 각 선택지는 Infographic block selector처럼 왼쪽에 실제 기본 렌더 기반 thumbnail image, 오른쪽에 title/description을 가진 행형 카드로 보여 결과 형태를 선택 전에 파악할 수 있게 한다. 선택된 카드는 2px lime outline으로만 표시하고 추천 badge는 쓰지 않는다.
+- Product Visual `Details panel`은 body variant 선택을 노출하지 않는다. 편집 UI는 Title, `Show information` switch, Information 값 4개, Activity tag/text 3줄처럼 최종 이미지에 실제로 보이는 slot만 남겨 결과를 안정적으로 유지한다. `Show information`을 끄면 Information 섹션과 Activity heading을 숨겨 timeline-only detail panel로 즉시 렌더한다.
+- compact block 생성 후에는 `Edit block copy` 섹션을 노출해 Title, main text, evidence/source, CTA처럼 마케터가 실제로 바꿔야 하는 slot만 수정하게 한다. Layout, spacing, block type은 고정해 결과 품질을 유지하며, copy edit은 별도 update 버튼 없이 프리뷰에 자동 반영한다.
+- Concept UI source에서는 frame 선택 섹션을 노출하지 않는다. 제한된 compact block은 항상 primary panel만 floating capture로 렌더한다.
 - Rebuild from reference는 품질 개선 전까지 archived 상태로 UI에 노출하지 않는다. 코드 경로는 나중에 다시 켤 수 있게 보관한다.
 
 ### Toast
