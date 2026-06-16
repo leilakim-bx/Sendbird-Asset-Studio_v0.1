@@ -288,3 +288,4 @@ fontSize: 13 × fs
 - Product feature의 Comparison cards는 짧은 point를 여러 개 넣을 수 있게 최대 6 rows를 허용하되, 카드 padding은 20px로 고정하고 body text size도 point 개수와 관계없이 일정하게 유지한다. bullet gap은 최소 8px 아래로 줄이지 않으며, 각 point는 최대 5줄로 clamp해 fixed frame 밖으로 나가지 않게 한다.
 - Comparison cards의 table layout에서 row label은 before/after column과 같은 grid width를 유지하되, Product feature에서는 row label/before/after cell을 최대 2줄로 clamp한다.
 - Blog/Perspective의 Orbit diagram hub shape은 Product feature보다 compact한 stage height를 사용해 title/footnote와 중앙 그래픽 사이의 위아래 간격을 좁힌다.
+- Product feature의 Metrics block이 4개 KPI를 한 줄로 보여줄 때는 큰 숫자 font scale과 column gap을 한 단계 낮춰 4자리 이상 숫자가 과도하게 ellipsis 처리되지 않게 한다.

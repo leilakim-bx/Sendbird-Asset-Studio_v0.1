@@ -14,6 +14,7 @@ import {
   Download,
   Check,
   Wrench,
+  WandSparkles,
 } from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 
@@ -102,13 +103,15 @@ async function copyToClipboard(text: string) {
   }
 }
 
-type PlannedVisual = {
+export type PlannedVisual = {
   id: string;
   template: "Product Visual" | "Infographic" | "Chat UI";
   title: string;
   use: string;
   brief: string;
 };
+
+const OPTIMIZED_PLANNER_PREFIX = "Brief for image suggestions:";
 
 const PLANNER_FALLBACKS: PlannedVisual[] = [
   {
@@ -220,6 +223,138 @@ function buildPageVisualPlan(source: string): PlannedVisual[] {
   return plans.slice(0, 6);
 }
 
+function limitText(value: string, max: number) {
+  const cleaned = value.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= max) return cleaned;
+  return `${cleaned.slice(0, max - 1).trim()}...`;
+}
+
+function getFirstMeaningfulLine(source: string) {
+  return source
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0) ?? "";
+}
+
+function derivePlannerFeature(source: string) {
+  const firstLine = getFirstMeaningfulLine(source);
+  const introducingMatch = firstLine.match(/^introducing\s+([^:.]+)[:.]/i);
+  if (introducingMatch?.[1]) return limitText(introducingMatch[1], 58);
+
+  const colonTitle = firstLine.split(":")[0]?.trim();
+  if (colonTitle && colonTitle.length >= 4 && colonTitle.length < firstLine.length) {
+    return limitText(colonTitle.replace(/^#+\s*/, ""), 58);
+  }
+
+  return limitText(firstLine.replace(/^#+\s*/, "").replace(/[.!?]$/, ""), 58) || "Untitled feature";
+}
+
+function derivePlannerCoreMessage(source: string) {
+  const firstLine = getFirstMeaningfulLine(source);
+  const titleMessage = firstLine.includes(":") ? firstLine.split(":").slice(1).join(":").trim() : "";
+  if (titleMessage) return limitText(titleMessage.replace(/[.!?]$/, ""), 110);
+
+  const sentence = source
+    .replace(firstLine, "")
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 24);
+
+  return limitText(sentence?.replace(/[.!?]$/, "") ?? firstLine, 110);
+}
+
+function derivePlannerAudience(source: string) {
+  const normalized = source.toLowerCase();
+  if (/cx|support|agent|ops|operator|customer/.test(normalized)) {
+    return "CX ops teams, support leaders, AI admins";
+  }
+  if (/marketing|pmm|campaign|launch|blog|release/.test(normalized)) {
+    return "PMMs, marketers, launch teams";
+  }
+  if (/developer|engineering|api|sdk/.test(normalized)) {
+    return "Product, engineering, and technical operators";
+  }
+  return "Product and operations teams";
+}
+
+function derivePlannerVisualPriority(source: string) {
+  const normalized = source.toLowerCase();
+  const hasComparison = /before|after|old|new|without|with|compare|versus|problem|stale|기존|개선|비교|전후/.test(normalized);
+  const hasDetailPanel = /actionbook|rule|conditional|tree|section|editor|approval|policy|audit|governance/.test(normalized);
+  const hasConversation = /conversation|chat|reply|message|customer|ticket|inbox/.test(normalized);
+
+  if (hasComparison && hasDetailPanel) return "Product Visual Details panel, Card, Infographic comparison";
+  if (hasComparison) return "Product Visual Card, Infographic comparison, Chat UI proof";
+  if (hasConversation) return "Chat UI proof, Product Visual Card, Infographic workflow";
+  if (hasDetailPanel) return "Product Visual Details panel, Card, Infographic workflow";
+  return "Product Visual Card, Details panel, supporting Infographic";
+}
+
+function derivePlannerKeyMoments(source: string) {
+  const firstLine = getFirstMeaningfulLine(source);
+  const sentences = source
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 32 && sentence !== firstLine);
+  const priorityTerms = [
+    "problem",
+    "without",
+    "instead",
+    "built for",
+    "designed",
+    "preview",
+    "tester",
+    "tree",
+    "conditional",
+    "workflow",
+    "rules",
+    "actionbook",
+    "stale",
+    "edit",
+  ];
+  const scored = sentences
+    .map((sentence, index) => ({
+      sentence,
+      index,
+      score: priorityTerms.reduce(
+        (total, term) => total + (sentence.toLowerCase().includes(term) ? 1 : 0),
+        0,
+      ),
+    }))
+    .filter((item) => item.score > 0 || item.index < 5)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+
+  const moments: string[] = [];
+  for (const item of scored) {
+    const text = limitText(item.sentence.replace(/[.!?]$/, ""), 104);
+    if (moments.includes(text)) continue;
+    moments.push(text);
+    if (moments.length >= 4) break;
+  }
+
+  return moments.length > 0 ? moments : ["Show the core problem, product moment, and customer-facing outcome"];
+}
+
+export function buildOptimizedPlannerSource(source: string) {
+  const original = source.trim();
+  if (!original || original.startsWith(OPTIMIZED_PLANNER_PREFIX)) return source;
+
+  return [
+    OPTIMIZED_PLANNER_PREFIX,
+    `Feature: ${derivePlannerFeature(original)}`,
+    `Core message: ${derivePlannerCoreMessage(original)}`,
+    `Audience: ${derivePlannerAudience(original)}`,
+    `Visual priority: ${derivePlannerVisualPriority(original)}`,
+    "Key moments:",
+    ...derivePlannerKeyMoments(original).map((moment) => `- ${moment}`),
+    "Avoid: Generic orbit diagram unless explaining system structure, full dashboards, dense UI.",
+    "",
+    "Original copy:",
+    original,
+  ].join("\n");
+}
+
 function buildPlannerPrompt(source: string, plans: PlannedVisual[], alternatives: PlannedVisual[]) {
   const planLines = plans
     .map(
@@ -269,7 +404,7 @@ function buildPlannerPrompt(source: string, plans: PlannedVisual[], alternatives
   ].join("\n");
 }
 
-function getPlannerThumbnailSrc(plan: PlannedVisual) {
+export function getPlannerThumbnailSrc(plan: PlannedVisual) {
   if (plan.template === "Product Visual") {
     return plan.id.includes("details") || plan.title.toLowerCase().includes("details")
       ? "/preview/productvisual_floatingmodal.png"
@@ -283,7 +418,54 @@ function getPlannerThumbnailSrc(plan: PlannedVisual) {
   return "/preview/mobile_mockup.png";
 }
 
+export function getPlannerInfographicVariant(plan: PlannedVisual) {
+  const key = `${plan.id} ${plan.title} ${plan.brief}`.toLowerCase();
+  return /comparison|before|after|compare|versus|changed/.test(key) ? "comparison" : "diagram";
+}
+
+function PlannerInfographicThumbnail({ variant }: { variant: "comparison" | "diagram" }) {
+  if (variant === "comparison") {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-studio-text p-2 text-studio-bg">
+        <div className="grid h-14 w-full grid-cols-2 gap-1.5 rounded-lg bg-studio-sidebar/10 p-1.5">
+          <div className="flex flex-col justify-between rounded-md border border-studio-border/70 bg-studio-text p-1.5">
+            <span className="h-1 w-7 rounded-full bg-studio-muted/50" />
+            <span className="h-1.5 w-9 rounded-full bg-studio-muted/70" />
+            <span className="h-1 w-6 rounded-full bg-studio-muted/35" />
+          </div>
+          <div className="flex flex-col justify-between rounded-md border border-studio-border bg-studio-text p-1.5">
+            <span className="h-1 w-7 rounded-full bg-studio-bg" />
+            <span className="h-1.5 w-9 rounded-full bg-studio-accent" />
+            <span className="h-1 w-6 rounded-full bg-studio-bg/70" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-studio-text text-studio-bg">
+      <div className="relative flex size-14 items-center justify-center rounded-full border border-studio-border/70">
+        <div className="absolute size-9 rounded-full border border-studio-border/70" />
+        <div className="flex size-5 items-center justify-center rounded-full bg-studio-bg text-[9px] font-semibold text-studio-text">
+          AI
+        </div>
+        {["top-1 left-6", "top-5 right-1", "bottom-1 left-6", "top-5 left-1"].map((position) => (
+          <span
+            key={position}
+            className={`absolute ${position} h-2.5 w-4 rounded-sm border border-studio-border bg-studio-text`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PlannerTemplateThumbnail({ plan }: { plan: PlannedVisual }) {
+  if (plan.template === "Infographic") {
+    return <PlannerInfographicThumbnail variant={getPlannerInfographicVariant(plan)} />;
+  }
+
   return (
     <Image
       src={getPlannerThumbnailSrc(plan)}
@@ -542,6 +724,7 @@ function PageVisualPlannerModal({ onClose }: { onClose: () => void }) {
   const [source, setSource] = useState("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [hasSuggestions, setHasSuggestions] = useState(false);
+  const [optimizedUndoSource, setOptimizedUndoSource] = useState<string | null>(null);
   const plans = useMemo(() => buildPageVisualPlan(source), [source]);
   const selectedPlans = useMemo(() => plans.slice(0, 3), [plans]);
   const alternativePlans = useMemo(() => plans.slice(3, 6), [plans]);
@@ -550,10 +733,27 @@ function PageVisualPlannerModal({ onClose }: { onClose: () => void }) {
     [source, selectedPlans, alternativePlans],
   );
   const canSuggest = source.trim().length > 0;
+  const isOptimizedSource = source.trimStart().startsWith(OPTIMIZED_PLANNER_PREFIX);
 
   function handleShowSuggestions() {
     if (!canSuggest) return;
     setHasSuggestions(true);
+    setCopyState("idle");
+  }
+
+  function handleOptimizeSource() {
+    if (!canSuggest || isOptimizedSource) return;
+    setOptimizedUndoSource(source);
+    setSource(buildOptimizedPlannerSource(source));
+    setHasSuggestions(false);
+    setCopyState("idle");
+  }
+
+  function handleUndoOptimizeSource() {
+    if (optimizedUndoSource === null) return;
+    setSource(optimizedUndoSource);
+    setOptimizedUndoSource(null);
+    setHasSuggestions(false);
     setCopyState("idle");
   }
 
@@ -600,26 +800,59 @@ function PageVisualPlannerModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => {
                   setSource(e.target.value);
                   setHasSuggestions(false);
+                  setOptimizedUndoSource(null);
                   setCopyState("idle");
                 }}
                 placeholder="Paste a landing page section, release notes, blog draft, or feature description..."
                 className="w-full h-44 resize-none rounded-xl bg-studio-bg border border-studio-border text-studio-text placeholder:text-studio-muted px-4 py-3 pb-16 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-studio-accent"
               />
-              <button
-                onClick={handleShowSuggestions}
-                disabled={!canSuggest}
-                style={canSuggest ? { background: "var(--studio-codex-cta-border)" } : undefined}
-                className={[
-                  "absolute bottom-4 right-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--app-sidebar-action-radius)] font-bold text-xs transition-all",
-                  canSuggest
-                    ? "text-studio-accent-fg hover:opacity-90"
-                    : "bg-studio-hover border border-studio-border text-studio-muted disabled:opacity-40 disabled:cursor-not-allowed",
-                ].join(" ")}
-              >
-                <SolidSparklesIcon className="h-3.5 w-3.5 shrink-0" />
-                Get image suggestions
-              </button>
+              <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOptimizeSource}
+                  disabled={!canSuggest || isOptimizedSource}
+                  title="Optimize for suggestions"
+                  aria-label="Optimize for suggestions"
+                  className={[
+                    "group relative flex h-9 w-9 items-center justify-center rounded-[var(--app-sidebar-action-radius)] transition-all",
+                    canSuggest && !isOptimizedSource
+                      ? "bg-studio-border text-studio-text hover:brightness-125"
+                      : "bg-studio-hover text-studio-muted opacity-50 disabled:cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  <WandSparkles size={16} strokeWidth={2.1} />
+                  <span className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md bg-studio-bg px-2 py-1 text-[10px] font-semibold text-studio-text opacity-0 shadow-lg ring-1 ring-studio-border transition-opacity group-hover:opacity-100">
+                    Optimize for suggestions
+                  </span>
+                </button>
+                <button
+                  onClick={handleShowSuggestions}
+                  disabled={!canSuggest}
+                  style={canSuggest ? { background: "var(--studio-codex-cta-border)" } : undefined}
+                  className={[
+                    "flex items-center justify-center gap-2 px-4 py-2.5 rounded-[var(--app-sidebar-action-radius)] font-bold text-xs transition-all",
+                    canSuggest
+                      ? "text-studio-accent-fg hover:opacity-90"
+                      : "bg-studio-hover border border-studio-border text-studio-muted disabled:opacity-40 disabled:cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  <SolidSparklesIcon className="h-3.5 w-3.5 shrink-0" />
+                  Get image suggestions
+                </button>
+              </div>
             </div>
+            {optimizedUndoSource !== null && isOptimizedSource ? (
+              <div className="mt-2 flex items-center gap-2 text-[11px] text-studio-muted">
+                <span>Optimized for suggestions.</span>
+                <button
+                  type="button"
+                  onClick={handleUndoOptimizeSource}
+                  className="font-semibold text-studio-text underline-offset-2 hover:underline"
+                >
+                  Undo
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {hasSuggestions ? (

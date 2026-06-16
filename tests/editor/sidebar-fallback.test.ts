@@ -2,6 +2,11 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it } from "vitest";
 import { InfographicSidebar } from "@/components/infographic/InfographicSidebar";
+import {
+  buildOptimizedPlannerSource,
+  getPlannerInfographicVariant,
+  getPlannerThumbnailSrc,
+} from "@/components/layout/Sidebar";
 import { ProductVisualSidebar } from "@/components/product-visual/ProductVisualSidebar";
 import { useEditorStore } from "@/lib/store";
 import { getTemplate } from "@/lib/template-registry";
@@ -87,5 +92,57 @@ describe("editor sidebars", () => {
     expect(html).toContain("Hub map");
     expect(html).toContain("Comparison cards");
     expect(html).not.toContain("Layer diagram");
+  });
+
+  it("matches Create with Codex thumbnails to suggested visual intent", () => {
+    expect(
+      getPlannerInfographicVariant({
+        id: "supporting-infographic",
+        template: "Infographic",
+        title: "Before and after explanation",
+        use: "Use after the hero to explain the improvement",
+        brief: "Show what changed before and after.",
+      }),
+    ).toBe("comparison");
+
+    expect(
+      getPlannerInfographicVariant({
+        id: "infographic-workflow",
+        template: "Infographic",
+        title: "Workflow explanation",
+        use: "Use in the how-it-works section",
+        brief: "Explain the workflow in simple steps or a loop.",
+      }),
+    ).toBe("diagram");
+
+    expect(
+      getPlannerThumbnailSrc({
+        id: "primary-product-visual",
+        template: "Product Visual",
+        title: "Main product visual",
+        use: "Use as the main page or release visual",
+        brief: "Show the core feature as a polished product moment.",
+      }),
+    ).toBe("/preview/productvisual_card.png");
+  });
+
+  it("prepends an optimized brief while preserving the original page copy", () => {
+    const source = [
+      "Introducing Actionbook Editor: Edit your AI's rules like a Notion doc.",
+      "",
+      "Actionbooks get long. Fast.",
+      "Ops teams know exactly what needs to change, but engineering owns the backlog.",
+      "The editor shows rules on the left, live Preview and Tester on the right, and a Tree view for conditional branches.",
+    ].join("\n");
+
+    const optimized = buildOptimizedPlannerSource(source);
+
+    expect(optimized).toContain("Brief for image suggestions:");
+    expect(optimized).toContain("Feature: Actionbook Editor");
+    expect(optimized).toContain("Core message: Edit your AI's rules like a Notion doc");
+    expect(optimized).toContain("Visual priority: Product Visual Details panel, Card, Infographic workflow");
+    expect(optimized).toContain("Original copy:");
+    expect(optimized).toContain(source);
+    expect(buildOptimizedPlannerSource(optimized)).toBe(optimized);
   });
 });

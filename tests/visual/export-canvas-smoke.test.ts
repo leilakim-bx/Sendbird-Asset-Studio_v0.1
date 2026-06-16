@@ -132,6 +132,35 @@ describe("export canvas visual smoke", () => {
     expect(html).toContain("Support impact metrics");
   });
 
+  it("uses a compact number size for four-up product metrics", () => {
+    const content: InfographicContent = {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
+      format: "product",
+      bg: "warmgray",
+      accent: "lime",
+      showTitle: false,
+      blocks: [
+        {
+          id: "metric",
+          type: "kpi-group",
+          items: [
+            { number: "1,000", label: "We surveyed U.S consumers" },
+            { number: "2,000", label: "consumers across five industries" },
+            { number: "47%", label: "of consumers want to stay in control" },
+            { number: "16%", label: "are comfortable with AI acting alone" },
+          ],
+        },
+      ],
+    };
+
+    const html = renderToStaticMarkup(React.createElement(InfographicCanvas, { content, exportMode: true }));
+
+    expectStableMarkup(html);
+    expect(html).toContain("font-size:69px");
+    expect(html).toContain("gap:32px 22px");
+    expect(html).toContain("1,000");
+  });
+
   it("suppresses content title and footnote for process loops in product and blog formats", () => {
     for (const format of ["product", "blog"] as const) {
       const content: InfographicContent = {

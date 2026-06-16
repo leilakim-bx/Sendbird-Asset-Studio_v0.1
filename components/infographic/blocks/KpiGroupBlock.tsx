@@ -14,9 +14,11 @@ export function KpiGroupBlock({ block, scale = 1, format }: Props) {
   const items = block.items.slice(0, INFOGRAPHIC_BLOCK_LIMITS.kpiItems);
   const isBlog = format === "blog";
   const useTwoColumnBlog = isBlog && items.length >= 4;
+  const isDenseProductRow = !useTwoColumnBlog && items.length >= 4;
   const cols = useTwoColumnBlog ? 2 : items.length || 1;
-  const columnGap = useTwoColumnBlog ? 28 : 32;
+  const columnGap = useTwoColumnBlog ? 28 : isDenseProductRow ? 22 : 32;
   const rowGap = useTwoColumnBlog ? 34 : 32;
+  const numberFontSize = isDenseProductRow ? 60 : 72;
   const fs = (n: number) => Math.round(n * scale);
   return (
     <div
@@ -43,9 +45,9 @@ export function KpiGroupBlock({ block, scale = 1, format }: Props) {
           <div
             style={{
               fontFamily: INFOGRAPHIC_SERIF,
-              fontSize: fs(72),
+              fontSize: fs(numberFontSize),
               fontWeight: 400,
-              letterSpacing: isBlog ? "-0.02em" : "-0.04em",
+              letterSpacing: isDenseProductRow ? "-0.05em" : isBlog ? "-0.02em" : "-0.04em",
               lineHeight: 1,
               color: brand.color.ink,
               maxWidth: "100%",
