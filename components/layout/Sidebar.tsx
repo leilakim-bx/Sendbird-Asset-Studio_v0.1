@@ -116,42 +116,42 @@ const PLANNER_FALLBACKS: PlannedVisual[] = [
     template: "Product Visual",
     title: "Compact feature card",
     use: "Use near the top of the page",
-    brief: "Create a compact Card-style Product Visual that makes the feature outcome feel concrete.",
+    brief: "Show the feature outcome as a compact product moment.",
   },
   {
     id: "product-details-panel",
     template: "Product Visual",
     title: "Details panel visual",
     use: "Use for governance, review, or object-detail sections",
-    brief: "Create a focused Details panel that shows approvals, audit trail, review state, or object context.",
+    brief: "Show status, evidence, and review context.",
   },
   {
     id: "infographic-workflow",
     template: "Infographic",
     title: "Workflow explanation",
     use: "Use in the how-it-works section",
-    brief: "Show the core steps or system loop with short labels and minimal supporting text.",
+    brief: "Explain the workflow in simple steps or a loop.",
   },
   {
     id: "infographic-comparison",
     template: "Infographic",
     title: "Before and after explanation",
     use: "Use after the hero to explain the improvement",
-    brief: "Create a concise before/after or comparison block that makes the improvement obvious.",
+    brief: "Show what changed before and after.",
   },
   {
     id: "chat-proof",
     template: "Chat UI",
     title: "Customer conversation example",
     use: "Use as proof of the customer-facing outcome",
-    brief: "Show one realistic customer request and the AI response that demonstrates the feature.",
+    brief: "Show a realistic request and AI response.",
   },
   {
     id: "chat-resolution",
     template: "Chat UI",
     title: "Resolution moment",
     use: "Use when the page needs a short outcome proof",
-    brief: "Create a short chat moment that shows the problem, AI action, and resolved customer outcome.",
+    brief: "Show the problem, AI action, and outcome.",
   },
 ];
 
@@ -174,7 +174,7 @@ function buildPageVisualPlan(source: string): PlannedVisual[] {
       template: "Product Visual",
       title: "Main product visual",
       use: "Use as the main page or release visual",
-      brief: "Render a compact Product Visual Feature Moment. Use Card for AI answers, evidence, or search results; use Details panel for approvals, governance, or activity history.",
+      brief: "Show the core feature as a polished product moment.",
     });
   }
 
@@ -184,7 +184,7 @@ function buildPageVisualPlan(source: string): PlannedVisual[] {
       template: "Product Visual",
       title: "Details panel visual",
       use: "Use for approval, audit, or governance sections",
-      brief: "Render a Details panel Feature Moment with status, evidence, and review context.",
+      brief: "Show status, evidence, and review context.",
     });
   }
 
@@ -195,8 +195,8 @@ function buildPageVisualPlan(source: string): PlannedVisual[] {
       title: hasComparison ? "Before and after explanation" : "System or workflow explanation",
       use: "Use after the hero to explain the idea",
       brief: hasComparison
-        ? "Create a concise before/after or comparison block that makes the improvement obvious."
-        : "Create a simple diagram or step block that explains how the feature works.",
+        ? "Show what changed before and after."
+        : "Explain how the feature works.",
     });
   }
 
@@ -206,7 +206,7 @@ function buildPageVisualPlan(source: string): PlannedVisual[] {
       template: "Chat UI",
       title: "Conversation proof example",
       use: "Use where the customer outcome needs proof",
-      brief: "Create a short chat scenario that shows the customer problem, AI action, and resolved outcome.",
+      brief: "Show the customer problem, AI action, and outcome.",
     });
   }
 
@@ -302,32 +302,25 @@ function PlannerSuggestionCard({
   plan: PlannedVisual;
 }) {
   return (
-    <div className="group rounded-[var(--app-sidebar-action-radius)] border border-studio-border bg-studio-hover p-4 transition-colors hover:border-studio-muted">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="inline-flex items-center rounded-full bg-studio-bg px-3 py-1 text-[11px] font-semibold leading-none text-studio-text">
+    <div className="group rounded-[var(--app-sidebar-action-radius)] border border-studio-border bg-studio-hover p-3 transition-colors hover:border-studio-muted">
+      <div className="mb-2 flex items-center gap-2">
+        <span className="inline-flex items-center rounded-[var(--app-sidebar-action-radius)] bg-studio-bg px-3 py-1 text-[11px] font-semibold leading-none text-studio-text">
           {plan.template}
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-studio-muted">
-          Recommended
         </span>
       </div>
 
-      <div className="rounded-xl bg-studio-bg p-4">
-        <div className="flex gap-5">
-          <div className="relative h-28 w-44 shrink-0 overflow-hidden rounded-xl border border-studio-border bg-studio-sidebar">
+      <div className="flex gap-3 rounded-[var(--app-sidebar-action-radius)] bg-studio-bg p-3">
+        <div className="relative h-20 w-28 shrink-0 overflow-hidden rounded-[var(--app-sidebar-action-radius)] border border-studio-border bg-studio-sidebar">
           <PlannerTemplateThumbnail plan={plan} />
-          </div>
+        </div>
 
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold leading-tight text-studio-text">
-              {plan.title}
-            </p>
-            <div className="mt-4 grid grid-cols-[64px_1fr] gap-x-4 gap-y-2 text-xs leading-relaxed">
-              <span className="font-semibold text-studio-text">Use:</span>
-              <p className="line-clamp-1 text-studio-muted">{plan.use}</p>
-              <span className="font-semibold text-studio-text">Brief:</span>
-              <p className="line-clamp-2 text-studio-muted">{plan.brief}</p>
-            </div>
+        <div className="min-w-0 flex-1 py-0.5">
+          <p className="line-clamp-1 text-sm font-semibold leading-tight text-studio-text">
+            {plan.title}
+          </p>
+          <div className="mt-3 flex items-baseline gap-1.5 text-xs leading-relaxed">
+            <span className="shrink-0 font-semibold text-studio-text">Use:</span>
+            <p className="line-clamp-2 text-studio-muted">{plan.use}</p>
           </div>
         </div>
       </div>
@@ -640,7 +633,7 @@ function PageVisualPlannerModal({ onClose }: { onClose: () => void }) {
               </span>
             </div>
 
-            <div className="max-h-[360px] overflow-y-auto pr-1 flex flex-col gap-3">
+            <div className="grid max-h-[360px] grid-cols-2 gap-3 overflow-y-auto pr-1">
               {selectedPlans.map((plan, index) => (
                 <PlannerSuggestionCard key={`${index}-${plan.id}`} plan={plan} />
               ))}
