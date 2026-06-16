@@ -35,11 +35,87 @@ function ToolButton({ children, wide = false }: { children: ReactNode; wide?: bo
   );
 }
 
+function PhonePreviewMockup({ cards }: { cards: string[] }) {
+  return (
+    <div
+      style={{
+        width: 218,
+        height: 350,
+        margin: "18px auto 0",
+        borderRadius: 34,
+        border: `1px solid ${t.color.border}`,
+        background: t.color.app,
+        boxShadow: t.shadow.float,
+        padding: "18px 14px 14px",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 46,
+          height: 5,
+          borderRadius: 999,
+          background: t.color.border,
+          alignSelf: "center",
+          flex: "0 0 auto",
+        }}
+      />
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 9, minHeight: 0 }}>
+        {cards.slice(0, 4).map((card, index) => {
+          const isUser = index === 0;
+          return (
+            <div
+              key={`${index}-${card}`}
+              style={{
+                maxWidth: isUser ? "84%" : "90%",
+                alignSelf: isUser ? "flex-end" : "flex-start",
+                borderRadius: 15,
+                border: `1px solid ${t.color.border}`,
+                background: isUser ? t.color.surface : index === 2 ? t.color.aiSoft : t.color.app,
+                padding: "9px 11px",
+                boxSizing: "border-box",
+              }}
+            >
+              <EllipsisText lines={2} style={{ fontSize: 12, lineHeight: 1.3, fontWeight: 760, color: t.color.text }}>
+                {card}
+              </EllipsisText>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        style={{
+          marginTop: "auto",
+          minHeight: 34,
+          borderRadius: 17,
+          border: `1px solid ${t.color.border}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "0 11px",
+          color: t.color.faint,
+          fontSize: 12,
+          fontWeight: 760,
+        }}
+      >
+        Push sent
+        <Send size={15} style={{ marginLeft: "auto", color: t.color.ink }} />
+      </div>
+    </div>
+  );
+}
+
 export function WorkspaceScene({ spec }: Props) {
   const { content } = spec;
   const callout = spec.modifiers.aiCallout;
   const cursor = spec.modifiers.cursor;
   const hasBlocks = hasReusableBlocks(content);
+  const showSubtitle = content.subtitle.trim().length > 0;
+  const showPhonePreview = content.preview.emptyLabel.toLowerCase() === "phone mockup";
 
   return (
     <Card
@@ -68,9 +144,11 @@ export function WorkspaceScene({ spec }: Props) {
             <EllipsisText style={{ fontSize: 29, fontWeight: 800, color: t.color.text }}>
               {content.title}
             </EllipsisText>
-            <EllipsisText style={{ marginTop: 6, fontSize: 15, color: t.color.muted }}>
-              {content.subtitle}
-            </EllipsisText>
+            {showSubtitle ? (
+              <EllipsisText style={{ marginTop: 6, fontSize: 15, color: t.color.muted }}>
+                {content.subtitle}
+              </EllipsisText>
+            ) : null}
           </div>
         </div>
         <MoreHorizontal size={26} color={t.color.muted} />
@@ -211,6 +289,8 @@ export function WorkspaceScene({ spec }: Props) {
                 max={1}
                 style={{ marginTop: 22, boxShadow: t.shadow.none }}
               />
+            ) : showPhonePreview ? (
+              <PhonePreviewMockup cards={content.preview.cards} />
             ) : (
               <div style={{ marginTop: 26, display: "grid", gap: 13 }}>
                 {content.preview.cards.map((card, index) => (

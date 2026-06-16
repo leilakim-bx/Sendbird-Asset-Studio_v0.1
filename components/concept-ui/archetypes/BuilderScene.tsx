@@ -10,16 +10,20 @@ type Props = {
   spec: BuilderSceneSpec;
 };
 
-const BUILDER_PANEL_W = 1180;
-const BUILDER_PANEL_H = 720;
-const HEADER_H = 78;
-const PALETTE_W = 230;
-const MAIN_W = 660;
-const INSPECTOR_W = 290;
-const STAGE_W = 600;
-const STAGE_H = 480;
-const NODE_W = 138;
-const NODE_H = 88;
+const BUILDER_PANEL_W = 1080;
+const BUILDER_PANEL_H = 560;
+const HEADER_H = 64;
+const PALETTE_W = 190;
+const MAIN_W = 630;
+const INSPECTOR_W = 260;
+const STAGE_W = 570;
+const STAGE_H = 330;
+const NODE_W = 120;
+const NODE_H = 76;
+const NODE_GAP_X = 20;
+
+type BuilderNode = BuilderSceneSpec["content"]["canvas"]["nodes"][number];
+type NodeLayout = { left: number; top: number };
 
 function typeIcon(type: BuilderSceneSpec["content"]["canvas"]["nodes"][number]["type"], size = 18) {
   if (type === "trigger") return <PlayCircle size={size} />;
@@ -28,19 +32,58 @@ function typeIcon(type: BuilderSceneSpec["content"]["canvas"]["nodes"][number]["
   return <Zap size={size} />;
 }
 
-function nodePosition(node: BuilderSceneSpec["content"]["canvas"]["nodes"][number]) {
+function rawNodePosition(node: BuilderNode): NodeLayout {
   return {
     left: (node.x / 1000) * (STAGE_W - NODE_W),
     top: (node.y / 640) * (STAGE_H - NODE_H),
   };
 }
 
+function builderNodeLayouts(nodes: BuilderNode[]): Map<string, NodeLayout> {
+  const raw = nodes.map((node) => ({ node, ...rawNodePosition(node) }));
+  const rows: Array<typeof raw> = [];
+
+  for (const item of raw.sort((a, b) => a.top - b.top || a.left - b.left)) {
+    const row = rows.find((candidate) => {
+      const avgTop = candidate.reduce((sum, entry) => sum + entry.top, 0) / candidate.length;
+      return Math.abs(avgTop - item.top) < NODE_H * 0.72;
+    });
+    if (row) row.push(item);
+    else rows.push([item]);
+  }
+
+  const out = new Map<string, NodeLayout>();
+  for (const row of rows) {
+    const sorted = row.sort((a, b) => a.left - b.left);
+    const usableGap =
+      sorted.length > 1
+        ? Math.max(8, Math.min(NODE_GAP_X, (STAGE_W - sorted.length * NODE_W) / (sorted.length - 1)))
+        : NODE_GAP_X;
+    sorted.forEach((entry, index) => {
+      const previous = index > 0 ? out.get(sorted[index - 1].node.id) : undefined;
+      const minLeft = previous ? previous.left + NODE_W + usableGap : 0;
+      const maxLeft = STAGE_W - NODE_W;
+      out.set(entry.node.id, {
+        left: Math.min(maxLeft, Math.max(entry.left, minLeft)),
+        top: Math.min(STAGE_H - NODE_H, Math.max(0, entry.top)),
+      });
+    });
+  }
+
+  return out;
+}
+
+function nodePosition(node: BuilderNode, layouts: Map<string, NodeLayout>) {
+  return layouts.get(node.id) ?? rawNodePosition(node);
+}
+
 function edgePath(
-  from: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
-  to: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
+  from: BuilderNode,
+  to: BuilderNode,
+  layouts: Map<string, NodeLayout>,
 ) {
-  const a = nodePosition(from);
-  const b = nodePosition(to);
+  const a = nodePosition(from, layouts);
+  const b = nodePosition(to, layouts);
   const sx = a.left + NODE_W;
   const sy = a.top + NODE_H / 2;
   const ex = b.left;
@@ -50,13 +93,14 @@ function edgePath(
 }
 
 function edgeLabelPosition(
-  from: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
-  to: BuilderSceneSpec["content"]["canvas"]["nodes"][number],
+  from: BuilderNode,
+  to: BuilderNode,
   label: string,
-  nodes: BuilderSceneSpec["content"]["canvas"]["nodes"],
+  nodes: BuilderNode[],
+  layouts: Map<string, NodeLayout>,
 ) {
-  const a = nodePosition(from);
-  const b = nodePosition(to);
+  const a = nodePosition(from, layouts);
+  const b = nodePosition(to, layouts);
   const labelWidth = Math.min(170, Math.max(58, label.length * 7 + 20));
   const labelHeight = 24;
   const x = (a.left + b.left + NODE_W) / 2 - labelWidth / 2;
@@ -68,7 +112,7 @@ function edgeLabelPosition(
     bottom: y + labelHeight + 8,
   };
   const overlapsNode = nodes.some((node) => {
-    const pos = nodePosition(node);
+    const pos = nodePosition(node, layouts);
     return (
       padded.left < pos.left + NODE_W &&
       padded.right > pos.left &&
@@ -80,8 +124,8 @@ function edgeLabelPosition(
   return { x, y, width: labelWidth, height: labelHeight };
 }
 
-function nodePopover(node: BuilderSceneSpec["content"]["canvas"]["nodes"][number]) {
-  const pos = nodePosition(node);
+function nodePopover(node: BuilderNode, layouts: Map<string, NodeLayout>) {
+  const pos = nodePosition(node, layouts);
   if (pos.left > STAGE_W - NODE_W - 260) return "left";
   if (pos.top < 165) return "bottom";
   return "top";
@@ -97,6 +141,7 @@ export function BuilderScene({ spec }: Props) {
   const hasBlocks = hasReusableBlocks(content);
   const nodeCallout = callout && nodeSlotIds.has(callout.targetSlotId) ? callout : undefined;
   const blockCallout = nodeCallout ? undefined : callout;
+  const nodeLayouts = builderNodeLayouts(content.canvas.nodes);
 
   return (
     <Card
@@ -114,14 +159,14 @@ export function BuilderScene({ spec }: Props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 30px",
+          padding: "0 24px",
           borderBottom: `1px solid ${t.color.border}`,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <DelightMark size={40} />
+          <DelightMark size={34} />
           <div>
-            <EllipsisText style={{ fontSize: 26, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 22, fontWeight: 800, color: t.color.text }}>
               {content.title}
             </EllipsisText>
           </div>
@@ -136,27 +181,27 @@ export function BuilderScene({ spec }: Props) {
           minHeight: 0,
         }}
       >
-        <aside style={{ borderRight: `1px solid ${t.color.border}`, padding: 20 }}>
-          <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+        <aside style={{ borderRight: `1px solid ${t.color.border}`, padding: 14 }}>
+          <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>
             {content.paletteTitle}
           </EllipsisText>
-          <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 11 }}>
+          <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
             {content.paletteItems.map((item, index) => (
               <div
                 key={`${index}-${item.type}`}
                 style={{
-                  borderRadius: 16,
+                  borderRadius: 14,
                   border: `1px solid ${t.color.border}`,
                   background: t.color.surface,
-                  padding: 13,
+                  padding: 10,
                   display: "flex",
                   gap: 10,
                 }}
               >
                 <div
                   style={{
-                    width: 30,
-                    height: 30,
+                    width: 26,
+                    height: 26,
                     borderRadius: 11,
                     background: item.type === "ai" ? t.color.aiSoft : t.color.app,
                     color: item.type === "ai" ? t.color.ink : t.color.text,
@@ -166,13 +211,13 @@ export function BuilderScene({ spec }: Props) {
                     flex: "0 0 auto",
                   }}
                 >
-                  {typeIcon(item.type, 18)}
+                  {typeIcon(item.type, 15)}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <EllipsisText style={{ fontSize: 15, fontWeight: 800, color: t.color.text }}>
+                  <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.text }}>
                     {item.label}
                   </EllipsisText>
-                  <EllipsisText lines={2} style={{ marginTop: 5, fontSize: 12, lineHeight: 1.35, color: t.color.muted }}>
+                  <EllipsisText lines={2} style={{ marginTop: 4, fontSize: 10.5, lineHeight: 1.32, color: t.color.muted }}>
                     {item.description}
                   </EllipsisText>
                 </div>
@@ -181,9 +226,9 @@ export function BuilderScene({ spec }: Props) {
           </div>
         </aside>
 
-        <main style={{ padding: 24, background: t.color.surface, minWidth: 0 }}>
+        <main style={{ padding: 20, background: t.color.surface, minWidth: 0 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+            <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>
               {content.canvas.title}
             </EllipsisText>
             <Pill tone="neutral">Deterministic layout</Pill>
@@ -191,7 +236,7 @@ export function BuilderScene({ spec }: Props) {
           <div
             style={{
               position: "relative",
-              marginTop: 18,
+              marginTop: 14,
               width: STAGE_W,
               height: STAGE_H,
               borderRadius: 24,
@@ -217,11 +262,11 @@ export function BuilderScene({ spec }: Props) {
                 const from = nodesById.get(edge.from);
                 const to = nodesById.get(edge.to);
                 if (!from || !to) return null;
-                const labelPos = edge.label ? edgeLabelPosition(from, to, edge.label, content.canvas.nodes) : null;
+                const labelPos = edge.label ? edgeLabelPosition(from, to, edge.label, content.canvas.nodes, nodeLayouts) : null;
                 return (
                   <g key={`${edge.from}-${edge.to}-${index}`}>
                     <path
-                      d={edgePath(from, to)}
+                      d={edgePath(from, to, nodeLayouts)}
                       fill="none"
                       stroke={t.color.borderStrong}
                       strokeWidth={3}
@@ -255,7 +300,7 @@ export function BuilderScene({ spec }: Props) {
             </svg>
 
             {content.canvas.nodes.map((node) => {
-              const pos = nodePosition(node);
+              const pos = nodePosition(node, nodeLayouts);
               const isSelected = node.id === selected?.id;
               return (
                 <Slot
@@ -263,24 +308,24 @@ export function BuilderScene({ spec }: Props) {
                   id={node.slotId}
                   highlighted={callout?.targetSlotId === node.slotId || spec.modifiers.highlightedSlotId === node.slotId}
                   cursor={cursor}
-                  popover={nodePopover(node)}
+                  popover={nodePopover(node, nodeLayouts)}
                   style={{
                     position: "absolute",
                     left: pos.left,
                     top: pos.top,
                     width: NODE_W,
                     minHeight: NODE_H,
-                    borderRadius: 20,
+                    borderRadius: 16,
                     border: `2px solid ${isSelected ? t.color.ink : t.color.border}`,
                     background: t.color.app,
-                    padding: 14,
+                    padding: 11,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div
                       style={{
-                        width: 32,
-                        height: 32,
+                        width: 25,
+                        height: 25,
                         borderRadius: 10,
                         background: node.type === "ai" ? t.color.aiSoft : t.color.surface,
                         color: node.type === "ai" ? t.color.ink : t.color.text,
@@ -290,16 +335,16 @@ export function BuilderScene({ spec }: Props) {
                         flex: "0 0 auto",
                       }}
                     >
-                      {typeIcon(node.type, 17)}
+                      {typeIcon(node.type, 14)}
                     </div>
-                    <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>
+                    <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.text }}>
                       {node.title}
                     </EllipsisText>
                   </div>
-                  <EllipsisText lines={2} style={{ marginTop: 9, fontSize: 13, lineHeight: 1.35, color: t.color.muted }}>
+                  <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 10.5, lineHeight: 1.3, color: t.color.muted }}>
                     {node.description}
                   </EllipsisText>
-                  <Pill tone={node.type === "ai" ? "ai" : "neutral"} style={{ marginTop: 10, minHeight: 24, fontSize: 12 }}>
+                  <Pill tone={node.type === "ai" ? "ai" : "neutral"} style={{ marginTop: 8, minHeight: 20, fontSize: 10 }}>
                     {node.status}
                   </Pill>
                 </Slot>
@@ -308,12 +353,12 @@ export function BuilderScene({ spec }: Props) {
           </div>
         </main>
 
-        <aside style={{ borderLeft: `1px solid ${t.color.border}`, padding: 20 }}>
+        <aside style={{ borderLeft: `1px solid ${t.color.border}`, padding: 16, alignSelf: "start" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
               style={{
-                width: 36,
-                height: 36,
+                width: 30,
+                height: 30,
                 borderRadius: 13,
                 background: t.color.ink,
                 color: t.color.inverse,
@@ -322,13 +367,13 @@ export function BuilderScene({ spec }: Props) {
                 justifyContent: "center",
               }}
             >
-              <CheckCircle2 size={20} />
+              <CheckCircle2 size={16} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <EllipsisText style={{ fontSize: 20, fontWeight: 800, color: t.color.text }}>
+              <EllipsisText style={{ fontSize: 16, fontWeight: 800, color: t.color.text }}>
                 {content.selectedNode.panelTitle}
               </EllipsisText>
-              <EllipsisText style={{ marginTop: 4, fontSize: 14, color: t.color.muted }}>
+              <EllipsisText style={{ marginTop: 3, fontSize: 11, color: t.color.muted }}>
                 Selected node
               </EllipsisText>
             </div>
@@ -342,18 +387,18 @@ export function BuilderScene({ spec }: Props) {
               compact
               max={1}
               popover="inline"
-              style={{ marginTop: 20, boxShadow: t.shadow.none }}
+              style={{ marginTop: 14, boxShadow: t.shadow.none }}
             />
           ) : (
             <>
               {nodeCallout ? (
                 <div
                   style={{
-                    marginTop: 20,
-                    borderRadius: 17,
+                    marginTop: 14,
+                    borderRadius: 14,
                     background: t.color.app,
                     border: `1px solid ${t.color.borderStrong}`,
-                    padding: 15,
+                    padding: 12,
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -374,30 +419,30 @@ export function BuilderScene({ spec }: Props) {
                     >
                       AI
                     </span>
-                    <EllipsisText style={{ minWidth: 0, fontSize: 16, fontWeight: 800, color: t.color.text }}>
+                    <EllipsisText style={{ minWidth: 0, fontSize: 13, fontWeight: 800, color: t.color.text }}>
                       {nodeCallout.label}
                     </EllipsisText>
                   </div>
-                  <EllipsisText lines={3} style={{ marginTop: 8, fontSize: 13, lineHeight: 1.35, color: t.color.muted }}>
+                  <EllipsisText lines={3} style={{ marginTop: 7, fontSize: 11, lineHeight: 1.32, color: t.color.muted }}>
                     {nodeCallout.description}
                   </EllipsisText>
                 </div>
               ) : null}
-              <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 13 }}>
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 9 }}>
                 {content.selectedNode.fields.map((field, index) => (
                   <div
                     key={`${index}-${field.label}`}
                     style={{
-                      borderRadius: 17,
+                      borderRadius: 14,
                       background: t.color.surface,
                       border: `1px solid ${t.color.border}`,
-                      padding: 15,
+                      padding: 12,
                     }}
                   >
-                    <EllipsisText style={{ fontSize: 13, fontWeight: 800, color: t.color.faint }}>
+                    <EllipsisText style={{ fontSize: 10.5, fontWeight: 800, color: t.color.faint }}>
                       {field.label}
                     </EllipsisText>
-                    <EllipsisText lines={2} style={{ marginTop: 7, fontSize: 15, lineHeight: 1.35, color: t.color.text }}>
+                    <EllipsisText lines={2} style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.32, color: t.color.text }}>
                       {field.value}
                     </EllipsisText>
                   </div>
@@ -406,7 +451,7 @@ export function BuilderScene({ spec }: Props) {
             </>
           )}
 
-          <div style={{ marginTop: 22, display: "flex", gap: 10 }}>
+          <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
             {content.selectedNode.actions.map((action, index) => (
               <button
                 key={`${index}-${action.label}`}
@@ -417,8 +462,8 @@ export function BuilderScene({ spec }: Props) {
                   borderRadius: 14,
                   background: action.tone === "primary" ? t.color.ink : t.color.app,
                   color: action.tone === "primary" ? t.color.inverse : t.color.text,
-                  minHeight: 44,
-                  fontSize: 15,
+                  minHeight: 36,
+                  fontSize: 12,
                   fontWeight: 800,
                 }}
               >
