@@ -144,8 +144,10 @@ Item:   px-3 py-1.5 text-xs text-studio-text hover:bg-studio-hover cursor-defaul
 - Product Feature 포맷에서는 Screenshot을 비활성화하고 Concept UI를 기본 source로 사용한다.
 - Concept UI source의 기본 입력 섹션은 `Create from brief`이며, `Add guidance`로 짧은 feature/user/surface/proof/avoid 힌트를 붙일 수 있다. Brief composer는 Chat UI/Infographic과 같은 라임색 arrow submit 버튼을 우측 하단에 두되, `Card`와 `Details panel` block 선택지는 첫 진입부터 바로 노출한다.
 - Product Visual 생성 액션은 자유로운 archetype 선택 대신 2개의 compact block 카드(`Card`, `Details panel`)를 보여준다. 각 선택지는 Infographic block selector처럼 왼쪽에 실제 기본 렌더 기반 thumbnail image, 오른쪽에 title/description을 가진 행형 카드로 보여 결과 형태를 선택 전에 파악할 수 있게 한다. 선택된 카드는 2px lime outline으로만 표시하고 추천 badge는 쓰지 않는다.
-- Product Visual `Details panel`은 body variant 선택을 노출하지 않는다. 편집 UI는 Title, `Show information` switch, Information 값 4개, Activity tag/text 3줄처럼 최종 이미지에 실제로 보이는 slot만 남겨 결과를 안정적으로 유지한다. `Show information`을 끄면 Information 섹션과 Activity heading을 숨겨 timeline-only detail panel로 즉시 렌더한다.
-- compact block 생성 후에는 `Edit block copy` 섹션을 노출해 Title, main text, evidence/source, CTA처럼 마케터가 실제로 바꿔야 하는 slot만 수정하게 한다. Layout, spacing, block type은 고정해 결과 품질을 유지하며, copy edit은 별도 update 버튼 없이 프리뷰에 자동 반영한다.
+- Product Visual `Card` 편집 UI는 reviewer를 토글 스위치가 아니라 `Show reviewer` checkbox로 제어한다. 체크를 끄면 reviewer label/avatar/name row만 숨기고 reviewer 값은 유지해 다시 켰을 때 복원한다.
+- Product Visual `Card`의 source row는 source label/match와 함께 제한된 5개 icon preset(Document, Knowledge, Customer, Data, Conversation)만 선택하게 한다. 자유 아이콘 업로드나 임의 lucide 이름 입력은 제공하지 않는다.
+- Product Visual `Details panel`은 body variant 선택을 노출하지 않는다. 편집 UI는 Title, `Show information` checkbox, Information 값 4개, Activity tag/text 3줄처럼 최종 이미지에 실제로 보이는 slot만 남겨 결과를 안정적으로 유지한다. `Show information`을 끄면 Information 섹션과 Activity heading을 숨겨 timeline-only detail panel로 즉시 렌더한다.
+- compact block 생성 후에는 `Edit block copy` 섹션을 노출해 Title, main text, evidence/source, CTA처럼 마케터가 실제로 바꿔야 하는 slot만 수정하게 한다. Layout, spacing, block type은 고정해 결과 품질을 유지하며, copy edit은 별도 update 버튼 없이 프리뷰에 자동 반영한다. 이 편집 영역은 Chat UI block editor와 같은 `bg-studio-hover` card surface와 `bg-studio-sidebar` input styling을 사용해 오른쪽 패널 안에서 일관된 편집 경험을 유지한다.
 - Concept UI source에서는 frame 선택 섹션을 노출하지 않는다. 제한된 compact block은 항상 primary panel만 floating capture로 렌더한다.
 - Rebuild from reference는 품질 개선 전까지 archived 상태로 UI에 노출하지 않는다. 코드 경로는 나중에 다시 켤 수 있게 보관한다.
 

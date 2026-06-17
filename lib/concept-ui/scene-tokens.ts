@@ -78,6 +78,7 @@ export const conceptSceneTokens = {
       frame: {
         width: 1000,
         height: 920,
+        heightWithoutReviewer: 800,
       },
       card: {
         radius: brand.radius[42],

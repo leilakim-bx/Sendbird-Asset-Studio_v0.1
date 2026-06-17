@@ -1511,10 +1511,13 @@ function aiResponseCardSpec(description: string): SceneSpec {
         title,
         description: "Review the generated response and source evidence before sending.",
         fields: [
+          { slotId: "moment-show-reviewer", label: "Show reviewer", value: "true" },
           { slotId: "moment-reviewer", label: "Reviewer", value: clampText(reviewer, RESPONSE_CARD_COPY_LIMITS.reviewer) },
           { slotId: "moment-response", label: "Response", value: clampText(responseText, RESPONSE_CARD_COPY_LIMITS.response) },
           { slotId: "moment-source-1", label: "Source", value: sourceValue(sources[0] ?? "Knowledge base article", 0) },
+          { slotId: "moment-source-1-icon", label: "Source 1 icon", value: "knowledge" },
           { slotId: "moment-source-2", label: "Source", value: sourceValue(sources[1] ?? "Customer context", 1) },
+          { slotId: "moment-source-2-icon", label: "Source 2 icon", value: "customer" },
         ],
         actions: [
           { label: clampText(secondaryCta, RESPONSE_CARD_COPY_LIMITS.action), tone: "secondary" },

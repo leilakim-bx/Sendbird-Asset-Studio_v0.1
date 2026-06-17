@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, CheckCircle2, FileText, Sparkles, X } from "lucide-react";
+import { BookOpen, Bot, CheckCircle2, Database, FileText, MessageSquare, Sparkles, UserRound, X } from "lucide-react";
 import type { ModalSceneSpec } from "@/lib/concept-ui/scene-spec";
 import { conceptSceneTokens as t } from "@/lib/concept-ui/scene-tokens";
 import { hasReusableBlocks, ReusableBlockStack } from "../blocks/ReusableBlockCards";
@@ -36,6 +36,33 @@ function sourceParts(value: string): { label: string; match: string } {
   return { label: label || value, match: match || "" };
 }
 
+const responseSourceIconComponents = {
+  document: FileText,
+  knowledge: BookOpen,
+  customer: UserRound,
+  data: Database,
+  conversation: MessageSquare,
+} as const;
+
+type ResponseSourceIconId = keyof typeof responseSourceIconComponents;
+
+function responseSourceIconId(value: string): ResponseSourceIconId {
+  return value in responseSourceIconComponents ? (value as ResponseSourceIconId) : "document";
+}
+
+function responseSourceRows(content: ModalSceneSpec["content"]) {
+  return [1, 2]
+    .map((index) => {
+      const source = content.modal.fields.find((field) => field.slotId === `moment-source-${index}`);
+      if (!source) return null;
+      return {
+        ...sourceParts(source.value),
+        icon: responseSourceIconId(fieldSlotValue(content, `moment-source-${index}-icon`)),
+      };
+    })
+    .filter((source): source is { label: string; match: string; icon: ResponseSourceIconId } => Boolean(source));
+}
+
 function isResponseMoment(content: ModalSceneSpec["content"]): boolean {
   return content.modal.slotId === "moment-ai-response";
 }
@@ -48,7 +75,8 @@ function MomentResponseCard({ spec }: Props) {
   const { content } = spec;
   const reviewer = fieldValue(content, "Reviewer") || "Reviewer";
   const response = fieldValue(content, "Response") || content.modal.description;
-  const sources = content.modal.fields.filter((field) => field.label.toLowerCase() === "source").map((field) => sourceParts(field.value));
+  const showReviewer = fieldSlotValue(content, "moment-show-reviewer") !== "false";
+  const sources = responseSourceRows(content);
   const cardType = t.momentResponse;
   const study = cardType.study;
 
@@ -57,7 +85,7 @@ function MomentResponseCard({ spec }: Props) {
       primaryPanel
       style={{
         width: study.frame.width,
-        minHeight: study.frame.height,
+        minHeight: showReviewer ? study.frame.height : study.frame.heightWithoutReviewer,
         boxSizing: "border-box",
         border: 0,
         borderRadius: study.card.radius,
@@ -74,53 +102,55 @@ function MomentResponseCard({ spec }: Props) {
           {content.modal.title}
         </EllipsisText>
 
-        <div
-          style={{
-            marginTop: study.meta.top,
-            display: "flex",
-            alignItems: "center",
-            gap: study.meta.gap,
-            color: t.color.text,
-          }}
-        >
-          <EllipsisText style={cardType.metaLabel}>Reviewer</EllipsisText>
+        {showReviewer ? (
           <div
-            aria-hidden
             style={{
-              width: study.meta.avatar,
-              height: study.meta.avatar,
-              borderRadius: t.radius.full,
-              background: t.color.surfaceStrong,
-              boxShadow: `0 0 0 1px ${t.color.border}`,
+              marginTop: study.meta.top,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              flex: "0 0 auto",
-              overflow: "hidden",
+              gap: study.meta.gap,
+              color: t.color.text,
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/preview/Avatar/Woman-08.png"
-              alt=""
+            <EllipsisText style={cardType.metaLabel}>Reviewer</EllipsisText>
+            <div
+              aria-hidden
               style={{
-                width: "100%",
-                height: "100%",
-                display: "block",
-                objectFit: "cover",
+                width: study.meta.avatar,
+                height: study.meta.avatar,
+                borderRadius: t.radius.full,
+                background: t.color.surfaceStrong,
+                boxShadow: `0 0 0 1px ${t.color.border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flex: "0 0 auto",
+                overflow: "hidden",
               }}
-            />
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/preview/Avatar/Woman-08.png"
+                alt=""
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                }}
+              />
+            </div>
+            <EllipsisText style={{ ...cardType.metaValue, color: t.color.text }}>
+              {reviewer}
+            </EllipsisText>
           </div>
-          <EllipsisText style={{ ...cardType.metaValue, color: t.color.text }}>
-            {reviewer}
-          </EllipsisText>
-        </div>
+        ) : null}
 
         <Slot
           id="moment-response"
           highlighted={spec.modifiers.highlightedSlotId === "moment-response"}
           style={{
-            marginTop: study.responseBox.top,
+            marginTop: showReviewer ? study.responseBox.top : study.meta.top,
             minHeight: study.responseBox.minHeight,
             borderRadius: study.responseBox.radius,
             border: `${study.responseBox.borderWidth}px solid ${t.color.border}`,
@@ -149,7 +179,10 @@ function MomentResponseCard({ spec }: Props) {
             {sources.slice(0, 2).map((source, index) => (
               <div key={`${index}-${source.label}`} style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 24, alignItems: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
-                  <FileText size={study.evidence.iconSize} color={t.color.text} strokeWidth={1.9} />
+                  {(() => {
+                    const Icon = responseSourceIconComponents[source.icon];
+                    return <Icon size={study.evidence.iconSize} color={t.color.text} strokeWidth={1.9} />;
+                  })()}
                   <EllipsisText style={{ ...cardType.evidenceLabel, color: t.color.text, textDecoration: "underline" }}>
                     {source.label}
                   </EllipsisText>

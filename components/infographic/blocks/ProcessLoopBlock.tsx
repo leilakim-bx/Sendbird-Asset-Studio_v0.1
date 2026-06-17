@@ -35,7 +35,7 @@ export function ProcessLoopBlock({ block, scale = 1, format = "blog", maxHeight 
   const labelScale = Math.min(scale, 1);
   const labelFs = (n: number) => Math.round(n * labelScale);
   const title = block.title?.trim();
-  const loopLabel = block.loopLabel?.trim() || DEFAULT_LOOP_LABEL;
+  const loopLabel = block.loopLabel === undefined ? DEFAULT_LOOP_LABEL : block.loopLabel.trim();
   const panelMaxWidth = isProduct ? 760 : 560;
   const panelPaddingX = isProduct ? brand.spacing[24] : brand.spacing[18];
   const panelPaddingY = isProduct ? brand.spacing[14] : brand.spacing[12];
@@ -43,7 +43,20 @@ export function ProcessLoopBlock({ block, scale = 1, format = "blog", maxHeight 
   const stepPaddingX = compactProductSteps ? brand.spacing[12] : isProduct ? brand.spacing[16] : brand.spacing[12];
   const stepPaddingY = isProduct ? brand.spacing[12] : brand.spacing[10];
   const stepMinWidth = compactProductSteps ? brand.spacing[92] : isProduct ? brand.spacing[100] : brand.spacing[72];
-  const stepMaxWidth = compactProductSteps ? brand.spacing[170] : isProduct ? brand.spacing[152] : brand.spacing[130];
+  const rowGap = compactProductSteps ? brand.spacing[5] : isProduct ? brand.spacing[7] : brand.spacing[6];
+  const arrowCount = Math.max(steps.length - 1, 0);
+  const arrowReserve = labelFs(isProduct ? brand.typography.size[20] : brand.typography.size[16]);
+  const availableStepWidth =
+    panelMaxWidth -
+    panelPaddingX * 2 -
+    rowGap * Math.max(steps.length + arrowCount - 1, 0) -
+    arrowReserve * arrowCount;
+  const dynamicStepMaxWidth = Math.max(stepMinWidth, Math.floor(availableStepWidth / Math.max(steps.length, 1)));
+  const stepMaxWidth = compactProductSteps
+    ? Math.min(dynamicStepMaxWidth, brand.spacing[170])
+    : isProduct
+      ? dynamicStepMaxWidth
+      : brand.spacing[130];
 
   return (
     <div
@@ -93,7 +106,7 @@ export function ProcessLoopBlock({ block, scale = 1, format = "blog", maxHeight 
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            gap: brandPx(compactProductSteps ? brand.spacing[5] : isProduct ? brand.spacing[7] : brand.spacing[6]),
+            gap: brandPx(rowGap),
             padding: `${brandPx(panelPaddingY)} ${brandPx(panelPaddingX)}`,
             borderRadius: brand.radius[14],
             background: brand.color.infographic.paper,
@@ -184,20 +197,22 @@ export function ProcessLoopBlock({ block, scale = 1, format = "blog", maxHeight 
                 strokeLinejoin="round"
               />
             </svg>
-            <div
-              style={{
-                maxWidth: "100%",
-                color: INFOGRAPHIC_INK_MUTED,
-                fontSize: fs(isProduct ? brand.typography.size[14] : brand.typography.size[12]),
-                lineHeight: brand.typography.lineHeight.normal,
-                textAlign: "center",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {loopLabel}
-            </div>
+            {loopLabel ? (
+              <div
+                style={{
+                  maxWidth: "100%",
+                  color: INFOGRAPHIC_INK_MUTED,
+                  fontSize: fs(isProduct ? brand.typography.size[14] : brand.typography.size[12]),
+                  lineHeight: brand.typography.lineHeight.normal,
+                  textAlign: "center",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {loopLabel}
+              </div>
+            ) : null}
           </div>
         )}
       </div>

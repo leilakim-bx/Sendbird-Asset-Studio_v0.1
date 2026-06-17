@@ -134,7 +134,7 @@ function StepLabel({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-hover text-[10px] font-bold text-studio-text">
+      <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-studio-border text-[10px] font-bold text-studio-text">
         {number}
       </span>
       <span>
@@ -173,6 +173,13 @@ function RecipePreviewThumb({
 
 type ProductMomentDraft = Record<string, string>;
 
+const BLOCK_COPY_PANEL_CLASS = "mt-4 rounded-lg bg-studio-hover p-2.5";
+const BLOCK_COPY_LABEL_CLASS = "mb-1 block text-[10px] font-medium uppercase tracking-[0.12em] text-studio-muted";
+const BLOCK_COPY_FIELD_LABEL_CLASS = "mb-1 block text-[10px] font-medium text-studio-muted";
+const BLOCK_COPY_INPUT_CLASS =
+  "w-full rounded-md border border-studio-border bg-studio-sidebar px-3 py-2 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:ring-1 focus:ring-studio-accent";
+const BLOCK_COPY_TEXTAREA_CLASS = `${BLOCK_COPY_INPUT_CLASS} resize-none leading-relaxed`;
+
 const RESPONSE_CARD_COPY_LIMITS = {
   title: 34,
   reviewer: 24,
@@ -184,6 +191,22 @@ const RESPONSE_CARD_COPY_LIMITS = {
   primaryAction: 12,
   secondaryAction: 12,
 } as const satisfies Record<string, number>;
+
+const RESPONSE_SOURCE_ICON_OPTIONS = [
+  { id: "document", label: "Document" },
+  { id: "knowledge", label: "Knowledge" },
+  { id: "customer", label: "Customer" },
+  { id: "data", label: "Data" },
+  { id: "conversation", label: "Conversation" },
+] as const;
+
+type ResponseSourceIconId = (typeof RESPONSE_SOURCE_ICON_OPTIONS)[number]["id"];
+
+function responseSourceIconValue(value?: string): ResponseSourceIconId {
+  return RESPONSE_SOURCE_ICON_OPTIONS.some((option) => option.id === value)
+    ? (value as ResponseSourceIconId)
+    : "document";
+}
 
 const DETAILS_PANEL_COPY_LIMITS = {
   title: 40,
@@ -203,6 +226,10 @@ const DETAILS_PANEL_ACTIVITY_ROWS = [1, 2, 3] as const;
 
 function detailsPanelShowInformation(draft: ProductMomentDraft): boolean {
   return draft.showInformation !== "false";
+}
+
+function responseCardShowReviewer(draft: ProductMomentDraft): boolean {
+  return draft.showReviewer !== "false";
 }
 
 function isResponseMomentSpec(spec: SceneSpec | null): boolean {
@@ -339,12 +366,15 @@ function buildProductMomentDraft(spec: SceneSpec | null): ProductMomentDraft {
     const secondaryAction = spec.content.modal.actions.find((action) => action.tone === "secondary") ?? spec.content.modal.actions[0];
     return {
       title: spec.content.modal.title,
+      showReviewer: modalSlotValue(spec, "moment-show-reviewer") === "false" ? "false" : "true",
       reviewer: modalFieldValue(spec, "Reviewer"),
       response: modalFieldValue(spec, "Response"),
       source1: sources[0]?.label ?? "",
       source1Match: sources[0]?.match ?? "",
+      source1Icon: responseSourceIconValue(modalSlotValue(spec, "moment-source-1-icon")),
       source2: sources[1]?.label ?? "",
       source2Match: sources[1]?.match ?? "",
+      source2Icon: responseSourceIconValue(modalSlotValue(spec, "moment-source-2-icon")),
       secondaryAction: secondaryAction?.label ?? "",
       primaryAction: primaryAction?.label ?? "",
     };
@@ -867,9 +897,22 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
 
     if (kind === "response" && next.archetype === "modal" && isResponseMomentSpec(next)) {
       const title = responseCardDraftText(draft, "title", next.content.modal.title);
+      const showReviewer = responseCardShowReviewer(draft);
+      let hasShowReviewerField = false;
+      let hasSource1IconField = false;
+      let hasSource2IconField = false;
       next.content.title = title;
       next.content.modal.title = title;
       next.content.modal.fields = next.content.modal.fields.map((field) => {
+        if (field.slotId === "moment-show-reviewer" || field.label === "Show reviewer") {
+          hasShowReviewerField = true;
+          return {
+            ...field,
+            slotId: "moment-show-reviewer",
+            label: "Show reviewer",
+            value: showReviewer ? "true" : "false",
+          };
+        }
         if (field.label === "Reviewer") {
           return { ...field, value: responseCardDraftText(draft, "reviewer", field.value) };
         }
@@ -885,6 +928,10 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
             ),
           };
         }
+        if (field.slotId === "moment-source-1-icon") {
+          hasSource1IconField = true;
+          return { ...field, value: responseSourceIconValue(draft.source1Icon) };
+        }
         if (field.slotId === "moment-source-2") {
           return {
             ...field,
@@ -894,8 +941,32 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
             ),
           };
         }
+        if (field.slotId === "moment-source-2-icon") {
+          hasSource2IconField = true;
+          return { ...field, value: responseSourceIconValue(draft.source2Icon) };
+        }
         return field;
       });
+      if (!hasShowReviewerField) {
+        next.content.modal.fields = [
+          { slotId: "moment-show-reviewer", label: "Show reviewer", value: showReviewer ? "true" : "false" },
+          ...next.content.modal.fields,
+        ];
+      }
+      if (!hasSource1IconField) {
+        next.content.modal.fields.push({
+          slotId: "moment-source-1-icon",
+          label: "Source 1 icon",
+          value: responseSourceIconValue(draft.source1Icon),
+        });
+      }
+      if (!hasSource2IconField) {
+        next.content.modal.fields.push({
+          slotId: "moment-source-2-icon",
+          label: "Source 2 icon",
+          value: responseSourceIconValue(draft.source2Icon),
+        });
+      }
       next.content.modal.actions = next.content.modal.actions.map((action) => {
         if (action.tone === "primary") {
           return { ...action, label: responseCardDraftText(draft, "primaryAction", action.label) };
@@ -1495,15 +1566,15 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
               <p className="mt-2 text-[11px] leading-snug text-studio-muted">{specNotice}</p>
             ) : null}
             {editableMomentKind ? (
-              <div className="mt-4 rounded-xl border border-studio-border bg-studio-input p-3">
+              <div className={BLOCK_COPY_PANEL_CLASS}>
                 <StepLabel
                   number={3}
                   title="Edit block copy"
                   description="Keep the layout fixed; change only the high-signal text slots."
                 />
-                <div className="mt-3 space-y-2.5">
+                <div className="mt-3 space-y-2">
                   <label className="block">
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Title</span>
+                    <span className={BLOCK_COPY_LABEL_CLASS}>Title</span>
                     <input
                       value={blockCopyDraft.title ?? ""}
                       maxLength={
@@ -1514,70 +1585,99 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                             : undefined
                       }
                       onChange={(e) => updateBlockDraft("title", e.currentTarget.value)}
-                      className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                      className={BLOCK_COPY_INPUT_CLASS}
                     />
                   </label>
 
                   {editableMomentKind === "response" ? (
                     <>
-                      <label className="block">
-                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Reviewer</span>
+                      <label className="flex cursor-pointer items-center gap-2 py-1">
                         <input
-                          value={blockCopyDraft.reviewer ?? ""}
-                          maxLength={responseCardLimit("reviewer")}
-                          onChange={(e) => updateBlockDraft("reviewer", e.currentTarget.value)}
-                          className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          type="checkbox"
+                          checked={responseCardShowReviewer(blockCopyDraft)}
+                          onChange={(e) =>
+                            updateBlockDraft("showReviewer", e.currentTarget.checked ? "true" : "false", { immediate: true })
+                          }
+                          className="sb-checkbox"
                         />
+                        <span className="text-xs font-medium text-studio-text">Show reviewer</span>
                       </label>
+                      {responseCardShowReviewer(blockCopyDraft) ? (
+                        <label className="block">
+                          <span className={BLOCK_COPY_LABEL_CLASS}>Reviewer</span>
+                          <input
+                            value={blockCopyDraft.reviewer ?? ""}
+                            maxLength={responseCardLimit("reviewer")}
+                            onChange={(e) => updateBlockDraft("reviewer", e.currentTarget.value)}
+                            className={BLOCK_COPY_INPUT_CLASS}
+                          />
+                        </label>
+                      ) : null}
                       <label className="block">
-                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Response</span>
+                        <span className={BLOCK_COPY_LABEL_CLASS}>Response</span>
                         <textarea
                           value={blockCopyDraft.response ?? ""}
                           maxLength={responseCardLimit("response")}
                           onChange={(e) => updateBlockDraft("response", e.currentTarget.value)}
                           rows={4}
-                          className="w-full resize-none rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs leading-relaxed text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          className={BLOCK_COPY_TEXTAREA_CLASS}
                         />
                       </label>
                       {[1, 2].map((index) => (
-                        <div key={index} className="grid grid-cols-[minmax(0,1fr)_76px] gap-1.5">
+                        <div key={index} className="space-y-1.5">
+                          <div className="grid grid-cols-[minmax(0,1fr)_76px] gap-1.5">
+                            <label className="block">
+                              <span className={BLOCK_COPY_LABEL_CLASS}>Source {index}</span>
+                              <input
+                                value={blockCopyDraft[`source${index}`] ?? ""}
+                                maxLength={responseCardLimit(`source${index}`)}
+                                onChange={(e) => updateBlockDraft(`source${index}`, e.currentTarget.value)}
+                                className={BLOCK_COPY_INPUT_CLASS}
+                              />
+                            </label>
+                            <label className="block">
+                              <span className={BLOCK_COPY_LABEL_CLASS}>Match</span>
+                              <input
+                                value={blockCopyDraft[`source${index}Match`] ?? ""}
+                                maxLength={responseCardLimit(`source${index}Match`)}
+                                onChange={(e) => updateBlockDraft(`source${index}Match`, e.currentTarget.value)}
+                                className={BLOCK_COPY_INPUT_CLASS}
+                              />
+                            </label>
+                          </div>
                           <label className="block">
-                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Source {index}</span>
-                            <input
-                              value={blockCopyDraft[`source${index}`] ?? ""}
-                              maxLength={responseCardLimit(`source${index}`)}
-                              onChange={(e) => updateBlockDraft(`source${index}`, e.currentTarget.value)}
-                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
-                            />
-                          </label>
-                          <label className="block">
-                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Match</span>
-                            <input
-                              value={blockCopyDraft[`source${index}Match`] ?? ""}
-                              maxLength={responseCardLimit(`source${index}Match`)}
-                              onChange={(e) => updateBlockDraft(`source${index}Match`, e.currentTarget.value)}
-                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
-                            />
+                            <span className={BLOCK_COPY_LABEL_CLASS}>Icon</span>
+                            <select
+                              value={responseSourceIconValue(blockCopyDraft[`source${index}Icon`])}
+                              onChange={(e) => updateBlockDraft(`source${index}Icon`, e.currentTarget.value, { immediate: true })}
+                              className={BLOCK_COPY_INPUT_CLASS}
+                            >
+                              {RESPONSE_SOURCE_ICON_OPTIONS.map((option) => (
+                                <option key={option.id} value={option.id}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
                           </label>
                         </div>
                       ))}
                       <div className="grid grid-cols-2 gap-1.5">
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Secondary CTA</span>
+                          <span className={BLOCK_COPY_LABEL_CLASS}>Secondary CTA</span>
                           <input
                             value={blockCopyDraft.secondaryAction ?? ""}
                             maxLength={responseCardLimit("secondaryAction")}
                             onChange={(e) => updateBlockDraft("secondaryAction", e.currentTarget.value)}
-                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            className={BLOCK_COPY_INPUT_CLASS}
                           />
                         </label>
                         <label className="block">
-                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Primary CTA</span>
+                          <span className={BLOCK_COPY_LABEL_CLASS}>Primary CTA</span>
                           <input
                             value={blockCopyDraft.primaryAction ?? ""}
                             maxLength={responseCardLimit("primaryAction")}
                             onChange={(e) => updateBlockDraft("primaryAction", e.currentTarget.value)}
-                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            className={BLOCK_COPY_INPUT_CLASS}
                           />
                         </label>
                       </div>
@@ -1586,40 +1686,24 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
 
                   {editableMomentKind === "approval" ? (
                     <>
-                      <div className="flex items-center justify-between gap-3 rounded-lg border border-studio-border bg-black/20 px-2.5 py-2">
-                        <span>
-                          <span className="block text-[11px] font-semibold text-studio-text">Show information</span>
-                          <span className="mt-0.5 block text-[10px] leading-snug text-studio-muted">Hide for a timeline-only detail panel.</span>
-                        </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={detailsPanelShowInformation(blockCopyDraft)}
-                          onClick={() =>
+                      <label className="flex cursor-pointer items-center gap-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={detailsPanelShowInformation(blockCopyDraft)}
+                          onChange={(e) =>
                             updateBlockDraft(
                               "showInformation",
-                              detailsPanelShowInformation(blockCopyDraft) ? "false" : "true",
+                              e.currentTarget.checked ? "true" : "false",
                               { immediate: true },
                             )
                           }
-                          className={[
-                            "relative h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-1 focus:ring-studio-accent",
-                            detailsPanelShowInformation(blockCopyDraft) ? "bg-studio-accent" : "bg-studio-hover",
-                          ].join(" ")}
-                        >
-                          <span
-                            className={[
-                              "block size-4 rounded-full transition-transform",
-                              detailsPanelShowInformation(blockCopyDraft)
-                                ? "translate-x-4 bg-studio-accent-fg"
-                                : "translate-x-0 bg-studio-muted",
-                            ].join(" ")}
-                          />
-                        </button>
-                      </div>
+                          className="sb-checkbox"
+                        />
+                        <span className="text-xs font-medium text-studio-text">Show information</span>
+                      </label>
                       {detailsPanelShowInformation(blockCopyDraft) ? (
                         <div>
-                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Information</span>
+                          <span className={BLOCK_COPY_LABEL_CLASS}>Information</span>
                           <div className="grid grid-cols-2 gap-1.5">
                             {[
                               ["detailType", "Type"],
@@ -1628,12 +1712,12 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                               ["detailTime", "Time"],
                             ].map(([key, label]) => (
                               <label key={key} className="block">
-                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">{label}</span>
+                                <span className={BLOCK_COPY_FIELD_LABEL_CLASS}>{label}</span>
                                 <input
                                   value={blockCopyDraft[key] ?? ""}
                                   maxLength={detailsPanelLimit(key)}
                                   onChange={(e) => updateBlockDraft(key, e.currentTarget.value)}
-                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                  className={BLOCK_COPY_INPUT_CLASS}
                                 />
                               </label>
                             ))}
@@ -1641,26 +1725,26 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                         </div>
                       ) : null}
                       <div>
-                        <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Activity</span>
+                        <span className={BLOCK_COPY_LABEL_CLASS}>Activity</span>
                         <div className="space-y-2">
                           {DETAILS_PANEL_ACTIVITY_ROWS.map((index) => (
                             <div key={index} className="grid grid-cols-[90px_minmax(0,1fr)] gap-1.5">
                               <label className="block">
-                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">Tag {index}</span>
+                                <span className={BLOCK_COPY_FIELD_LABEL_CLASS}>Tag {index}</span>
                                 <input
                                   value={blockCopyDraft[`activity${index}Tag`] ?? ""}
                                   maxLength={detailsPanelLimit(`activity${index}Tag`)}
                                   onChange={(e) => updateBlockDraft(`activity${index}Tag`, e.currentTarget.value)}
-                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                  className={BLOCK_COPY_INPUT_CLASS}
                                 />
                               </label>
                               <label className="block">
-                                <span className="mb-1 block text-[10px] font-medium text-studio-muted">Text {index}</span>
+                                <span className={BLOCK_COPY_FIELD_LABEL_CLASS}>Text {index}</span>
                                 <input
                                   value={blockCopyDraft[`activity${index}Text`] ?? ""}
                                   maxLength={detailsPanelLimit(`activity${index}Text`)}
                                   onChange={(e) => updateBlockDraft(`activity${index}Text`, e.currentTarget.value)}
-                                  className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                                  className={BLOCK_COPY_INPUT_CLASS}
                                 />
                               </label>
                             </div>
@@ -1673,32 +1757,32 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                   {editableMomentKind === "search" ? (
                     <>
                       <label className="block">
-                        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Search field</span>
+                        <span className={BLOCK_COPY_LABEL_CLASS}>Search field</span>
                         <input
                           value={blockCopyDraft.search ?? ""}
                           onChange={(e) => updateBlockDraft("search", e.currentTarget.value)}
-                          className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                          className={BLOCK_COPY_INPUT_CLASS}
                         />
                       </label>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[1, 2, 3].map((index) => (
                           <label key={index} className="block">
-                            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Filter</span>
+                            <span className={BLOCK_COPY_LABEL_CLASS}>Filter</span>
                             <input
                               value={blockCopyDraft[`filter${index}`] ?? ""}
                               onChange={(e) => updateBlockDraft(`filter${index}`, e.currentTarget.value)}
-                              className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                              className={BLOCK_COPY_INPUT_CLASS}
                             />
                           </label>
                         ))}
                       </div>
                       {[1, 2, 3].map((index) => (
                         <label key={index} className="block">
-                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-studio-muted">Result {index}</span>
+                          <span className={BLOCK_COPY_LABEL_CLASS}>Result {index}</span>
                           <input
                             value={blockCopyDraft[`result${index}`] ?? ""}
                             onChange={(e) => updateBlockDraft(`result${index}`, e.currentTarget.value)}
-                            className="w-full rounded-md border border-studio-border bg-black/25 px-2 py-1.5 text-xs text-studio-text outline-none placeholder:text-studio-muted/60 focus:border-studio-muted"
+                            className={BLOCK_COPY_INPUT_CLASS}
                           />
                         </label>
                       ))}
