@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { InfographicSidebar } from "@/components/infographic/InfographicSidebar";
 import {
   buildOptimizedPlannerSource,
-  getPlannerInfographicVariant,
   getPlannerThumbnailSrc,
 } from "@/components/layout/Sidebar";
 import { ProductVisualSidebar } from "@/components/product-visual/ProductVisualSidebar";
@@ -96,24 +95,24 @@ describe("editor sidebars", () => {
 
   it("matches Create with Codex thumbnails to suggested visual intent", () => {
     expect(
-      getPlannerInfographicVariant({
+      getPlannerThumbnailSrc({
         id: "supporting-infographic",
         template: "Infographic",
         title: "Before and after explanation",
         use: "Use after the hero to explain the improvement",
         brief: "Show what changed before and after.",
       }),
-    ).toBe("comparison");
+    ).toBe("/preview/suggestions_thumbnail_imfographic.png");
 
     expect(
-      getPlannerInfographicVariant({
+      getPlannerThumbnailSrc({
         id: "infographic-workflow",
         template: "Infographic",
         title: "Workflow explanation",
         use: "Use in the how-it-works section",
         brief: "Explain the workflow in simple steps or a loop.",
       }),
-    ).toBe("diagram");
+    ).toBe("/preview/suggestions_thumbnail_imfographic.png");
 
     expect(
       getPlannerThumbnailSrc({

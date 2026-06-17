@@ -57,7 +57,7 @@ Studio가 **만들어내는** 목업 디자인 규칙은 `ASSET_DESIGN.md` 참�
 - 새 작업 시작 영역은 `Create asset` -> `Create with Codex` 순서로 둔다.
   - `Create asset`은 기존 수동 템플릿 선택 flow를 그대로 연다.
   - `Create with Codex`는 페이지 copy를 붙여넣고 textarea 우하단의 compact `Get image suggestions`를 눌러 필요한 이미지 세트를 먼저 정리한 뒤 Codex planning prompt를 복사하는 홈 전용 planning entry이며, 보조 CTA로 그라데이션 테두리를 사용하고 hover 시 같은 gradient fill로 전환한다. `Get image suggestions` 왼쪽에는 icon-only `Optimize for suggestions` 버튼을 두고, 클릭 시 원문을 삭제하지 않고 textarea 맨 앞에 Feature/Core message/Audience/Visual priority/Key moments/Avoid brief를 붙여 router와 Codex가 같은 입력을 더 안정적으로 읽게 한다.
-  - `Create with Codex` 모달의 추천 결과는 기본 3개 asset set으로 고정하고 2단 그리드로 보여준다. Studio 안에서는 교체 후보를 노출하지 않고, 대체 가능한 후보는 복사되는 Codex prompt 안에만 포함해 Codex에서 말로 조정하게 한다. 결과 카드는 템플릿별 미니 preview 썸네일, 짧은 고정 제목, 템플릿 pill, 사용 위치만 보여주며 brief는 화면에 노출하지 않는다. Infographic 추천 썸네일은 용도에 맞춰 before/after·comparison은 comparison preview, workflow/system explanation은 orbit/diagram preview를 사용한다.
+  - `Create with Codex` 모달의 추천 결과는 기본 3개 asset set으로 고정하고 2단 그리드로 보여준다. Studio 안에서는 교체 후보를 노출하지 않고, 대체 가능한 후보는 복사되는 Codex prompt 안에만 포함해 Codex에서 말로 조정하게 한다. 결과 카드는 템플릿별 preview 썸네일, 짧은 고정 제목, 템플릿 pill, 사용 위치만 보여주며 brief는 화면에 노출하지 않는다. Infographic 추천 썸네일은 `public/preview/suggestions_thumbnail_imfographic.png` 대표 이미지를 사용한다.
   - Codex에서 전체 asset set을 렌더하면 10-20분 걸릴 수 있으므로, planning prompt 복사 버튼 근처에 짧은 소요 시간 안내를 노출한다.
 - 저장 에셋 찾기는 `Create with Codex` 아래의 `Asset finder` 단일 버튼으로 노출한다. 버튼은 `/open`을 열고, 세부 카테고리 전환은 열린 화면의 Chat UI / Infographic / Product Visual 탭에서 처리한다.
 - `Create asset`, `Create with Codex`, `Asset finder`는 같은 compact corner radius(`--app-sidebar-action-radius`, `controlLg`)를 사용해 하나의 action group처럼 보이게 한다.

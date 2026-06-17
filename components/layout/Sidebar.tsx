@@ -25,6 +25,8 @@ const NAV_ITEMS = [
   { label: "Recent Assets", href: "/recent" },
 ];
 
+const CODEX_SKILL_VERSION = "v1.0.0";
+
 function NavItem({ label, href, badge }: { label: string; href: string; badge?: number }) {
   const pathname = usePathname();
   const active = pathname === href;
@@ -412,60 +414,13 @@ export function getPlannerThumbnailSrc(plan: PlannedVisual) {
   }
 
   if (plan.template === "Infographic") {
-    return "/preview/diagram.png";
+    return "/preview/suggestions_thumbnail_imfographic.png";
   }
 
   return "/preview/mobile_mockup.png";
 }
 
-export function getPlannerInfographicVariant(plan: PlannedVisual) {
-  const key = `${plan.id} ${plan.title} ${plan.brief}`.toLowerCase();
-  return /comparison|before|after|compare|versus|changed/.test(key) ? "comparison" : "diagram";
-}
-
-function PlannerInfographicThumbnail({ variant }: { variant: "comparison" | "diagram" }) {
-  if (variant === "comparison") {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-studio-text p-2 text-studio-bg">
-        <div className="grid h-14 w-full grid-cols-2 gap-1.5 rounded-lg bg-studio-sidebar/10 p-1.5">
-          <div className="flex flex-col justify-between rounded-md border border-studio-border/70 bg-studio-text p-1.5">
-            <span className="h-1 w-7 rounded-full bg-studio-muted/50" />
-            <span className="h-1.5 w-9 rounded-full bg-studio-muted/70" />
-            <span className="h-1 w-6 rounded-full bg-studio-muted/35" />
-          </div>
-          <div className="flex flex-col justify-between rounded-md border border-studio-border bg-studio-text p-1.5">
-            <span className="h-1 w-7 rounded-full bg-studio-bg" />
-            <span className="h-1.5 w-9 rounded-full bg-studio-accent" />
-            <span className="h-1 w-6 rounded-full bg-studio-bg/70" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-studio-text text-studio-bg">
-      <div className="relative flex size-14 items-center justify-center rounded-full border border-studio-border/70">
-        <div className="absolute size-9 rounded-full border border-studio-border/70" />
-        <div className="flex size-5 items-center justify-center rounded-full bg-studio-bg text-[9px] font-semibold text-studio-text">
-          AI
-        </div>
-        {["top-1 left-6", "top-5 right-1", "bottom-1 left-6", "top-5 left-1"].map((position) => (
-          <span
-            key={position}
-            className={`absolute ${position} h-2.5 w-4 rounded-sm border border-studio-border bg-studio-text`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function PlannerTemplateThumbnail({ plan }: { plan: PlannedVisual }) {
-  if (plan.template === "Infographic") {
-    return <PlannerInfographicThumbnail variant={getPlannerInfographicVariant(plan)} />;
-  }
-
   return (
     <Image
       src={getPlannerThumbnailSrc(plan)}
@@ -876,7 +831,7 @@ function PageVisualPlannerModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
           ) : (
-            <div className="rounded-xl border border-studio-border bg-studio-hover/40 p-4">
+            <div className="rounded-xl bg-studio-hover/40 p-4">
               <p className="text-studio-text text-xs font-semibold">Next step</p>
               <p className="text-studio-muted text-xs leading-relaxed mt-1">
                 Paste page copy, then click Get image suggestions to see the recommended asset set.
@@ -1212,11 +1167,18 @@ export function Sidebar() {
             ) : (
               <Download size={18} strokeWidth={2.2} className="shrink-0" />
             )}
-            {skillDownloadState === "downloading"
-              ? "Preparing download"
-              : skillDownloadState === "downloaded"
-                ? "Skill downloaded"
-                : "Download Codex Skill"}
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate">
+                {skillDownloadState === "downloading"
+                  ? "Preparing"
+                  : skillDownloadState === "downloaded"
+                    ? "Downloaded"
+                    : "Codex Skill"}
+              </span>
+              <span className="shrink-0 rounded-full border border-studio-border px-1.5 py-0.5 text-[10px] leading-none text-studio-muted">
+                {CODEX_SKILL_VERSION}
+              </span>
+            </span>
           </button>
           {skillDownloadState === "failed" && (
             <p className="-mt-2 pl-8 text-[11px] leading-relaxed text-studio-muted">
