@@ -1,0 +1,57 @@
+{
+  "archetype": "dashboard",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Insights",
+    "title": "Customer experience metrics",
+    "subtitle": "Track conversation quality, resolution, and policy health across AI agents.",
+    "filters": ["Last 30 days", "All channels", "CX Score"],
+    "kpis": [
+      { "slotId": "kpi-csat", "label": "CSAT", "value": "4.7", "delta": "+8%", "tone": "good" },
+      { "slotId": "kpi-deflect", "label": "Deflection", "value": "62%", "delta": "+12%", "tone": "good" },
+      { "slotId": "kpi-risk", "label": "Review rate", "value": "9%", "delta": "-3%", "tone": "good" },
+      { "slotId": "kpi-time", "label": "Avg handle", "value": "1m 42s", "delta": "-18s", "tone": "good" }
+    ],
+    "lineChart": {
+      "slotId": "chart-csat",
+      "title": "CSAT trend",
+      "seriesName": "CSAT",
+      "points": [
+        { "label": "Mon", "value": 72 },
+        { "label": "Tue", "value": 74 },
+        { "label": "Wed", "value": 78 },
+        { "label": "Thu", "value": 76 },
+        { "label": "Fri", "value": 83 },
+        { "label": "Sat", "value": 86 }
+      ]
+    },
+    "barChart": {
+      "slotId": "chart-topics",
+      "title": "Resolved topics",
+      "seriesName": "Conversations",
+      "bars": [
+        { "label": "Refund", "value": 820 },
+        { "label": "Login", "value": 640 },
+        { "label": "Plan", "value": 540 },
+        { "label": "Order", "value": 430 },
+        { "label": "Billing", "value": 390 }
+      ]
+    },
+    "table": {
+      "slotId": "table-agents",
+      "title": "Agent health",
+      "rows": [
+        { "slotId": "row-agent-1", "name": "Refund Concierge", "volume": "1,842", "status": "On policy", "trend": "+12%" },
+        { "slotId": "row-agent-2", "name": "Order Tracker", "volume": "1,214", "status": "Healthy", "trend": "+5%" },
+        { "slotId": "row-agent-3", "name": "Plan Advisor", "volume": "984", "status": "Review", "trend": "-2%" }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "kpi-deflect",
+      "label": "AI impact",
+      "description": "Deflection rose after the agent started using customer memory."
+    }
+  }
+}

@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── Serrif — serif display font (voice card quote, etc.) ── */
+@font-face {
+  font-family: "Serrif";
+  src: url("/fonts/Serrif/Serrif-Light.woff2") format("woff2"),
+       url("/fonts/Serrif/Serrif-Light.woff") format("woff");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Serrif";
+  src: url("/fonts/Serrif/Serrif-Regular.woff2") format("woff2"),
+       url("/fonts/Serrif/Serrif-Regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Serrif";
+  src: url("/fonts/Serrif/Serrif-Medium.woff2") format("woff2"),
+       url("/fonts/Serrif/Serrif-Medium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Serrif";
+  src: url("/fonts/Serrif/Serrif-SemiBold.woff2") format("woff2"),
+       url("/fonts/Serrif/Serrif-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Helvetica Now Text — brand body/UI font ──
+   Only 3 weights ship (Regular/Medium/Bold). Semibold (600) maps to Medium so
+   600-weight text gets the brand face instead of a synthesized bold. */
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowText.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowTextMedium.otf") format("opentype");
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Helvetica Now Text";
+  src: url("/HelveticaNowTextBold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-app-sans);
+  --font-mono: var(--font-app-mono);
+  --font-heading: var(--font-app-heading);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Studio shell colors — separate @theme block so Tailwind generates bg-studio-* / text-studio-* utilities */
+@theme {
+  --color-studio-bg: var(--studio-bg);
+  --color-studio-sidebar: var(--studio-sidebar);
+  --color-studio-border: var(--studio-border);
+  --color-studio-text: var(--studio-text);
+  --color-studio-muted: var(--studio-text-muted);
+  --color-studio-hover: var(--studio-hover);
+  --color-studio-accent: var(--studio-accent);
+  --color-studio-accent-fg: var(--studio-accent-fg);
+  --color-studio-input: var(--studio-input);
+  --color-studio-crop-selector: var(--studio-crop-selector);
+  --color-studio-preview-surface: var(--studio-preview-surface);
+  --color-app-error: var(--app-error);
+  --color-app-placeholder: var(--app-placeholder);
+  --color-app-overlay-modal: var(--app-overlay-modal);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    font-family: var(--font-app-sans);
+  }
+}
+
+/* Sidebar checkbox — no native border/outline, slightly rounded, accent + check
+   when selected. Used across the infographic editor's option toggles. */
+.sb-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: var(--app-checkbox-size);
+  height: var(--app-checkbox-size);
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  border-radius: var(--app-checkbox-radius);
+  background-color: var(--studio-checkbox);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.sb-checkbox:hover {
+  background-color: var(--studio-checkbox-hover);
+}
+.sb-checkbox:checked {
+  background-color: var(--studio-accent);
+  background-image: var(--app-checkbox-check-icon);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: var(--app-checkbox-icon-size) var(--app-checkbox-icon-size);
+}
+
+.codex-gradient-cta:hover {
+  background-image: var(--studio-codex-cta-border);
+  color: var(--studio-accent-fg);
+}

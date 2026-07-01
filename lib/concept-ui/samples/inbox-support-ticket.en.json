@@ -1,0 +1,96 @@
+{
+  "archetype": "inbox",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Inbox",
+    "title": "AI-assisted support inbox",
+    "subtitle": "Agent replies, customer memory, and recent activity in one workspace.",
+    "conversations": [
+      {
+        "slotId": "conv-refund",
+        "customer": "Maya Chen",
+        "title": "Refund on delayed order",
+        "preview": "AI drafted a policy-safe refund response.",
+        "status": "Needs review",
+        "time": "2m",
+        "score": "CSAT 4"
+      },
+      {
+        "slotId": "conv-access",
+        "customer": "Luis Easton",
+        "title": "Account access reset",
+        "preview": "Identity verified, reset link ready.",
+        "status": "Open",
+        "time": "8m",
+        "score": "VIP"
+      },
+      {
+        "slotId": "conv-shipping",
+        "customer": "Nora Patel",
+        "title": "Missing shipment",
+        "preview": "Carrier scan found; follow-up scheduled.",
+        "status": "Solved",
+        "time": "19m",
+        "score": "CSAT 5"
+      }
+    ],
+    "thread": {
+      "customerName": "Maya Chen",
+      "statusLabel": "AI draft ready",
+      "messages": [
+        {
+          "slotId": "msg-customer",
+          "author": "customer",
+          "name": "Maya",
+          "text": "My order arrived late and the gift date passed. Can you refund shipping?",
+          "timestamp": "7:42 PM"
+        },
+        {
+          "slotId": "msg-ai",
+          "author": "ai",
+          "name": "AI Concierge",
+          "text": "The policy allows shipping refunds when delivery misses the promised date.",
+          "timestamp": "7:43 PM"
+        },
+        {
+          "slotId": "msg-agent",
+          "author": "agent",
+          "name": "Support",
+          "text": "I can refund the shipping fee now and send a confirmation email.",
+          "timestamp": "7:44 PM"
+        }
+      ]
+    },
+    "context": {
+      "customerName": "Maya Chen",
+      "summary": "Repeat customer with two recent shipping issues and high purchase intent.",
+      "sections": [
+        {
+          "slotId": "context-memory",
+          "title": "Customer memory",
+          "items": [
+            { "label": "Plan", "value": "Premium" },
+            { "label": "Sentiment", "value": "Frustrated" },
+            { "label": "Last order", "value": "$184" }
+          ]
+        },
+        {
+          "slotId": "context-actions",
+          "title": "Recommended actions",
+          "items": [
+            { "label": "Refund", "value": "Shipping fee" },
+            { "label": "Follow-up", "value": "Send confirmation" },
+            { "label": "Risk", "value": "Medium" }
+          ]
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "msg-ai",
+      "label": "AI reason",
+      "description": "Uses policy and order context before the agent sends a reply."
+    }
+  }
+}
