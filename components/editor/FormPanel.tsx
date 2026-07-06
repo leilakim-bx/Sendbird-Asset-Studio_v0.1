@@ -1,29 +1,46 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback, memo } from "react";
-import { UserRound, Bot, Sparkles, GripVertical, Shuffle, Search, RotateCcw, ChevronDown, Copy, Trash2 } from "lucide-react";
-import { SCENARIOS } from "@/lib/scenarios";
+import { createElement, useRef, useState, useEffect, useCallback, memo } from "react";
+import { Sparkles, Search, RotateCcw, ChevronDown, Trash2, AudioLines, Circle, Info, CircleCheck, TriangleAlert, UserRound, Bot, Plus, X, MousePointerClick } from "lucide-react";
+import { SCENARIOS, DEFAULT_SCENARIO_ID } from "@/lib/scenarios";
 import { useEditorStore } from "@/lib/store";
-import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock } from "@/lib/store";
+import type { ChatMessage, MessagePatch, TextBlock, ActionsBlock, ProductsBlock, ProductItem, ChecklistBlock, ChecklistItem, StatusBlock, VoiceBlock, ItineraryBlock, ItineraryGroup, ItineraryIcon } from "@/lib/store";
+import { ITINERARY_ICONS, itineraryIcon } from "@/components/templates/itinerary-icons";
 import { BACKGROUNDS } from "@/lib/backgrounds";
 import { BackgroundPickerModal } from "./BackgroundPickerModal";
+import { ChecklistStatusIcon } from "@/components/templates/checklist-status-icon";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Menu } from "@base-ui/react/menu";
+import { ScenarioList } from "./ScenarioList";
+import { ScenarioLibraryModal } from "./ScenarioLibraryModal";
+import { AiMagicButton } from "@/components/ui/ai-magic-button";
+import { CoachmarkBubble } from "@/components/ui/coachmark-bubble";
+import { useOnceFlag } from "@/lib/use-once-flag";
 
 const uid = () => `m${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-const SCENARIO_PLACEHOLDERS = [
-  "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly",
-  "e.g. Agent checks flight prices and books the cheapest option",
-  "e.g. User asks for today's weather, AI replies with outfit suggestion",
-  "e.g. AI greets new user, asks 3 questions, then shows a personalized plan",
-  "e.g. Support agent detects an issue and proactively offers a refund",
-  "e.g. AI recommends a product, user taps to buy in one step",
-];
+/** Solid red circle-with-exclamation badge used for "full"/"max" warnings. */
+const AlertCircleSolid = ({ size = 13 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" className="shrink-0" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" fill="var(--app-error)" />
+    <rect x="11" y="6.5" width="2" height="7" rx="1" fill="var(--studio-text)" />
+    <circle cx="12" cy="16.75" r="1.25" fill="var(--studio-text)" />
+  </svg>
+);
+
+// 고정 예시 프롬프트 — 롤링 대신 가장 결과가 잘 나오는 대표 예시 하나로 고정
+const EXAMPLE_PROMPT = "e.g. AI suggests 3 hotels, user picks one, agent confirms booking instantly";
+const CHAT_BRIEF_TEMPLATE = [
+  "Customer goal: ",
+  "Agent action: ",
+  "Outcome: ",
+].join("\n");
+const CHAT_BRIEF_APPEND_TEMPLATE = [
+  "Customer goal: ",
+  "Agent action: ",
+  "Outcome: ",
+  "Avoid: ",
+].join("\n");
 
 /** Search Pexels for a product photo matching the keyword.
  *  Returns a proxy-wrapped image URL, or empty string on failure. */
@@ -44,15 +61,47 @@ const SectionLabel = ({ children, required }: { children: React.ReactNode; requi
   </p>
 );
 
+// Per-row icon dropdown for itinerary rows (curated set from itinerary-icons).
+function ItineraryIconPicker({ value, onChange }: { value: ItineraryIcon; onChange: (v: ItineraryIcon) => void }) {
+  const current = ITINERARY_ICONS.find((option) => option.key === value);
+  const icon = current?.Icon ?? itineraryIcon(value);
+  return (
+    <Menu.Root>
+      <Menu.Trigger
+        title="Choose icon"
+        className="shrink-0 w-10 h-7 flex items-center justify-center gap-0.5 rounded-md border border-studio-border bg-studio-sidebar text-studio-text hover:bg-studio-hover transition-colors"
+      >
+        {createElement(icon, { size: 14 })}
+        <ChevronDown size={10} className="text-studio-muted" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={4}>
+          <Menu.Popup className="z-50 min-w-[150px] rounded-lg border border-studio-border bg-studio-sidebar shadow-xl py-1 outline-none">
+            {ITINERARY_ICONS.map(({ key, label, Icon }) => (
+              <Menu.Item
+                key={key}
+                onClick={() => onChange(key)}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-studio-text cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover"
+              >
+                <Icon size={14} className="text-studio-muted" />
+                {label}
+              </Menu.Item>
+            ))}
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
 type ProductItemRowProps = {
   item: ProductItem;
   index: number;
   onUpdate: (patch: Partial<ProductItem>) => void;
   onRemove: () => void;
-  onDuplicate: () => void;
 };
 
-function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: ProductItemRowProps) {
+function ProductItemRow({ item, index, onUpdate, onRemove }: ProductItemRowProps) {
   const [loading, setLoading] = useState(false);
   const [imageQuery, setImageQuery] = useState(item.imageQuery || item.name);
 
@@ -73,67 +122,14 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
     <div className="bg-studio-bg border border-studio-border rounded-lg overflow-hidden">
       {/* Card header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-studio-border">
-        <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab" />
-        <span className="text-xs font-medium text-studio-text flex-1">Product {index + 1}</span>
-        <button onClick={onDuplicate} title="Duplicate" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors">
-          <Copy size={12} />
-        </button>
+        <span className="text-xs font-medium text-studio-muted flex-1">Product {index + 1}</span>
         <button onClick={onRemove} title="Delete" className="w-6 h-6 flex items-center justify-center rounded text-studio-muted hover:text-red-400 hover:bg-studio-hover transition-colors">
           <Trash2 size={12} />
         </button>
       </div>
 
       <div className="flex flex-col gap-3 p-3">
-        {/* IMAGE section */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <SectionLabel>Image</SectionLabel>
-            <button onClick={applyImage} disabled={loading} title="Try another image"
-              className="flex items-center justify-center w-5 h-5 rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-50">
-              <RotateCcw size={11} />
-            </button>
-          </div>
-          <div className="flex items-start gap-3">
-            {/* Thumbnail */}
-            {item.img ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.img} alt={item.name}
-                className="w-16 h-16 rounded-md object-cover border border-studio-border shrink-0" />
-            ) : (
-              <div className="w-16 h-16 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center shrink-0">
-                <Search size={16} className="text-studio-muted opacity-40" />
-              </div>
-            )}
-            {/* Query + remove */}
-            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-              <div className="relative">
-                <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
-                <Input
-                  value={imageQuery}
-                  onChange={(e) => setImageQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") applyImage(); }}
-                  placeholder="e.g. white sneakers"
-                  className="h-7 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-                />
-              </div>
-              <button
-                onClick={applyImage}
-                disabled={loading}
-                className="w-full h-7 rounded-md bg-[#D0F3E6] text-[#1A1A1A] hover:opacity-90 transition-opacity text-[11px] font-semibold disabled:opacity-50"
-              >
-                {loading ? "Loading…" : "Apply Image"}
-              </button>
-              {item.img && (
-                <button onClick={() => onUpdate({ img: "" })}
-                  className="text-[11px] text-studio-muted hover:text-red-400 transition-colors text-left">
-                  Remove
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* TITLE section */}
+        {/* TITLE section — 자주 만지는 것 우선 */}
         <div>
           <SectionLabel>Title</SectionLabel>
           <Input
@@ -161,8 +157,50 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
               value={item.cta}
               onChange={(e) => onUpdate({ cta: e.target.value })}
               placeholder="Buy now"
+              maxLength={15}
               className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
             />
+          </div>
+        </div>
+
+        {/* IMAGE — 라벨 없이 한 줄: 썸네일(hover 시 새로고침) + 검색(Enter). 검색창 확장 */}
+        <div>
+          <div className="flex items-center gap-2">
+            {/* Thumbnail — hover 시 새로고침 버튼 오버레이 */}
+            <div className="group/thumb relative w-11 h-11 shrink-0">
+              {item.img ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.img} alt={item.name}
+                  className="w-11 h-11 rounded-md object-cover border border-studio-border" />
+              ) : (
+                <div className="w-11 h-11 rounded-md bg-studio-hover border border-studio-border flex items-center justify-center">
+                  <Search size={14} className="text-studio-muted opacity-40" />
+                </div>
+              )}
+              <button
+                onClick={applyImage}
+                disabled={loading || !imageQuery.trim()}
+                title="Try another image"
+                aria-label="Try another image"
+                className={[
+                  "absolute inset-0 flex items-center justify-center rounded-md bg-black/55 text-white transition-opacity disabled:cursor-not-allowed",
+                  loading ? "opacity-100" : "opacity-0 group-hover/thumb:opacity-100",
+                ].join(" ")}
+              >
+                <RotateCcw size={15} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+            {/* Search query — Enter to fetch */}
+            <div className="relative flex-1 min-w-0">
+              <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-studio-muted pointer-events-none" />
+              <Input
+                value={imageQuery}
+                onChange={(e) => setImageQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyImage(); } }}
+                placeholder="Search image — press Enter"
+                className="h-8 text-xs pl-6 bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -174,22 +212,162 @@ function ProductItemRow({ item, index, onUpdate, onRemove, onDuplicate }: Produc
 
 function Section({
   title,
+  info,
   action,
   children,
 }: {
   title: string;
+  /** Optional hover hint shown via an ℹ️ icon next to the title */
+  info?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-studio-border pb-5 mb-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-studio-muted uppercase tracking-wider">
+    <div className="border-b border-studio-border">
+      <div className="flex items-center gap-1.5 px-[18px] py-3.5">
+        <span className="text-[10px] font-semibold text-studio-muted uppercase tracking-[0.12em]">
           {title}
-        </p>
-        {action}
+        </span>
+        {info && (
+          <span className="relative group/tip flex items-center">
+            <Info size={14} className="text-studio-muted cursor-help" />
+            <span className="pointer-events-none absolute top-full left-0 mt-1.5 z-20 w-52 px-2 py-1 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug normal-case tracking-normal font-normal opacity-0 group-hover/tip:opacity-100 transition-opacity">
+              {info}
+            </span>
+          </span>
+        )}
+        {action && <span className="ml-auto flex items-center">{action}</span>}
       </div>
-      {children}
+      <div className="px-[18px] pb-4">{children}</div>
+    </div>
+  );
+}
+
+// ── Icon segmented toggle ─────────────────────────────────
+// 카드 헤더의 옵션 선택(아이콘 전용)을 세그먼트 토글로 통일 — Voice/Status/Text 공용
+function IconSegmentToggle<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: readonly { value: T; Icon: typeof Circle; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-studio-bg border border-studio-border">
+      {options.map(({ value: v, Icon, label }) => (
+        <div key={v} className="relative group/tip flex">
+          <button
+            type="button"
+            onClick={() => onChange(v)}
+            className={[
+              "w-7 h-5 rounded-md flex items-center justify-center transition-colors",
+              value === v
+                ? "bg-white/10 text-studio-text"
+                : "text-studio-muted hover:text-studio-text",
+            ].join(" ")}
+          >
+            <Icon size={13} />
+          </button>
+          <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+            {label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageSenderToggle({
+  role,
+  onChange,
+}: {
+  role: "user" | "bot";
+  onChange: (role: "user" | "bot") => void;
+}) {
+  return (
+    <IconSegmentToggle
+      options={[
+        { value: "user", Icon: UserRound, label: "User" },
+        { value: "bot", Icon: Bot, label: "delight.ai" },
+      ] as const}
+      value={role}
+      onChange={onChange}
+    />
+  );
+}
+
+function MessageCardHeader({
+  title,
+  extra,
+  sender,
+  onRemove,
+}: {
+  title: string;
+  extra?: React.ReactNode;
+  sender?: React.ReactNode;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-studio-text flex-1">{title}</span>
+        {extra}
+        <button
+          onClick={onRemove}
+          className="shrink-0 text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
+        >
+          ✕
+        </button>
+      </div>
+      {sender}
+    </div>
+  );
+}
+
+function ToggleGroup<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: { value: T; label: string; tooltip?: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
+      {options.map((opt, i) => {
+        const isFirst = i === 0;
+        const isLast = i === options.length - 1;
+        return (
+          <div key={opt.value} className="relative flex-1 group/tip">
+            <button
+              onClick={() => onChange(opt.value)}
+              className={[
+                "w-full text-xs py-1.5 rounded-md transition-colors",
+                value === opt.value
+                  ? "bg-studio-sidebar text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {opt.label}
+            </button>
+            {opt.tooltip && (
+              <span
+                className={[
+                  "pointer-events-none absolute bottom-full mb-1.5 z-20 w-44 px-2 py-1 rounded-md",
+                  "bg-studio-bg border border-studio-border text-studio-text text-[10px] leading-snug text-center",
+                  "opacity-0 group-hover/tip:opacity-100 transition-opacity",
+                  isFirst ? "left-0" : isLast ? "right-0" : "left-1/2 -translate-x-1/2",
+                ].join(" ")}
+              >
+                {opt.tooltip}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -203,7 +381,7 @@ type MessageItemProps = {
   msg: ChatMessage;
   index: number;
   isDragOver: boolean;
-  dragIndexRef: React.MutableRefObject<number | null>;
+  dragFrom: number | null;
   onDragStart: (i: number) => void;
   onDragOverItem: (e: React.DragEvent, i: number) => void;
   onDrop: (i: number) => void;
@@ -216,7 +394,7 @@ const MessageItem = memo(function MessageItem({
   msg,
   index,
   isDragOver,
-  dragIndexRef,
+  dragFrom,
   onDragStart,
   onDragOverItem,
   onDrop,
@@ -224,11 +402,17 @@ const MessageItem = memo(function MessageItem({
   onUpdate,
   onRemove,
 }: MessageItemProps) {
+  const canvasIsFull = useEditorStore((s) => s.canvasIsFull);
   // ── Local text state with 300 ms debounce ──────────────
   // Keeps every keystroke instant: local state updates immediately,
   // the Zustand store is only mutated 300 ms after the user stops typing.
   const storeText = msg.block?.type === "text" ? (msg.block as TextBlock).text : "";
   const [localText, setLocalText] = useState(storeText);
+  // 체크리스트 항목별 채널 태그 입력이 펼쳐졌는지 (값이 없을 때만 의미)
+  const [tagOpen, setTagOpen] = useState<Record<string, boolean>>({});
+  // 버블 너비(~264px)에서 15px 폰트 기준 약 33자/줄로 추정
+  const estimatedLines = localText.split("\n").reduce((acc, line) => acc + Math.max(1, Math.ceil((line.length || 1) / 33)), 0);
+  const isOverMaxLines = estimatedLines > 15;
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const committedRef = useRef(storeText); // last value we wrote to the store
 
@@ -255,10 +439,14 @@ const MessageItem = memo(function MessageItem({
   }
 
   // ── Shared drag / style ────────────────────────────────
+  // 드래그 중 삽입 위치를 블록 사이 라임 라인으로 표시 (드래그 방향에 맞춰 위/아래)
+  const showLineAbove = isDragOver && dragFrom !== null && dragFrom > index;
+  const showLineBelow = isDragOver && dragFrom !== null && dragFrom < index;
   const wrapCls = [
-    "bg-studio-hover rounded-lg p-3 flex flex-col gap-2 transition-opacity",
-    dragIndexRef.current === index ? "opacity-40" : "",
-    isDragOver ? "ring-1 ring-studio-accent" : "",
+    "relative bg-studio-hover rounded-lg p-2.5 flex flex-col gap-1.5 transition-opacity",
+    dragFrom === index ? "opacity-40" : "",
+    showLineAbove ? "before:content-[''] before:absolute before:left-0 before:right-0 before:-top-1 before:h-0.5 before:bg-studio-accent before:rounded-full" : "",
+    showLineBelow ? "after:content-[''] after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-0.5 after:bg-studio-accent after:rounded-full" : "",
   ].join(" ");
 
   const dragProps = {
@@ -269,46 +457,29 @@ const MessageItem = memo(function MessageItem({
     onDragEnd,
   };
 
-  const Grip = () => (
-    <GripVertical size={13} className="shrink-0 text-studio-muted cursor-grab active:cursor-grabbing" />
-  );
-
   // ── Text message ───────────────────────────────────────
   if (msg.block.type === "text") {
+    const hasActivityLog = msg.role === "bot" && !!msg.block.verifications?.length;
+    const hasButtons = msg.role === "bot" && !!msg.block.buttons?.length;
+    // bot-only add-ons present → lock the sender toggle (can't become a user msg)
+    const lockSender = hasActivityLog || hasButtons;
+    const cardTitle =
+      hasActivityLog && hasButtons ? "Text + Log + Buttons"
+      : hasActivityLog ? "Text + Activity log"
+      : hasButtons ? "Text + Buttons"
+      : "Text";
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          {/* Sender toggle: User / Bot */}
-          {([
-            { role: "user" as const, Icon: UserRound, label: "User" },
-            { role: "bot"  as const, Icon: Bot,       label: "delight.ai" },
-          ]).map(({ role, Icon, label }) => (
-            <div key={role} className="relative group/tip">
-              <button
-                onClick={() => onUpdate(msg.id, { role })}
-                className={[
-                  "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
-                  msg.role === role
-                    ? "bg-studio-sidebar text-studio-text"
-                    : "text-studio-muted hover:text-studio-text",
-                ].join(" ")}
-              >
-                <Icon size={13} />
-              </button>
-              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                {label}
-              </span>
-            </div>
-          ))}
-          <span className="text-xs text-studio-muted flex-1">Text</span>
-          <button
-            onClick={() => onRemove(msg.id)}
-            className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors"
-          >
-            ✕
-          </button>
-        </div>
+        <MessageCardHeader
+          title={cardTitle}
+          extra={lockSender ? undefined : (
+            <MessageSenderToggle
+              role={msg.role === "user" ? "user" : "bot"}
+              onChange={(role) => onUpdate(msg.id, { role })}
+            />
+          )}
+          onRemove={() => onRemove(msg.id)}
+        />
         <textarea
           value={localText}
           onChange={handleTextChange}
@@ -316,6 +487,114 @@ const MessageItem = memo(function MessageItem({
           rows={2}
           className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
         />
+        {isOverMaxLines && (
+          <p className="text-[10px] text-red-400 leading-none">
+            Text exceeds 15-line limit and will be clipped
+          </p>
+        )}
+        {msg.role === "bot" && (() => {
+          const verifications = msg.block.verifications;
+          const setVerifications = (next: string[]) =>
+            onUpdate(msg.id, {
+              block: { ...(msg.block as TextBlock), verifications: next.length ? next : undefined },
+            });
+          // "Add AI activity log" entry point removed by request — existing logs
+          // (presets / "Text + Activity log" menu / AI-generated) stay editable below.
+          if (!verifications || verifications.length === 0) {
+            return null;
+          }
+          return (
+            <div className="mt-1 pt-2 border-t border-studio-border flex flex-col gap-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-muted">
+                AI agent activity log
+              </div>
+              {verifications.map((v, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <Circle size={7} className="shrink-0 fill-studio-muted text-studio-muted" />
+                  <Input
+                    value={v}
+                    onChange={(e) => {
+                      const next = [...verifications];
+                      next[i] = e.target.value;
+                      setVerifications(next);
+                    }}
+                    placeholder={`Activity ${i + 1}`}
+                    className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                  />
+                  <button
+                    onClick={() => setVerifications(verifications.filter((_, idx) => idx !== i))}
+                    className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+                    aria-label="Remove activity line"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setVerifications([...verifications, ""])}
+                className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+              >
+                <Plus size={12} />
+                Add line
+              </button>
+            </div>
+          );
+        })()}
+        {msg.role === "bot" && (() => {
+          const buttons = (msg.block as TextBlock).buttons;
+          const setButtons = (next: string[]) =>
+            onUpdate(msg.id, {
+              block: { ...(msg.block as TextBlock), buttons: next.length ? next : undefined },
+            });
+          if (!buttons || buttons.length === 0) {
+            return (
+              <button
+                onClick={() => setButtons(["Option A"])}
+                className="self-start mt-1 inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+              >
+                <MousePointerClick size={12} />
+                Add buttons
+              </button>
+            );
+          }
+          return (
+            <div className="mt-1 pt-2 border-t border-studio-border flex flex-col gap-1.5">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-studio-muted">
+                Action buttons
+              </div>
+              {buttons.map((b, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <Input
+                    value={b}
+                    onChange={(e) => {
+                      const next = [...buttons];
+                      next[i] = e.target.value;
+                      setButtons(next);
+                    }}
+                    placeholder={`Button ${i + 1}`}
+                    className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                  />
+                  <button
+                    onClick={() => setButtons(buttons.filter((_, idx) => idx !== i))}
+                    className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
+                    aria-label="Remove button"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              {buttons.length < 6 && (
+                <button
+                  onClick={() => setButtons([...buttons, ""])}
+                  className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors"
+                >
+                  <Plus size={12} />
+                  Add button
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -325,25 +604,40 @@ const MessageItem = memo(function MessageItem({
     const actionsBlock = msg.block as ActionsBlock;
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Action Buttons</span>
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+        <MessageCardHeader title="Action Buttons" onRemove={() => onRemove(msg.id)} />
         {actionsBlock.buttons.map((btn, i) => (
-          <Input
-            key={i}
-            value={btn}
-            onChange={(e) => {
-              const buttons = [...actionsBlock.buttons];
-              buttons[i] = e.target.value;
-              onUpdate(msg.id, { block: { type: "actions", buttons } });
-            }}
-            placeholder={`Button ${i + 1}`}
-            className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
+          <div key={i} className="flex items-center gap-1.5">
+            <Input
+              value={btn}
+              onChange={(e) => {
+                const buttons = [...actionsBlock.buttons];
+                buttons[i] = e.target.value;
+                onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
+              }}
+              placeholder={`Button ${i + 1}`}
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+            <button
+              onClick={() => {
+                const buttons = actionsBlock.buttons.filter((_, idx) => idx !== i);
+                onUpdate(msg.id, { block: { ...actionsBlock, buttons } });
+              }}
+              disabled={actionsBlock.buttons.length <= 1}
+              aria-label="Remove button"
+              className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            >
+              <X size={12} />
+            </button>
+          </div>
         ))}
+        <button
+          onClick={() => onUpdate(msg.id, { block: { ...actionsBlock, buttons: [...actionsBlock.buttons, `Option ${actionsBlock.buttons.length + 1}`] } })}
+          disabled={actionsBlock.buttons.length >= 6}
+          title={actionsBlock.buttons.length >= 6 ? "Max 6 buttons" : undefined}
+          className="mt-1 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
+        >
+          + Add button
+        </button>
       </div>
     );
   }
@@ -355,19 +649,10 @@ const MessageItem = memo(function MessageItem({
     return (
       <div {...dragProps} className={wrapCls}>
         {/* Block header */}
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Product Cards</span>
-          {/* Count badge */}
-          <span className="text-[10px] font-semibold text-studio-muted bg-studio-hover border border-studio-border rounded px-1.5 py-0.5 leading-none">
-            {count}
-          </span>
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+        <MessageCardHeader title="Product Cards" onRemove={() => onRemove(msg.id)} />
 
         {/* Per-card rows */}
-        <div className="flex flex-col gap-3 mt-2">
+        <div className="flex flex-col gap-2 mt-2">
           {productsBlock.items.map((item, i) => (
             <ProductItemRow
               key={item.imageQuery ? `${item.imageQuery}-${i}` : i}
@@ -382,18 +667,13 @@ const MessageItem = memo(function MessageItem({
                 const items = productsBlock.items.filter((_, idx) => idx !== i);
                 onUpdate(msg.id, { block: { type: "products", items } });
               }}
-              onDuplicate={() => {
-                const items = [...productsBlock.items];
-                items.splice(i + 1, 0, { ...item });
-                onUpdate(msg.id, { block: { type: "products", items } });
-              }}
             />
           ))}
         </div>
 
         {/* Add product button — 3개 이상이면 비활성화 (캐러셀 max) */}
         <button
-          disabled={count >= 3}
+          disabled={count >= 3 || canvasIsFull}
           title={count >= 3 ? "Max 3 cards supported" : undefined}
           onClick={() => {
             const items = [
@@ -402,10 +682,16 @@ const MessageItem = memo(function MessageItem({
             ];
             onUpdate(msg.id, { block: { type: "products", items } });
           }}
-          className="mt-2 w-full h-7 rounded-md border border-dashed border-studio-border text-studio-muted hover:text-studio-text hover:border-studio-muted text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-studio-muted disabled:hover:border-studio-border"
+          className="mt-2 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
         >
           + Add product
         </button>
+        {canvasIsFull && count < 3 && (
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5">
+            <AlertCircleSolid />
+            Max items — Remove an item to add more
+          </p>
+        )}
       </div>
     );
   }
@@ -418,41 +704,67 @@ const MessageItem = memo(function MessageItem({
       "in-progress": "done",
       done: "pending",
     };
-    const STATUS_ICON: Record<ChecklistItem["status"], string> = {
-      pending: "○",
-      "in-progress": "◑",
-      done: "●",
+    const STATUS_LABEL: Record<ChecklistItem["status"], string> = {
+      pending: "Pending",
+      "in-progress": "In progress",
+      done: "Done",
     };
-    const STATUS_COLOR: Record<ChecklistItem["status"], string> = {
-      pending: "text-studio-muted",
-      "in-progress": "text-amber-400",
-      done: "text-studio-text",
-    };
-
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Checklist</span>
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+        <MessageCardHeader title="Checklist" onRemove={() => onRemove(msg.id)} />
         <div className="flex flex-col gap-1.5">
           {checklistBlock.items.map((item, i) => (
             <div key={item.id} className="flex items-center gap-1.5">
               {/* Status toggle */}
-              <button
-                title={item.status}
-                onClick={() => {
-                  const items = checklistBlock.items.map((it, idx) =>
-                    idx === i ? { ...it, status: CYCLE[it.status] } : it
-                  );
-                  onUpdate(msg.id, { block: { type: "checklist", items } });
-                }}
-                className={`shrink-0 w-5 h-5 flex items-center justify-center text-sm leading-none transition-colors ${STATUS_COLOR[item.status]}`}
-              >
-                {STATUS_ICON[item.status]}
-              </button>
+              <div className="relative group/tip shrink-0">
+                <button
+                  onClick={() => {
+                    const items = checklistBlock.items.map((it, idx) =>
+                      idx === i ? { ...it, status: CYCLE[it.status] } : it
+                    );
+                    onUpdate(msg.id, { block: { type: "checklist", items } });
+                  }}
+                  className="w-5 h-5 flex items-center justify-center transition-opacity hover:opacity-80"
+                >
+                  <ChecklistStatusIcon
+                    status={item.status}
+                    size={16}
+                    fill="var(--studio-text)"
+                    check="var(--studio-sidebar)"
+                    arc="var(--studio-text)"
+                    border="var(--studio-text-muted)"
+                  />
+                </button>
+                <span className="pointer-events-none absolute bottom-full left-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
+                  {STATUS_LABEL[item.status]} · click to change
+                </span>
+              </div>
+              {/* Channel badge (optional) — collapsed to "+ Tag" until used */}
+              {(item.badge || tagOpen[item.id]) ? (
+                <Input
+                  value={item.badge ?? ""}
+                  autoFocus={!item.badge && !!tagOpen[item.id]}
+                  onChange={(e) => {
+                    const badge = e.target.value.toUpperCase();
+                    const items = checklistBlock.items.map((it, idx) =>
+                      idx === i ? { ...it, badge } : it
+                    );
+                    onUpdate(msg.id, { block: { type: "checklist", items } });
+                  }}
+                  onFocus={() => setTagOpen((o) => ({ ...o, [item.id]: true }))}
+                  onBlur={() => { if (!item.badge) setTagOpen((o) => ({ ...o, [item.id]: false })); }}
+                  placeholder="Tag"
+                  maxLength={6}
+                  className="shrink-0 w-14 h-7 text-xs text-center uppercase bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:normal-case"
+                />
+              ) : (
+                <button
+                  onClick={() => setTagOpen((o) => ({ ...o, [item.id]: true }))}
+                  className="shrink-0 h-7 px-2 rounded-md border border-dashed border-studio-border text-[10px] text-studio-muted hover:text-studio-text hover:border-studio-muted transition-colors"
+                >
+                  + Tag
+                </button>
+              )}
               {/* Label */}
               <Input
                 value={item.label}
@@ -478,6 +790,7 @@ const MessageItem = memo(function MessageItem({
         </div>
         {/* Add item */}
         <button
+          disabled={canvasIsFull}
           onClick={() => {
             const items = [
               ...checklistBlock.items,
@@ -485,10 +798,163 @@ const MessageItem = memo(function MessageItem({
             ];
             onUpdate(msg.id, { block: { type: "checklist", items } });
           }}
-          className="text-[11px] text-studio-muted hover:text-studio-text transition-colors text-left"
+          className="text-[11px] text-studio-muted hover:text-studio-text transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-studio-muted"
         >
           + Add item
         </button>
+        {canvasIsFull && (
+          <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5">
+            <AlertCircleSolid />
+            Max items — Remove an item to add more
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Itinerary ──────────────────────────────────────────
+  if (msg.block.type === "itinerary") {
+    const itin = msg.block as ItineraryBlock;
+    const commit = (
+      groups: ItineraryGroup[],
+      cta: string | undefined = itin.cta,
+      intro: string | undefined = itin.intro,
+    ) =>
+      onUpdate(msg.id, {
+        block: {
+          type: "itinerary",
+          groups,
+          ...(intro && intro.trim() ? { intro } : {}),
+          ...(cta && cta.trim() ? { cta } : {}),
+        },
+      });
+    const setGroups = (fn: (gs: ItineraryGroup[]) => ItineraryGroup[]) => commit(fn(itin.groups));
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <MessageCardHeader title="Itinerary" onRemove={() => onRemove(msg.id)} />
+
+        <div className="mb-2.5">
+          <SectionLabel>Intro text (optional)</SectionLabel>
+          <textarea
+            value={itin.intro ?? ""}
+            onChange={(e) => commit(itin.groups, itin.cta, e.target.value)}
+            placeholder="e.g. I found 3 alternatives that protect your connection."
+            maxLength={180}
+            rows={3}
+            className="w-full resize-none rounded-md border border-studio-border bg-studio-sidebar px-2.5 py-2 text-xs text-studio-text placeholder:text-studio-muted focus:outline-none focus:ring-1 focus:ring-studio-accent"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {itin.groups.map((g, gi) => (
+            <div key={g.id} className="rounded-md border border-studio-border p-2 flex flex-col gap-1.5">
+              {/* Group label + remove group */}
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={g.label ?? ""}
+                  onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi ? { ...x, label: e.target.value || undefined } : x))}
+                  placeholder="Date / section (optional)"
+                  className="flex-1 h-7 text-xs md:text-xs font-semibold bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted placeholder:font-normal"
+                />
+                <button
+                  onClick={() => setGroups((gs) => gs.filter((_, i) => i !== gi))}
+                  disabled={itin.groups.length <= 1}
+                  aria-label="Remove group"
+                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+
+              {/* Rows */}
+              {g.items.map((it, ii) => (
+                <div key={it.id} className="flex items-start gap-1.5">
+                  <ItineraryIconPicker
+                    value={it.icon}
+                    onChange={(icon) => setGroups((gs) => gs.map((x, i) => i === gi
+                      ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, icon } : y) } : x))}
+                  />
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <Input
+                      value={it.title}
+                      onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                        ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, title: e.target.value } : y) } : x))}
+                      placeholder="Title"
+                      className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                    />
+                    <Input
+                      value={it.sub ?? ""}
+                      onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                        ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, sub: e.target.value || undefined } : y) } : x))}
+                      placeholder="Detail (optional)"
+                      className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                    />
+                    <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                      <Input
+                        value={it.badge ?? ""}
+                        onChange={(e) => setGroups((gs) => gs.map((x, i) => i === gi
+                          ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, badge: e.target.value || undefined } : y) } : x))}
+                        placeholder="Badge (optional)"
+                        maxLength={18}
+                        className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+                      />
+                      <IconSegmentToggle
+                        options={[
+                          { value: "neutral", Icon: Circle, label: "Neutral" },
+                          { value: "accent", Icon: Sparkles, label: "Accent" },
+                        ] as const}
+                        value={it.badgeTone ?? "neutral"}
+                        onChange={(badgeTone) => setGroups((gs) => gs.map((x, i) => i === gi
+                          ? { ...x, items: x.items.map((y, j) => j === ii ? { ...y, badgeTone } : y) } : x))}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
+                      ? { ...x, items: x.items.filter((_, j) => j !== ii) } : x))}
+                    disabled={g.items.length <= 1}
+                    aria-label="Remove row"
+                    className="shrink-0 w-5 h-5 mt-1 flex items-center justify-center rounded text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+
+              {/* Add row */}
+              <button
+                onClick={() => setGroups((gs) => gs.map((x, i) => i === gi
+                  ? { ...x, items: [...x.items, { id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined, badge: undefined }] } : x))}
+                disabled={g.items.length >= 5}
+                className="self-start inline-flex items-center gap-1 text-[11px] text-studio-muted hover:text-studio-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <Plus size={12} /> Add row
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add group */}
+        <button
+          onClick={() => setGroups((gs) => [...gs, { id: uid(), label: "", items: [{ id: uid(), icon: "place" as ItineraryIcon, title: "", sub: undefined }] }])}
+          disabled={itin.groups.length >= 4 || canvasIsFull}
+          className="mt-1 w-full h-7 rounded-md bg-studio-muted/20 text-studio-text hover:bg-studio-muted/30 text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-studio-muted/20"
+        >
+          + Add day
+        </button>
+
+        {/* Footer CTA */}
+        <div className="mt-1">
+          <SectionLabel>Footer button (optional)</SectionLabel>
+          <Input
+            value={itin.cta ?? ""}
+            onChange={(e) => commit(itin.groups, e.target.value, itin.intro)}
+            placeholder="e.g. Start booking"
+            maxLength={24}
+            className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
+        </div>
       </div>
     );
   }
@@ -496,44 +962,89 @@ const MessageItem = memo(function MessageItem({
   // ── Status pill ────────────────────────────────────────
   if (msg.block.type === "status") {
     const statusBlock = msg.block as StatusBlock;
-    const VARIANTS: StatusBlock["variant"][] = ["success", "warning"];
-    const VARIANT_LABEL: Record<StatusBlock["variant"], string> = {
-      success: "✓ Success",
-      warning: "! Warning",
-    };
 
     return (
       <div {...dragProps} className={wrapCls}>
-        <div className="flex items-center gap-1.5">
-          <Grip />
-          <Bot size={13} className="shrink-0 text-studio-muted" />
-          <span className="text-xs text-studio-muted flex-1">Status</span>
-          <button onClick={() => onRemove(msg.id)} className="text-studio-muted hover:text-studio-text hover:bg-studio-border rounded-[4px] w-5 h-5 flex items-center justify-center text-xs transition-colors">✕</button>
-        </div>
+        <MessageCardHeader
+          title="Status"
+          extra={
+            <IconSegmentToggle
+              options={[
+                { value: "success", Icon: CircleCheck,   label: "Success" },
+                { value: "warning", Icon: TriangleAlert, label: "Warning" },
+              ] as const}
+              value={statusBlock.variant}
+              onChange={(variant) => onUpdate(msg.id, { block: { ...statusBlock, variant } })}
+            />
+          }
+          onRemove={() => onRemove(msg.id)}
+        />
         {/* Label input */}
         <Input
           value={statusBlock.label}
           onChange={(e) => onUpdate(msg.id, { block: { ...statusBlock, label: e.target.value } })}
           placeholder="Status label"
-          className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+          className="h-7 text-xs md:text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
         />
-        {/* Variant selector */}
-        <div className="flex gap-1">
-          {VARIANTS.map((v) => (
-            <button
-              key={v}
-              onClick={() => onUpdate(msg.id, { block: { ...statusBlock, variant: v } })}
-              className={[
-                "flex-1 h-6 rounded-md text-[10px] font-medium transition-colors",
-                statusBlock.variant === v
-                  ? "bg-studio-accent text-studio-accent-fg"
-                  : "bg-studio-hover text-studio-muted hover:text-studio-text",
-              ].join(" ")}
-            >
-              {VARIANT_LABEL[v]}
-            </button>
-          ))}
-        </div>
+      </div>
+    );
+  }
+
+  // ── Voice card ─────────────────────────────────────────
+  if (msg.block.type === "voice") {
+    const voiceBlock = msg.block as VoiceBlock;
+    const STYLE_OPTIONS: { style: VoiceBlock["style"]; Icon: typeof Circle; label: string }[] = [
+      { style: "quote",  Icon: Circle,     label: "Spotlight" },
+      { style: "player", Icon: AudioLines, label: "Player bar" },
+    ];
+    const patch = (p: Partial<VoiceBlock>) => onUpdate(msg.id, { block: { ...voiceBlock, ...p } });
+
+    return (
+      <div {...dragProps} className={wrapCls}>
+        <MessageCardHeader
+          title="Voice"
+          extra={
+            <IconSegmentToggle
+              options={STYLE_OPTIONS.map(({ style, Icon, label }) => ({ value: style, Icon, label }))}
+              value={voiceBlock.style}
+              onChange={(style) => patch({ style })}
+            />
+          }
+          onRemove={() => onRemove(msg.id)}
+        />
+
+        {/* Transcript */}
+        <textarea
+          value={voiceBlock.transcript}
+          onChange={(e) => patch({ transcript: e.target.value })}
+          placeholder="Spoken line / transcript"
+          rows={3}
+          className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text placeholder:text-studio-muted resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
+        />
+
+        {/* Style-specific field */}
+        {voiceBlock.style === "quote" ? (
+          <div>
+            <SectionLabel>Caption</SectionLabel>
+            <Input
+              value={voiceBlock.caption ?? ""}
+              onChange={(e) => patch({ caption: e.target.value })}
+              placeholder="Order notification"
+              maxLength={43}
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+        ) : (
+          <div>
+            <SectionLabel>Eyebrow</SectionLabel>
+            <Input
+              value={voiceBlock.eyebrow ?? ""}
+              onChange={(e) => patch({ eyebrow: e.target.value })}
+              placeholder="Voice AI agents:"
+              className="h-7 text-xs bg-studio-sidebar border-studio-border text-studio-text placeholder:text-studio-muted"
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -544,6 +1055,7 @@ const MessageItem = memo(function MessageItem({
 // ── Main ──────────────────────────────────────────────────
 
 export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const {
     layout, setLayout,
     exportSize, setExportSize,
@@ -553,33 +1065,26 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     customBackgrounds, addCustomBackground,
     userName, userAvatarUrl, setUserName, shuffleUserProfile,
     setActiveScenarioId,
+    canvasIsFull,
   } = useEditorStore();
 
   const [showBgModal, setShowBgModal] = useState(false);
+  const [showScenarioModal, setShowScenarioModal] = useState(false);
 
   // ── Scenario ───────────────────────────────────────────
   // Default: first scenario pre-selected (matches EditorShell's seed on fresh load)
-  const [activeScenario,    setActiveScenario]    = useState<string | null>(SCENARIOS[0].id);
-  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
+  const [activeScenario,    setActiveScenario]    = useState<string | null>(DEFAULT_SCENARIO_ID);
   const [genPrompt,  setGenPrompt]  = useState("");
   const [genLoading, setGenLoading] = useState(false);
   const [genError,   setGenError]   = useState<string | null>(null);
 
-  // ── Rotating placeholder ───────────────────────────────
-  const [phIdx,     setPhIdx]     = useState(0);
-  const [phOpacity, setPhOpacity] = useState(1);
+  // ── Placeholder (focus 시 숨김) ─────────────────────────
   const [phFocused, setPhFocused] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhOpacity(0);
-      setTimeout(() => {
-        setPhIdx((i) => (i + 1) % SCENARIO_PLACEHOLDERS.length);
-        setPhOpacity(1);
-      }, 300);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  // First-run coachmark nudging the user toward the Scenario section. Rendered
+  // inside the Scenario wrapper (below) so it scrolls with the section rather
+  // than floating at a fixed panel offset.
+  const [showScenarioCoach, dismissScenarioCoach] = useOnceFlag("coach-chat-scenario-v1");
 
   /** product cards 중 imageQuery 있고 img 없는 항목 자동 fetch */
   function autoFetchImages(msgs: ChatMessage[]) {
@@ -621,13 +1126,10 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** 드롭다운 변경 시 — 메시지가 있으면 confirm, 없으면 즉시 적용 */
+  /** 시나리오 선택 시 즉시 적용 (확인 모달 없음 — 빠른 전환 우선) */
   function handleScenarioChange(id: string) {
-    if (messages.length > 0) {
-      setPendingScenarioId(id);
-    } else {
-      applyScenario(id);
-    }
+    dismissScenarioCoach(); // user engaged with scenarios — retire the coachmark
+    applyScenario(id);
   }
 
   async function handleGenerate() {
@@ -644,8 +1146,16 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         body:    JSON.stringify({ prompt }),
       });
       const data = await res.json() as { messages?: unknown[]; error?: string };
-      if (!res.ok) { setGenError(data.error ?? "Generation failed"); return; }
-      setMessages(data.messages as Parameters<typeof setMessages>[0]);
+      if (!res.ok || !data.messages?.length) {
+        setGenError(data.error ?? "Couldn't generate a scenario — try rephrasing.");
+        return;
+      }
+      // Server already validated + converted to ChatMessage[]. Apply, then
+      // fetch product photos (parity with applyScenario — handleGenerate used
+      // to skip this, so generated product cards rendered with no images).
+      const msgs = data.messages as Parameters<typeof setMessages>[0];
+      setMessages(msgs);
+      autoFetchImages(msgs);
     } catch {
       setGenError("Network error — please try again");
     } finally {
@@ -653,8 +1163,19 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
     }
   }
 
+  function handleAddGuidance() {
+    setGenPrompt((current) => {
+      const trimmed = current.trim();
+      if (!trimmed) return CHAT_BRIEF_TEMPLATE;
+      if (/(^|\n)\s*(Structured brief:|Scenario:|Customer goal:|Agent action:)/i.test(trimmed)) return current;
+      return `${trimmed}\n\n${CHAT_BRIEF_APPEND_TEMPLATE}`;
+    });
+    setGenError(null);
+  }
+
   // ── Drag-to-reorder ────────────────────────────────────
   const dragIndex = useRef<number | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
   // Keep a stable ref to messages so handleDrop doesn't need it as a dep.
@@ -664,6 +1185,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   const handleDragStart = useCallback((i: number) => {
     dragIndex.current = i;
+    setDragFrom(i);
   }, []);
 
   const handleDragOverItem = useCallback((e: React.DragEvent, i: number) => {
@@ -673,50 +1195,23 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
 
   const handleDrop = useCallback((i: number) => {
     const from = dragIndex.current;
-    if (from === null || from === i) { setDragOver(null); return; }
+    if (from === null || from === i) { setDragFrom(null); setDragOver(null); return; }
     const next = [...messagesRef.current];
     const [moved] = next.splice(from, 1);
     next.splice(i, 0, moved);
     setMessages(next);
     dragIndex.current = null;
+    setDragFrom(null);
     setDragOver(null);
   }, [setMessages]);
 
   const handleDragEnd = useCallback(() => {
     dragIndex.current = null;
+    setDragFrom(null);
     setDragOver(null);
   }, []);
 
   // ── Layout & Size ──────────────────────────────────────
-
-  function ToggleGroup<T extends string>({
-    value,
-    options,
-    onChange,
-  }: {
-    value: T;
-    options: { value: T; label: string }[];
-    onChange: (v: T) => void;
-  }) {
-    return (
-      <div className="flex gap-1 p-0.5 bg-studio-hover rounded-lg">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={[
-              "flex-1 text-xs py-1.5 rounded-md transition-colors",
-              value === opt.value
-                ? "bg-studio-sidebar text-studio-text"
-                : "text-studio-muted hover:text-studio-text",
-            ].join(" ")}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
 
   // ── Panel resize ───────────────────────────────────────
 
@@ -751,11 +1246,11 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
       {/* Resize handle — left edge (outside scroll container so h-full is always full panel height) */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:[background:#F2FF66] transition-colors"
+        className="absolute left-0 top-0 h-full w-px cursor-ew-resize z-10 bg-transparent hover:bg-studio-accent transition-colors"
         title="Drag to resize panel"
       />
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto">
 
       <Section title="Export Size">
         <ToggleGroup
@@ -765,29 +1260,102 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       </Section>
 
-      <Section title="App Name">
-        <Input
-          value={appName}
-          onChange={(e) => setAppName(e.target.value)}
-          placeholder="e.g. sendbird.ai"
-          className="h-8 text-sm bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+      {/* Generate a chat scenario from a short brief or guidance. */}
+      <div className="m-4 rounded-xl p-3.5 border border-studio-border bg-white/[0.02]">
+        <div className="flex items-center gap-1.5 mb-2.5">
+          <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center bg-studio-hover">
+            <Sparkles size={13} className="text-studio-text" fill="currentColor" />
+          </span>
+          <span className="text-xs font-semibold text-studio-text tracking-tight">Create from brief</span>
+        </div>
+        {/* Composer — borderless textarea with a bottom-right send button */}
+        <div className="relative">
+          <textarea
+            value={genPrompt}
+            onChange={(e) => setGenPrompt(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
+            onFocus={() => setPhFocused(true)}
+            onBlur={() => setPhFocused(false)}
+            placeholder=""
+            rows={5}
+            disabled={genLoading}
+            className="w-full bg-transparent border-0 outline-none resize-none text-xs text-studio-text leading-snug placeholder:text-app-placeholder disabled:opacity-60 disabled:cursor-not-allowed min-h-[96px]"
+          />
+          {/* Fixed example prompt — hidden when typing or focused */}
+          {!genPrompt && !phFocused && (
+            <p className="absolute top-0 left-0 right-0 text-xs text-studio-muted pointer-events-none leading-snug">
+              {EXAMPLE_PROMPT}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleAddGuidance}
+            disabled={genLoading}
+            className="text-[11px] font-medium text-studio-muted transition-colors hover:text-studio-text disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Add guidance
+          </button>
+          <AiMagicButton
+            label="Generate conversation"
+            loading={genLoading}
+            disabled={genLoading || !genPrompt.trim()}
+            onClick={handleGenerate}
+          />
+        </div>
+        {genError && <p className="mt-1.5 text-[10px] text-red-400 leading-snug">{genError}</p>}
+      </div>
+
+      {/* Scenario — preset-style list (mirrors infographic Preset cards).
+          Wrapped so the floating first-run coachmark can measure its position. */}
+      <div className="relative">
+        {showScenarioCoach && (
+          <CoachmarkBubble
+            text="Pick a scenario to start 🙂"
+            onDismiss={dismissScenarioCoach}
+          />
+        )}
+        <Section
+          title="Scenario"
+          action={
+            <button
+              onClick={() => setShowScenarioModal(true)}
+              title="All scenarios"
+              aria-label="All scenarios"
+              className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
+            >
+              <Plus size={15} />
+            </button>
+          }
+        >
+          <ScenarioList activeId={activeScenario} onPick={handleScenarioChange} limit={4} />
+        </Section>
+      </div>
+
+      {showScenarioModal && (
+        <ScenarioLibraryModal
+          activeId={activeScenario}
+          onSelect={handleScenarioChange}
+          onClose={() => setShowScenarioModal(false)}
         />
-      </Section>
+      )}
 
       <Section
         title="Background"
         action={
           <button
             onClick={() => setShowBgModal(true)}
-            title="Browse or upload backgrounds"
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-semibold text-studio-muted hover:text-studio-text hover:bg-studio-hover border border-studio-border transition-colors leading-none"
+            title="Background Library"
+            aria-label="Background Library"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-studio-muted hover:text-studio-text hover:bg-white/[0.06] transition-colors"
           >
-            +
+            <Plus size={15} />
           </button>
         }
       >
         <div className="grid grid-cols-3 gap-2">
-          {[...BACKGROUNDS, ...customBackgrounds].map((bg) => (
+          {[...BACKGROUNDS, ...customBackgrounds].slice(0, 6).map((bg) => (
             <button
               key={bg.id}
               onClick={() => setBackgroundId(bg.id)}
@@ -805,14 +1373,6 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </div>
       </Section>
 
-      <Section title="Layout">
-        <ToggleGroup
-          value={layout}
-          options={[{ value: "split", label: "Split" }, { value: "center", label: "Center" }]}
-          onChange={setLayout}
-        />
-      </Section>
-
       {showBgModal && (
         <BackgroundPickerModal
           currentId={backgroundId}
@@ -823,120 +1383,18 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         />
       )}
 
-      <Section title="Scenario">
-        {/* Dropdown */}
-        <Select
-          value={activeScenario ?? ""}
-          onValueChange={(val) => handleScenarioChange(String(val))}
-        >
-          <SelectTrigger className="w-full h-8 border-studio-border bg-studio-hover text-studio-text text-xs rounded-lg">
-            <span className="flex-1 text-left truncate">
-              {SCENARIOS.find((s) => s.id === activeScenario)?.name ?? "Select a scenario"}
-            </span>
-          </SelectTrigger>
-          <SelectContent className="bg-studio-sidebar border border-studio-border shadow-lg rounded-lg py-1">
-            {SCENARIOS.map((s) => (
-              <SelectItem
-                key={s.id}
-                value={s.id}
-                className="text-xs text-studio-text rounded-none px-3 py-1.5 cursor-default [&[data-highlighted]]:bg-studio-hover [&[data-highlighted]]:text-white focus:bg-transparent"
-              >
-                {s.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Tagline */}
-        {activeScenario && (() => {
-          const s = SCENARIOS.find((s) => s.id === activeScenario);
-          return s ? (
-            <p className="text-[11px] text-studio-muted mt-1.5 leading-relaxed">
-              &ldquo;{s.tagline}&rdquo;
-            </p>
-          ) : null;
-        })()}
-
-        {/* ─── or ─── */}
-        <div className="flex items-center gap-2 my-3">
-          <div className="flex-1 h-px bg-studio-border" />
-          <span className="text-[10px] text-studio-muted uppercase tracking-widest">or</span>
-          <div className="flex-1 h-px bg-studio-border" />
-        </div>
-
-        {/* AI generate */}
-        <div className="flex flex-col gap-2">
-          <div className="relative">
-            <textarea
-              value={genPrompt}
-              onChange={(e) => setGenPrompt(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleGenerate(); } }}
-              onFocus={() => setPhFocused(true)}
-              onBlur={() => setPhFocused(false)}
-              placeholder=""
-              rows={4}
-              className="w-full text-xs bg-studio-sidebar border border-studio-border rounded-md px-3 py-2 text-studio-text resize-none focus:outline-none focus:ring-1 focus:ring-studio-accent"
-            />
-            {/* Rotating placeholder overlay — hidden when typing or focused */}
-            {!genPrompt && !phFocused && (
-              <p
-                style={{ opacity: phOpacity, transition: "opacity 300ms" }}
-                className="absolute inset-0 px-3 py-2 text-xs text-studio-muted pointer-events-none leading-relaxed"
-              >
-                {SCENARIO_PLACEHOLDERS[phIdx]}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleGenerate}
-            disabled={genLoading || !genPrompt.trim()}
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-hover border border-studio-border text-studio-text text-xs font-medium hover:border-studio-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Sparkles size={12} />
-            {genLoading ? "Generating…" : "Generate with AI"}
-          </button>
-          {genError && (
-            <p className="text-xs text-red-400">{genError}</p>
-          )}
-        </div>
+      <Section title="Layout">
+        <ToggleGroup
+          value={layout}
+          options={[
+            { value: "split",  label: "Split",  tooltip: "Keeps the chat UI off a person's face — best for photos with people." },
+            { value: "center", label: "Center", tooltip: "Best for nature or general backgrounds." },
+          ]}
+          onChange={setLayout}
+        />
       </Section>
 
-      <Section title="User Profile">
-        <div className="flex items-center gap-2">
-          {/* Avatar preview */}
-          {userAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={userAvatarUrl}
-              alt={userName}
-              className="w-8 h-8 rounded-full object-cover shrink-0 border border-studio-border"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border shrink-0" />
-          )}
-          {/* Name input */}
-          <Input
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            placeholder="User name"
-            className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
-          />
-          {/* Shuffle button */}
-          <div className="relative group/tip shrink-0">
-            <button
-              onClick={shuffleUserProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-md border border-studio-border text-studio-muted hover:text-studio-text hover:bg-studio-hover transition-colors"
-            >
-              <Shuffle size={13} />
-            </button>
-            <span className="pointer-events-none absolute bottom-full right-0 mb-1.5 px-1.5 py-0.5 rounded bg-studio-bg border border-studio-border text-studio-text text-[10px] whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-              Shuffle name &amp; avatar
-            </span>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Messages">
+      <Section title="Messages" info="Once the frame is full, you can't add more messages — remove or shorten one to make room.">
         <div className="flex flex-col gap-2 mb-3">
           {messages.map((msg, i) => (
             <MessageItem
@@ -944,7 +1402,7 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
               msg={msg}
               index={i}
               isDragOver={dragOver === i}
-              dragIndexRef={dragIndex}
+              dragFrom={dragFrom}
               onDragStart={handleDragStart}
               onDragOverItem={handleDragOverItem}
               onDrop={handleDrop}
@@ -965,39 +1423,54 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         {/* Add message dropdown */}
         <Menu.Root>
           <Menu.Trigger
-            disabled={isOverflowing}
-            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={isOverflowing || canvasIsFull}
+            className="flex items-center justify-center gap-1.5 w-full h-8 rounded-md bg-studio-accent text-studio-accent-fg font-semibold text-xs hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             + Add message
             <ChevronDown size={11} />
           </Menu.Trigger>
+          {canvasIsFull && (
+            <p className="text-[10px] text-red-400 leading-none flex items-center gap-1.5 mt-3">
+              <AlertCircleSolid />
+              Canvas is full — Remove or shorten a message to add more
+            </p>
+          )}
           <Menu.Portal>
             <Menu.Positioner side="top" align="center" sideOffset={6}>
-              <Menu.Popup className="z-50 min-w-[180px] rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
+              <Menu.Popup className="z-50 w-(--anchor-width) rounded-lg border border-studio-border bg-studio-sidebar shadow-lg py-1 outline-none origin-bottom data-[ending-style]:animate-out data-[ending-style]:fade-out-0 data-[ending-style]:zoom-out-95 data-[starting-style]:animate-in data-[starting-style]:fade-in-0 data-[starting-style]:zoom-in-95 duration-100">
                 {([
-                  { icon: "💬", label: "Text message",    add: () => {
+                  { label: "Text message",    add: () => {
                     const lastRole = messages.at(-1)?.role ?? "bot";
                     const role = lastRole === "bot" ? "user" : "bot";
                     addMessage({ id: uid(), role, sender: role === "user" ? (userName || "User") : "bot", block: { type: "text", text: "" } });
                   }},
-                  { icon: "🛍️", label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
+                  { label: "Text + Activity log", add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "text", text: "", verifications: ["Identity verified", "Source: live data"] } }) },
+                  { label: "Product cards",   add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "products", items: [
                     { img: "", name: "Product A", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                     { img: "", name: "Product B", sub: "$0.00", cta: "Buy now", imageQuery: "" },
                   ]}})},
-                  { icon: "🎯", label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
-                  { icon: "✅", label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
+                  { label: "Action buttons",  add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "actions", buttons: ["Option A", "Option B"] } }) },
+                  { label: "Checklist",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "checklist", items: [
                     { id: uid(), label: "Task one",   status: "done" },
                     { id: uid(), label: "Task two",   status: "in-progress" },
                     { id: uid(), label: "Task three", status: "pending" },
                   ]}})},
-                  { icon: "🏷️", label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
-                ] as const).map(({ icon, label, add }) => (
+                  { label: "Status",          add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "status", label: "Status label", variant: "success" } }) },
+                  { label: "Itinerary",       add: () => addMessage({ id: uid(), role: "bot", sender: "bot", block: { type: "itinerary", cta: "Start booking", groups: [
+                    { id: uid(), label: "Day 1", items: [
+                      { id: uid(), icon: "lodging", title: "Hotel check-in", sub: "4:00 PM" },
+                      { id: uid(), icon: "dining",  title: "Dinner",         sub: "Beach Club Restaurant" },
+                    ]},
+                    { id: uid(), label: "Day 2", items: [
+                      { id: uid(), icon: "activity", title: "Snorkeling", sub: "Lagoon · 9:00 AM" },
+                    ]},
+                  ]}})},
+                ] as const).map(({ label, add }) => (
                   <Menu.Item
                     key={label}
                     onClick={add}
-                    className="flex items-center gap-2.5 px-3 py-1.5 text-xs text-studio-text hover:bg-studio-hover cursor-default outline-none"
+                    className="text-xs text-studio-text px-3 py-1.5 cursor-default outline-none transition-colors data-[highlighted]:bg-studio-hover data-[highlighted]:text-white"
                   >
-                    <span className="text-sm leading-none">{icon}</span>
                     {label}
                   </Menu.Item>
                 ))}
@@ -1007,43 +1480,53 @@ export function FormPanel({ isOverflowing }: { isOverflowing: boolean }) {
         </Menu.Root>
       </Section>
 
-      {/* Bottom hint */}
-      <p className="text-[11px] text-studio-muted leading-relaxed pb-2">
-        Messages that exceed the frame height won&apos;t be added to the preview.
-      </p>
-
-      {/* Scenario switch confirm modal */}
-      {pendingScenarioId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-studio-sidebar border border-studio-border rounded-2xl p-5 w-64 shadow-xl flex flex-col gap-3">
-            <div>
-              <p className="text-sm font-semibold text-studio-text mb-1">Replace current messages?</p>
-              <p className="text-xs text-studio-muted">
-                Switching to &ldquo;{SCENARIOS.find((s) => s.id === pendingScenarioId)?.name}&rdquo; will overwrite your current messages.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPendingScenarioId(null)}
-                className="flex-1 h-8 rounded-lg border border-studio-border text-studio-muted text-xs hover:text-studio-text hover:bg-studio-hover transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  applyScenario(pendingScenarioId);
-                  setPendingScenarioId(null);
-                }}
-                className="flex-1 h-8 rounded-lg bg-studio-accent text-studio-accent-fg text-xs font-semibold hover:opacity-90 transition-opacity"
-              >
-                Replace
-              </button>
-            </div>
+      <Section title="User Profile">
+        <div className="flex items-center gap-2">
+          {/* Avatar — hover 시 shuffle 버튼 오버레이 */}
+          <div className="group/avatar relative w-8 h-8 shrink-0">
+            {userAvatarUrl && !avatarLoadError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={userAvatarUrl}
+                src={userAvatarUrl}
+                alt={userName}
+                className="w-8 h-8 rounded-full object-cover border border-studio-border"
+                onError={() => setAvatarLoadError(true)}
+                onLoad={() => setAvatarLoadError(false)}
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-studio-hover border border-studio-border" />
+            )}
+            <button
+              onClick={shuffleUserProfile}
+              title="Shuffle name & avatar"
+              aria-label="Shuffle name & avatar"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-white opacity-0 group-hover/avatar:opacity-100 transition-opacity"
+            >
+              <RotateCcw size={13} />
+            </button>
           </div>
+          {/* Name input */}
+          <Input
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            placeholder="User name"
+            className="h-8 text-sm flex-1 bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+          />
         </div>
-      )}
+      </Section>
+
+      <Section title="App Name">
+        <Input
+          value={appName}
+          onChange={(e) => setAppName(e.target.value)}
+          placeholder="e.g. sendbird.ai"
+          className="h-8 text-sm bg-studio-hover border-studio-border text-studio-text placeholder:text-studio-muted"
+        />
+      </Section>
 
       </div> {/* /p-5 */}
+
     </div>
   );
 }

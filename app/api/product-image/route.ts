@@ -1,17 +1,19 @@
 import { type NextRequest } from "next/server";
+import { env } from "@/lib/env";
 
 /**
  * GET /api/product-image?q=lace+dress
  *
  * Searches Pexels for a portrait-oriented photo matching the query,
  * picks one at random from the top results, and returns its URL.
- * The client then loads it through /api/proxy-image to stay same-origin.
+ * The client then loads it through the Pexels-only /api/proxy-image route
+ * to stay same-origin.
  *
  * Requires PEXELS_API_KEY in .env.local (free at https://www.pexels.com/api/)
  */
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q")?.trim() || "product";
-  const apiKey = process.env.PEXELS_API_KEY;
+  const apiKey = env.pexelsApiKey;
 
   if (!apiKey || apiKey === "your_pexels_api_key_here") {
     return Response.json(

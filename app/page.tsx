@@ -3,39 +3,50 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AssetLibrary } from "@/components/assets/AssetLibrary";
+import { useEditorStore } from "@/lib/store";
 
 // ── Template gallery ──────────────────────────────────────
 
 const TEMPLATES = [
   {
     id: "feature-mockup",
-    title: "Feature Mockup",
+    title: "Chat UI",
     preview: "/preview/mobile_mockup.png",
     ready: true,
   },
   {
-    id: "overview-diagram",
-    title: "Overview Diagram",
+    id: "infographic",
+    title: "Infographic",
     preview: "/preview/diagram.png",
-    ready: false,
+    ready: true,
   },
   {
-    id: "dashboard-snippet",
-    title: "Dashboard Snippet",
-    preview: "/preview/snippet.png",
-    ready: false,
+    id: "product-visual",
+    title: "Product Visual",
+    preview: "/preview/snippet.png", // stopgap art — dedicated preview in STEP 2~5
+    ready: true,
   },
 ];
 
 function TemplateGallery() {
   const router = useRouter();
+  const setFreshStart = useEditorStore((s) => s.setFreshStart);
   return (
     <div className="mb-8">
       <div className="flex gap-4 overflow-x-auto pb-1 -mx-8 px-8">
         {TEMPLATES.map((t) => (
           <button
             key={t.id}
-            onClick={() => { if (t.ready) router.push(`/editor/${t.id}`); }}
+            onClick={() => {
+              if (!t.ready) return;
+              // "Create asset" → seed fresh, not resume. Only chat + infographic
+              // consume this flag on mount (product-visual is a placeholder with
+              // no autosave), so scope it to them to avoid a lingering flag.
+              if (t.id === "feature-mockup" || t.id === "infographic") {
+                setFreshStart(true);
+              }
+              router.push(`/editor/${t.id}`);
+            }}
             className={[
               "relative shrink-0 w-56 h-36 rounded-xl overflow-hidden group",
               t.ready ? "cursor-pointer" : "cursor-default",
@@ -66,7 +77,10 @@ function TemplateGallery() {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   return (
     <div className="p-8 flex flex-col h-full min-h-0">

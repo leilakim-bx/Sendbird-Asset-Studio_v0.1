@@ -1,0 +1,96 @@
+{
+  "archetype": "inbox",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Inbox",
+    "title": "고객 맥락이 보이는 상담함",
+    "subtitle": "대화, 고객 정보, 추천 액션을 한 화면에서 확인합니다.",
+    "conversations": [
+      {
+        "slotId": "conv-vip",
+        "customer": "김하린",
+        "title": "VIP 배송 문의",
+        "preview": "AI가 최근 주문과 멤버십을 확인했습니다.",
+        "status": "검토 필요",
+        "time": "3분",
+        "score": "VIP"
+      },
+      {
+        "slotId": "conv-plan",
+        "customer": "이준호",
+        "title": "요금제 변경",
+        "preview": "업그레이드 조건을 정리했습니다.",
+        "status": "진행 중",
+        "time": "12분",
+        "score": "NPS 8"
+      },
+      {
+        "slotId": "conv-return",
+        "customer": "박소윤",
+        "title": "반품 상태",
+        "preview": "반품 라벨 재발송이 필요합니다.",
+        "status": "대기",
+        "time": "25분",
+        "score": "CSAT 3"
+      }
+    ],
+    "thread": {
+      "customerName": "김하린",
+      "statusLabel": "AI 추천 있음",
+      "messages": [
+        {
+          "slotId": "msg-ko-customer",
+          "author": "customer",
+          "name": "하린",
+          "text": "지난주 주문한 상품이 아직 안 왔어요. 오늘 안에 받을 수 있나요?",
+          "timestamp": "오후 2:11"
+        },
+        {
+          "slotId": "msg-ko-ai",
+          "author": "ai",
+          "name": "AI Concierge",
+          "text": "고객은 VIP이며, 배송 지연 보상 쿠폰 대상입니다.",
+          "timestamp": "오후 2:12"
+        },
+        {
+          "slotId": "msg-ko-agent",
+          "author": "agent",
+          "name": "상담팀",
+          "text": "배송 상태를 확인했고 오늘 오후 도착 예정입니다. 보상 쿠폰도 함께 드릴게요.",
+          "timestamp": "오후 2:13"
+        }
+      ]
+    },
+    "context": {
+      "customerName": "김하린",
+      "summary": "VIP 고객이며 최근 배송 지연 문의가 두 번 있었습니다.",
+      "sections": [
+        {
+          "slotId": "context-ko-memory",
+          "title": "고객 정보",
+          "items": [
+            { "label": "등급", "value": "VIP" },
+            { "label": "최근 구매", "value": "3일 전" },
+            { "label": "감정", "value": "불편함" }
+          ]
+        },
+        {
+          "slotId": "context-ko-actions",
+          "title": "추천 액션",
+          "items": [
+            { "label": "보상", "value": "쿠폰 발급" },
+            { "label": "응답", "value": "배송 시간 안내" },
+            { "label": "후속", "value": "도착 확인" }
+          ]
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "context-ko-actions",
+      "label": "AI 추천",
+      "description": "고객 등급과 최근 문의를 기준으로 다음 액션을 제안합니다."
+    }
+  }
+}

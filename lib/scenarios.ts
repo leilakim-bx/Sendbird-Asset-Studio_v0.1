@@ -1,5 +1,10 @@
 import type { ChatMessage } from "./store";
 
+/** Wrap an external image URL through our same-origin proxy */
+function p(url: string) {
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+}
+
 export type Scenario = {
   id: string;
   name: string;
@@ -36,45 +41,58 @@ export const SCENARIOS: Scenario[] = [
         block: {
           type: "products",
           items: [
-            { img: "", name: "Pegasus 41",  sub: "$130", cta: "Buy now", imageQuery: "running shoes" },
-            { img: "", name: "Vomero 17",   sub: "$150", cta: "Buy now", imageQuery: "running shoes" },
+            { img: p("https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&h=350"), name: "Pegasus 41",  sub: "$130", cta: "Buy now", imageQuery: "running shoes" },
+            { img: p("https://images.pexels.com/photos/9777229/pexels-photo-9777229.jpeg?auto=compress&cs=tinysrgb&h=350"), name: "Vomero 17",   sub: "$150", cta: "Buy now", imageQuery: "running shoes" },
           ],
         },
       },
     ],
   },
 
-  // 2. Proactive Outreach
+  // 2. Voice AI
+  {
+    id: "voice-ai",
+    name: "Voice AI",
+    tagline: "AI that speaks",
+    messages: [
+      {
+        id: "v1-1",
+        role: "bot",
+        sender: "bot",
+        block: {
+          type: "voice",
+          style: "quote",
+          transcript: "Your order is ready for pickup. Use code 7291 to skip the line — we're holding it until 8pm.",
+          caption: "Order notification",
+          eyebrow: "Voice AI agents:",
+        },
+      },
+    ],
+  },
+
+  // 3. Proactive Outreach
   {
     id: "proactive-outreach",
-    name: "Proactive Outreach",
+    name: "Proactive Chat",
     tagline: "AI that anticipates",
     messages: [
       {
         id: "s2-1",
         role: "bot",
         sender: "bot",
-        block: { type: "text", text: "Your NYC flight tomorrow may be delayed. Want to rebook?" },
-      },
-      {
-        id: "s2-2",
-        role: "user",
-        sender: "James",
-        block: { type: "text", text: "Yes please." },
-      },
-      {
-        id: "s2-3",
-        role: "bot",
-        sender: "bot",
-        block: { type: "actions", buttons: ["Rebook morning", "Keep current", "Refund"] },
+        block: {
+          type: "text",
+          text: "Your NYC flight tomorrow may be delayed. Want to rebook?",
+          buttons: ["Rebook morning", "Keep current", "Refund"],
+        },
       },
     ],
   },
 
-  // 3. Omnichannel Pickup
+  // 4. Omnichannel Pickup
   {
     id: "omnichannel-pickup",
-    name: "Omnichannel Pickup",
+    name: "Omnipresence",
     tagline: "Continuous across channels",
     messages: [
       {
@@ -98,7 +116,7 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 4. Agent Steward
+  // 5. Agent Steward
   {
     id: "agent-steward",
     name: "Agent Steward",
@@ -132,7 +150,7 @@ export const SCENARIOS: Scenario[] = [
     ],
   },
 
-  // 5. Trust & Governance
+  // 6. Trust & Governance
   {
     id: "trust-governance",
     name: "Trust & Governance",
@@ -148,89 +166,63 @@ export const SCENARIOS: Scenario[] = [
         id: "s5-2",
         role: "bot",
         sender: "bot",
-        block: { type: "text", text: "$2,847.32 as of 2 minutes ago." },
-      },
-      {
-        id: "s5-3",
-        role: "bot",
-        sender: "bot",
         block: {
-          type: "checklist",
-          items: [
-            { id: "s5-c1", label: "Identity verified",         status: "done" },
-            { id: "s5-c2", label: "PII redacted from logs",    status: "done" },
-            { id: "s5-c3", label: "Source: live banking API",  status: "done" },
+          type: "text",
+          text: "$2,847.32 as of 2 minutes ago.",
+          verifications: [
+            "Identity verified",
+            "PII redacted from logs",
+            "Source: live banking API",
           ],
         },
       },
     ],
   },
 
-  // 6. Personalization
+  // 7. Travel Itinerary
   {
-    id: "personalization",
-    name: "Personalization",
-    tagline: "Knows your taste",
-    imageCategory: "fashion clothing",
+    id: "travel-itinerary",
+    name: "Travel Planner",
+    tagline: "AI that plans your trip",
     messages: [
       {
         id: "s6-1",
         role: "user",
-        sender: "Emma",
-        block: { type: "text", text: "Anything new in stock?" },
-      },
-      {
-        id: "s6-2",
-        role: "bot",
-        sender: "bot",
-        block: { type: "text", text: "You like minimal beige tones. These just arrived:" },
+        sender: "Eloy",
+        block: { type: "text", text: "What is there to do in Bora Bora?" },
       },
       {
         id: "s6-3",
         role: "bot",
         sender: "bot",
         block: {
-          type: "products",
-          items: [
-            { img: "", name: "Linen Coat",    sub: "$189", cta: "Buy now", imageQuery: "linen coat" },
-            { img: "", name: "Oversized Tee", sub: "$54",  cta: "Buy now", imageQuery: "oversized t-shirt" },
+          type: "itinerary",
+          intro: "I found a simple plan that keeps the trip relaxed and easy to book.",
+          cta: "Start booking",
+          groups: [
+            {
+              id: "s6-g1",
+              label: "MON",
+              items: [
+                { id: "s6-g1-i1", icon: "dining", title: "Dinner", sub: "Bora Bora Beach Club Restaurant", badge: "Best match", badgeTone: "accent" },
+              ],
+            },
+            {
+              id: "s6-g2",
+              label: "TUE",
+              items: [
+                { id: "s6-g2-i1", icon: "activity", title: "Snorkeling", sub: "Matira Lagoon · 9:00 AM" },
+              ],
+            },
           ],
         },
       },
     ],
   },
 
-  // 7. Multi-step Resolution
-  {
-    id: "multistep-resolution",
-    name: "Multi-step Resolution",
-    tagline: "One request, full resolution",
-    messages: [
-      {
-        id: "s7-1",
-        role: "user",
-        sender: "Liam",
-        block: { type: "text", text: "I lost my package." },
-      },
-      {
-        id: "s7-2",
-        role: "bot",
-        sender: "bot",
-        block: { type: "text", text: "I'm on it." },
-      },
-      {
-        id: "s7-3",
-        role: "bot",
-        sender: "bot",
-        block: {
-          type: "checklist",
-          items: [
-            { id: "s7-c1", label: "Carrier notified",      status: "done" },
-            { id: "s7-c2", label: "Replacement queued",    status: "done" },
-            { id: "s7-c3", label: "Tracking new shipment", status: "in-progress" },
-          ],
-        },
-      },
-    ],
-  },
 ];
+
+/** Scenario shown by default when first entering the chat editor. */
+export const DEFAULT_SCENARIO_ID = "omnichannel-pickup";
+export const DEFAULT_SCENARIO =
+  SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0];

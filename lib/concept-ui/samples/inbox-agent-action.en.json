@@ -1,0 +1,96 @@
+{
+  "archetype": "inbox",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Desk",
+    "title": "Agent action workspace",
+    "subtitle": "Turn a conversation into a structured action without leaving the inbox.",
+    "conversations": [
+      {
+        "slotId": "conv-ticket",
+        "customer": "Amelia Park",
+        "title": "Convert to customer ticket",
+        "preview": "Draft fields extracted from the thread.",
+        "status": "Draft ready",
+        "time": "Now",
+        "score": "High"
+      },
+      {
+        "slotId": "conv-billing",
+        "customer": "Jon Bell",
+        "title": "Billing dispute",
+        "preview": "Invoice and plan details attached.",
+        "status": "Open",
+        "time": "5m",
+        "score": "Risk"
+      },
+      {
+        "slotId": "conv-review",
+        "customer": "Sana Lee",
+        "title": "Review request",
+        "preview": "Positive signal detected after CSAT 5.",
+        "status": "Ready",
+        "time": "16m",
+        "score": "CSAT 5"
+      }
+    ],
+    "thread": {
+      "customerName": "Amelia Park",
+      "statusLabel": "Action ready",
+      "messages": [
+        {
+          "slotId": "action-source",
+          "author": "customer",
+          "name": "Amelia",
+          "text": "Can you create a ticket so my team can track the password reset issue?",
+          "timestamp": "11:02 AM"
+        },
+        {
+          "slotId": "action-ai",
+          "author": "ai",
+          "name": "AI Concierge",
+          "text": "Ticket type, requester, plan, and summary were extracted from the conversation.",
+          "timestamp": "11:03 AM"
+        },
+        {
+          "slotId": "action-agent",
+          "author": "agent",
+          "name": "Support",
+          "text": "Ticket is ready to create with the customer details already filled in.",
+          "timestamp": "11:04 AM"
+        }
+      ]
+    },
+    "context": {
+      "customerName": "Amelia Park",
+      "summary": "Enterprise account, active admin seat, verified identity completed today.",
+      "sections": [
+        {
+          "slotId": "action-fields",
+          "title": "Extracted fields",
+          "items": [
+            { "label": "Type", "value": "Account access" },
+            { "label": "Plan", "value": "Enterprise" },
+            { "label": "Priority", "value": "High" }
+          ]
+        },
+        {
+          "slotId": "action-next",
+          "title": "Next steps",
+          "items": [
+            { "label": "Create", "value": "Customer ticket" },
+            { "label": "Assign", "value": "Admin team" },
+            { "label": "SLA", "value": "2 hours" }
+          ]
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "action-fields",
+      "label": "Draft ready",
+      "description": "AI turns the thread into structured fields the agent can approve."
+    }
+  }
+}

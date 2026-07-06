@@ -1,0 +1,56 @@
+{
+  "archetype": "dashboard",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Insights",
+    "title": "AI 상담 성과 대시보드",
+    "subtitle": "채널별 자동 해결률과 검토가 필요한 대화를 한눈에 봅니다.",
+    "filters": ["최근 30일", "전체 채널", "자동 해결"],
+    "kpis": [
+      { "slotId": "kpi-ko-resolved", "label": "자동 해결", "value": "58%", "delta": "+9%", "tone": "good" },
+      { "slotId": "kpi-ko-csat", "label": "CSAT", "value": "4.6", "delta": "+0.3", "tone": "good" },
+      { "slotId": "kpi-ko-review", "label": "검토 필요", "value": "74건", "delta": "-16%", "tone": "good" },
+      { "slotId": "kpi-ko-speed", "label": "평균 응답", "value": "42초", "delta": "-11초", "tone": "good" }
+    ],
+    "lineChart": {
+      "slotId": "chart-ko-resolved",
+      "title": "자동 해결 추이",
+      "seriesName": "해결률",
+      "points": [
+        { "label": "월", "value": 42 },
+        { "label": "화", "value": 45 },
+        { "label": "수", "value": 49 },
+        { "label": "목", "value": 52 },
+        { "label": "금", "value": 58 },
+        { "label": "토", "value": 57 }
+      ]
+    },
+    "barChart": {
+      "slotId": "chart-ko-channel",
+      "title": "채널별 대화량",
+      "seriesName": "대화",
+      "bars": [
+        { "label": "웹", "value": 720 },
+        { "label": "채팅", "value": 610 },
+        { "label": "이메일", "value": 380 },
+        { "label": "모바일", "value": 320 }
+      ]
+    },
+    "table": {
+      "slotId": "table-ko-agents",
+      "title": "상담 에이전트",
+      "rows": [
+        { "slotId": "row-ko-1", "name": "배송 안내 AI", "volume": "1,120", "status": "정상", "trend": "+8%" },
+        { "slotId": "row-ko-2", "name": "환불 지원 AI", "volume": "934", "status": "검토", "trend": "-3%" },
+        { "slotId": "row-ko-3", "name": "요금제 AI", "volume": "801", "status": "정상", "trend": "+11%" }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "chart-ko-resolved",
+      "label": "성과 변화",
+      "description": "새 룰 배포 이후 자동 해결률이 꾸준히 증가했습니다."
+    }
+  }
+}

@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Delight Asset Studio
+
+Internal Sendbird/Delight.ai asset creation studio for marketing images, product visuals, chat UI mockups, and infographics.
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.local.example` to `.env.local` for local-only secrets when needed.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Verification
 
-## Learn More
+```bash
+npm run lint
+npm run test:run
+npm run build
+npm run verify
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Docs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Product: [`docs/product/PRD.md`](docs/product/PRD.md)
+- Engineering: [`docs/engineering/DEVELOPMENT_DESIGN.md`](docs/engineering/DEVELOPMENT_DESIGN.md)
+- Studio UI rules: [`docs/design/STUDIO_DESIGN.md`](docs/design/STUDIO_DESIGN.md)
+- Asset visual rules: [`docs/design/ASSET_DESIGN.md`](docs/design/ASSET_DESIGN.md)
+- Protected source import guidance: [`docs/engineering/source-import-access.md`](docs/engineering/source-import-access.md)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Repository Layout
 
-## Deploy on Vercel
+```text
+app/          Next.js app routes and API routes
+components/   Studio UI and asset render components
+lib/          Business logic, tokens, storage, schemas, validators
+public/       Runtime static assets used by the app
+data/         Generated and static local data
+scripts/      Local maintenance scripts
+tests/        Vitest and Playwright tests
+docs/         Product, design, engineering, and reference docs
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Agent-specific working instructions live in [`AGENTS.md`](AGENTS.md) and [`CLAUDE.md`](CLAUDE.md).

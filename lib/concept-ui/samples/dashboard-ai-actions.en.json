@@ -1,0 +1,57 @@
+{
+  "archetype": "dashboard",
+  "theme": "light",
+  "content": {
+    "productName": "delight.ai Ops",
+    "title": "AI action oversight",
+    "subtitle": "Review what agents changed, which rules fired, and where humans stepped in.",
+    "filters": ["Today", "Production", "Actions"],
+    "kpis": [
+      { "slotId": "kpi-actions", "label": "Actions run", "value": "2,418", "delta": "+14%", "tone": "good" },
+      { "slotId": "kpi-policy", "label": "On policy", "value": "94%", "delta": "+6%", "tone": "good" },
+      { "slotId": "kpi-flagged", "label": "Flagged", "value": "12", "delta": "-4", "tone": "good" },
+      { "slotId": "kpi-human", "label": "Human loop", "value": "7%", "delta": "-2%", "tone": "good" }
+    ],
+    "lineChart": {
+      "slotId": "chart-actions",
+      "title": "Actions over time",
+      "seriesName": "Actions",
+      "points": [
+        { "label": "8a", "value": 180 },
+        { "label": "10a", "value": 240 },
+        { "label": "12p", "value": 320 },
+        { "label": "2p", "value": 410 },
+        { "label": "4p", "value": 390 },
+        { "label": "6p", "value": 470 }
+      ]
+    },
+    "barChart": {
+      "slotId": "chart-action-types",
+      "title": "Top action types",
+      "seriesName": "Runs",
+      "bars": [
+        { "label": "Refund", "value": 520 },
+        { "label": "Route", "value": 460 },
+        { "label": "Lookup", "value": 390 },
+        { "label": "Offer", "value": 260 },
+        { "label": "Escalate", "value": 160 }
+      ]
+    },
+    "table": {
+      "slotId": "table-action-log",
+      "title": "Recent action log",
+      "rows": [
+        { "slotId": "row-action-1", "name": "Refund eligibility", "volume": "312", "status": "On policy", "trend": "+9%" },
+        { "slotId": "row-action-2", "name": "Order lookup", "volume": "286", "status": "Healthy", "trend": "+4%" },
+        { "slotId": "row-action-3", "name": "Agent handoff", "volume": "74", "status": "Review", "trend": "-6%" }
+      ]
+    }
+  },
+  "modifiers": {
+    "aiCallout": {
+      "targetSlotId": "table-action-log",
+      "label": "Audit ready",
+      "description": "Every automated action keeps a readable reason and outcome."
+    }
+  }
+}

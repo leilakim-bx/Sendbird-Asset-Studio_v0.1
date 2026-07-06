@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { LayoutShell } from "@/components/layout/LayoutShell";
+import { appTokenCssVariables } from "@/lib/tokens/app";
 
 export const metadata: Metadata = {
   title: "Delight.ai Asset Studio",
@@ -14,6 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: appTokenCssVariables() }} />
+      </head>
       <body className="h-full flex bg-studio-bg text-studio-text">
         <LayoutShell>{children}</LayoutShell>
       </body>
