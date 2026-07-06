@@ -185,13 +185,20 @@ export async function exportImage(
   const blob = await captureBlob(element, width, height);
 
   if (saveHandle) {
-    await writeBlob(saveHandle, blob);
-    return {
-      filename,
-      href: null,
-      method: "save-picker",
-      revoke: () => {},
-    };
+    try {
+      await writeBlob(saveHandle, blob);
+      return {
+        filename,
+        href: null,
+        method: "save-picker",
+        revoke: () => {},
+      };
+    } catch (err) {
+      // Some contexts allow the picker but block the actual write
+      // (embedded browsers, protected folders, platform policy).
+      // The image is already captured — recover via plain download.
+      console.warn("Save picker write failed; falling back to browser download.", err);
+    }
   }
 
   return triggerDownload(blob, filename);
