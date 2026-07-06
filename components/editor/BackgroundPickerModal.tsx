@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TriangleAlert, ImageIcon } from "lucide-react";
-import { BACKGROUNDS, type Background } from "@/lib/backgrounds";
+import { TriangleAlert, ImageIcon, Star } from "lucide-react";
+import { BACKGROUNDS, type Background, type BackgroundGroup } from "@/lib/backgrounds";
+
+const TABS: { key: "all" | BackgroundGroup; label: string }[] = [
+  { key: "all",      label: "All" },
+  { key: "general",  label: "General" },
+  { key: "brand",    label: "Brand themes" },
+  { key: "industry", label: "Industry" },
+  { key: "everyday", label: "Everyday" },
+];
 
 type Props = {
   currentId: string;
   customBackgrounds: Background[];
+  hiddenGroups?: BackgroundGroup[];
   onSelect: (bg: Background) => void;
   onUpload: (bg: Background) => void;
   onClose: () => void;
@@ -15,12 +24,14 @@ type Props = {
 export function BackgroundPickerModal({
   currentId,
   customBackgrounds,
+  hiddenGroups = [],
   onSelect,
   onUpload,
   onClose,
 }: Props) {
   const [uploading, setUploading]     = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | BackgroundGroup>("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close on ESC
@@ -69,7 +80,12 @@ export function BackgroundPickerModal({
     }
   }
 
-  const allBackgrounds = [...BACKGROUNDS, ...customBackgrounds];
+  const hiddenGroupSet = new Set(hiddenGroups);
+  const tabs = TABS.filter((t) => t.key === "all" || !hiddenGroupSet.has(t.key));
+  const allBackgrounds = [...BACKGROUNDS, ...customBackgrounds].filter((bg) => !bg.group || !hiddenGroupSet.has(bg.group));
+  const visibleBackgrounds = tab === "all"
+    ? allBackgrounds
+    : allBackgrounds.filter((bg) => bg.group === tab);
 
   return (
     <div
@@ -89,10 +105,31 @@ export function BackgroundPickerModal({
           </button>
         </div>
 
-        {/* Grid */}
-        <div className="overflow-y-auto flex-1 p-5">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 px-5 pt-4 pb-3 shrink-0">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={[
+                "text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
+                tab === t.key
+                  ? "bg-studio-hover text-studio-text"
+                  : "text-studio-muted hover:text-studio-text",
+              ].join(" ")}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid — fixed ~3.5 rows tall (탭별 개수와 무관하게 동일 높이), scrolls beyond */}
+        <div className="overflow-y-auto p-5 h-[348px]">
+          {visibleBackgrounds.length === 0 ? (
+            <p className="text-xs text-studio-muted text-center py-10">No backgrounds in this category yet.</p>
+          ) : (
           <div className="grid grid-cols-3 gap-3">
-            {allBackgrounds.map((bg) => (
+            {visibleBackgrounds.map((bg) => (
               <button
                 key={bg.id}
                 onClick={() => { onSelect(bg); onClose(); }}
@@ -101,23 +138,30 @@ export function BackgroundPickerModal({
                   "aspect-video",
                   currentId === bg.id
                     ? "border-studio-accent"
-                    : "border-transparent hover:border-studio-muted",
+                    : "border-transparent hover:border-studio-accent",
                 ].join(" ")}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={bg.url} alt={bg.label} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
+                {bg.usageBadge ? (
+                  <span className="absolute top-1.5 right-1.5 flex max-w-[calc(100%-12px)] items-center gap-1 rounded-md border border-studio-border bg-studio-sidebar/90 px-1.5 py-1 text-[9px] font-semibold leading-none text-studio-text shadow-sm backdrop-blur-sm">
+                    <Star size={9} className="shrink-0" fill="currentColor" aria-hidden />
+                    <span className="truncate">{bg.usageBadge}</span>
+                  </span>
+                ) : null}
                 <span className="absolute bottom-0 inset-x-0 text-[10px] text-white font-medium px-2 py-1.5 bg-gradient-to-t from-black/60 to-transparent truncate text-left">
                   {bg.label}
                 </span>
                 {currentId === bg.id && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-[#1A1A1A] font-bold leading-none">
+                  <span className="absolute top-1.5 left-1.5 w-4 h-4 bg-studio-accent rounded-full flex items-center justify-center text-[9px] text-studio-accent-fg font-bold leading-none">
                     ✓
                   </span>
                 )}
               </button>
             ))}
           </div>
+          )}
         </div>
 
         {/* Footer: Upload */}
@@ -125,7 +169,7 @@ export function BackgroundPickerModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/png,image/jpeg,image/webp"
             className="hidden"
             onChange={handleFileChange}
           />
@@ -148,7 +192,7 @@ export function BackgroundPickerModal({
                 </span>
                 <span className="flex items-center gap-1 text-[11px] text-studio-muted">
                   <ImageIcon size={11} className="shrink-0" />
-                  JPEG · PNG · WebP · max 5 MB
+                  JPEG · PNG · WebP · max 10 MB
                 </span>
               </div>
             )}

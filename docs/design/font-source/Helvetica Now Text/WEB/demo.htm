@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Linotype.com Web Fonts Demo</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <style>
+   
+    body {
+        background: #fff;
+        font-family: "Helvetica", "Arial", "sans-serif";
+        font-size: 15px;
+        line-height: 24px;
+        color: #202020;
+        line-height: 24px;
+        margin: 0;
+        padding: 0;
+    }
+    
+    ul,
+    li {
+        margin: 0;
+        padding: 0;
+    }
+    
+    .clear {
+        clear: both;
+    }
+    
+    header a {
+        padding: 25px 0 0 25px;
+        display: block;
+    }
+    
+    .container {
+        max-width: 825px;
+        width: 100%;
+        margin: 52px auto;
+    }
+    
+    .entry-content {
+        padding: 0 120px;
+        text-align: center;
+    }
+    
+    .font-contained {
+        margin-top: 55px;
+    }
+    
+    .note-bg {
+        background: #000;
+        padding:2em;
+    }
+    
+    pre {
+        color: #fff;
+       
+        margin: 0;
+        white-space: pre-line;
+        font-size: 13px;
+    }
+    
+    #text-data {
+        color: #fff;
+        font-size: 16px;
+        line-height: 30px;
+        height: 100%;
+        outline: none;
+        padding: 30px;
+    }
+    
+    .accordion {
+        overflow: hidden;
+        box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.25);
+        background: #f7f7f7;
+    }
+    
+    .accordionButton {
+        background: #f9f9f7;
+        border-bottom: 1px solid #e2e3de;
+        border-left: 5px solid #e2e3de;
+        cursor: pointer;
+        padding: 20px 0px;
+        font-size: 20px;
+    }
+    
+    .accordionButton span {
+        color: #262624;
+        padding-left: 5px;
+        //font-weight: bold;
+        width: 12px;
+    }
+    
+    .accordionContent {
+        background: Ef9f9f7;
+        clear: both;
+        border-left: 5px solid #c00;
+        padding-left: 20px;
+    }
+    
+    .accordionContent ul {
+        width: 80%;
+        list-style: none;
+    }
+    
+    .accordionContent ul li {
+        font-size: 16px;
+        padding: 5px 0 18px 0;
+        margin: 0;
+        border-top: 1px solid #e2e3de;
+    }
+    
+    .accordionContent ul li:first-child {
+        border-top: none;
+        padding-top: 30px;
+    }
+    
+    .accordionContent ul li span {
+        background: #e4e4da;
+        display: block;
+        float: right;
+        width: 180px;
+        height: 35px;
+        text-align: center;
+        line-height: 35px;
+    }
+    
+    .accordionContent ul li span a {
+        color: #202020;
+        text-decoration: none;
+    }
+    
+    .accordionContent ul li span a:hover {
+        text-decoration: underline;
+    }
+    
+    .on {
+        background: #f2f2f1;
+        cursor: pointer;
+        border-left: 5px solid #c00;
+    }
+    
+    .on span {
+        color: #262624;
+    }
+    
+    .over {
+        background: #f2f2f1;
+        cursor: pointer;
+    }
+    
+    .over span {
+        color: #262624;
+    }
+    
+    .plusMinus {
+        font-weight: bold;
+        float: left;
+        padding-right: 4px;
+        content: "+";
+    }
+    
+    .font-label {
+        color: #acada8 !important;
+        font-size: 14px;
+    }
+    
+    .light-font {
+        font-family: "Helvetica", "Arial", "sans-serif";
+    }
+    
+    .heavy-font {
+        font-family: "Helvetica", "Arial", "sans-serif";
+        font-weight: bold;
+    }
+    
+    h2 {
+        font-size: 1.2em;
+        color: #000;
+        padding-bottom: 0.4em;
+        margin-top: 1.5em;
+    }
+    
+    .demo {
+        font-weight: bold;
+        font-style: normal;
+    }
+    
+    .fontdisplay {
+        font-size: 2em;
+        line-height: 150%;
+        margin: 10px 40px 0px 0px;
+    }
+    
+    .guidelines {
+        margin-top: 55px;
+    }
+    
+    .guidelines ul {
+        list-style: none;
+    }
+    
+    .guidelines ul li span {
+        font-weight: bold;
+    }
+    
+    hr {
+        border: 0;
+        border-bottom: 1px solid #888582;
+        margin: 20px 0;
+    }
+    
+    .link {
+        color: #537094;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    
+    .uc {
+        text-transform: uppercase;
+        margin: 30px 0 20px 0;
+    }
+	.code-wrapper {
+    	background: #000;
+		color:#fff;
+		font-size: 13px;
+		padding: 0 2em;
+		height:400px;
+		overflow: auto;
+		word-wrap: normal;
+		white-space: pre;
+	}
+	/*Scroll open*/	
+	
+    .scrollTo-demo .content {
+        height: 290px;
+    }
+    
+    .scrollTo-demo .demo-y {
+        height: 600px;
+    }
+    
+    .alignCenter {
+        text-align: center;
+    }
+    
+    .scrollTo-demo .demo-x {
+        width: 660px;
+        background-color: #252525;
+    }
+    
+    .scrollTo-demo .demo-x p {
+        float: left;
+        width: 300px;
+        margin-left: 30px;
+        height: auto;
+        padding: 5px 10px;
+        background-color: #333;
+        -webkit-border-radius: 3px;
+        -moz-border-radius: 3px;
+        border-radius: 3px;
+    }
+    
+    .scrollTo-demo .demo-x hr + p {
+        margin-left: 0;
+    }
+    
+    .scrollTo-demo .demo-yx {
+        background-color: #424242;
+    }
+    
+    .scrollTo-demo .demo-yx p {
+        width: 1000px;
+    }
+    
+    .scrollTo {
+        font-size: 12px;
+    }
+    
+    .scrollTo + .scrollTo {
+        margin-top: 20px;
+    }
+    
+    .scrollTo ul li:first-child span {
+        display: block;
+        padding: 3px 15px;
+    }
+    
+    #test-id {
+        background-color: #eb3755;
+        color: #fff;
+    }
+    
+    .rtl-demo #content-1 {
+        width: 500px;
+    }
+    
+    .rtl-demo #content-1 p {
+        width: 1000px;
+    }
+    
+    .transitions #examples {
+        -webkit-perspective: 1000;
+        -moz-perspective: 1000;
+    }
+    
+    .transitions .content {
+        -webkit-transition: all .6s ease-out;
+        -moz-transition: all .6s ease-out;
+        -o-transition: all .6s ease-out;
+        transition: all .6s ease-out;
+    }
+    
+    .footernote {
+        margin-top: 70px;
+    }
+    
+    .footernote span {
+        background: #e5e5d9;
+        padding: 15px 25px;
+        font-size: 16px;
+    }
+    
+    .footernote span a {
+        font-size: 16px;
+        color: #999;
+        text-decoration: none;
+    }
+    
+    .footernote span a:hover {
+        text-decoration: underline;
+    }
+    
+    footer {
+        max-width: 825px;
+        width: 100%;
+        margin: 80px auto;
+        text-align: center;
+    }
+    
+    footer,
+    footer a {
+        color: #bebebe;
+        text-decoration: none;
+    }
+    
+    footer a:hover {
+        color: #7b7b7b;
+    }
+
+    /*--- Tabs ---*/
+    
+    .tabs input[type=radio] {
+        display: none;
+        visibility: hidden;
+    }
+           
+    .tabs {
+        width: 100%;
+        float: none;
+        list-style: none;
+        position: relative;
+        padding: 0;
+        margin: 35px auto 0px;
+        height: 600px;
+    }
+           
+    .tabs li{
+        float: left;
+    }
+           
+    .tabs label {
+        display: block;
+        padding: 10px 20px;
+        color: #000;
+        font-size: 16px;
+        font-weight: normal;
+        background: #fafaf8;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s ease-in-out;
+    }
+           
+    .tab-content {
+        z-index: 2;
+        display: none;
+        left: 0;
+        width: 100%;
+        font-size: 15px;
+        line-height: 140%;
+        padding: 15px;
+        position: absolute;
+        box-sizing: border-box;
+        /*border:1px solid #ccc;*/
+        border-top: 6px solid #e5e5db;
+        background-color:#ffffff;
+    }
+
+    #tab-content1 {
+      display: block;
+    }
+
+    [id^=tab]:checked + label {
+        background: #e5e5db;
+        color: #000;
+    }
+
+    [id^=tab]:checked ~ [id^=tab-content] {
+        display: block;
+    }
+
+    .tabs a {
+        display: block;
+        padding: 10px 20px;
+        color: #FFFFFF;
+        font-size: 24px;
+        font-weight: normal;
+        background: #2c3e50;
+        cursor: pointer;
+        position: relative;
+        text-decoration: none;
+    } 
+
+    .tabs a:hover {
+        background: #3498db;
+    }
+
+    .tabs a:hover ~ [id^=tab-content] {
+        display: block;
+    }
+    
+    @media only screen and (min-width: 1229px) {
+        .showcase .horizontal-images.content {
+            width: 1060px;
+        }
+    }
+    
+    @media only screen and (min-width: 1629px) {
+        .showcase .horizontal-images.content {
+            width: 700px;
+        }
+    }
+    /*Scroll Close*/
+    
+    @media only screen and (min-width: 320px) {
+        .entry-content {
+            padding: 0;
+        }
+        h1 {
+            line-height: 35px;
+        }
+        .container {
+            padding: 0 2%;
+        }
+        .guidelines {
+            margin-right: 5%;
+        }
+    }   
+    {CSSSelectorsList}
+	
+    /*CustomeScrollbar*/
+    </style>
+
+    <style type="text/css">	
+    
+    @import url("https://fast.fonts.net/lt/1.css?apiType=css&c=34d0ed45-13cf-4b2f-943e-8755179f4ac9&fontids=5760871,5761054,5761068");
+    @font-face{
+        font-family:"Helvetica Now Text W05 Medium";
+        src:url("Fonts/5760871/2fd3ef81-07ed-45b4-a344-7a0defbdadcf.woff2") format("woff2"),url("Fonts/5760871/52492279-0374-4238-ba8b-751b50089cf0.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Bold";
+        src:url("Fonts/5761054/2a13627f-dba8-48e1-935c-a404f5293139.woff2") format("woff2"),url("Fonts/5761054/ce7a1fe7-2605-427a-b064-a01ebce69295.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Regular";
+        src:url("Fonts/5761068/5eec4451-e90c-42e7-b4d8-9b8654a65568.woff2") format("woff2"),url("Fonts/5761068/f7cf763b-e79b-4c28-af92-803e0c3f16d4.woff") format("woff");
+    }
+
+	</style>
+
+
+
+</head>
+
+<body>
+    <header>
+        <a href="http://www.linotype.com"><img alt="Linotype" height="56" width="150" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4NCjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+DQo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9Ikxpbm90eXBlTG9nbyIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiDQoJIHdpZHRoPSIxMzhweCIgaGVpZ2h0PSIzNi4xOTVweCIgdmlld0JveD0iMCAwIDEzOCAzNi4xOTUiIHhtbDpzcGFjZT0icHJlc2VydmUiPg0KPGc+DQoJPGc+DQoJCTxnPg0KCQkJPHBhdGggZD0iTTIyLjYwNCwxNC40MTJoNS4wODN2Mi41MzNoLTguNDk5VjQuNDA2aDMuNDE1VjE0LjQxMnoiLz4NCgkJCTxwYXRoIGQ9Ik0zMi4zNTYsNi4yMzhoLTMuMjUyVjMuODMyaDMuMjUyVjYuMjM4eiBNMzIuMzU2LDE2Ljk0NGgtMy4yNTJWNy42MDRoMy4yNTJWMTYuOTQ0eiIvPg0KCQkJPHBhdGggZD0iTTM3LjU0Niw5LjIyYzAuNjgzLTEuMDQyLDEuOTU4LTEuODUsMy4yODctMS44NWMyLjI4MiwwLDMuNjExLDEuNDAxLDMuNjExLDMuOTY5djUuNjA1SDQxLjIxdi00LjQzNg0KCQkJCWMwLTEuNzI0LTAuMzQtMi41NTMtMS40OS0yLjU1M2MtMC44NDYsMC0xLjMzMSwwLjM5NS0xLjYxNywwLjk1M2MtMC4yODksMC41NTgtMC4zNTksMS4zMTItMC4zNTksMi4wMjl2NC4wMDZoLTMuMjUyVjEwLjY0DQoJCQkJYzAtMC43OS0wLjAxOC0xLjc3OC0wLjA4OS0zLjAzNmgzLjAzNmMwLjAzNSwwLjM5NSwwLjA3MiwxLjEzMSwwLjA3MiwxLjYxN0gzNy41NDZ6Ii8+DQoJCQk8cGF0aCBkPSJNNTYuODE4LDEyLjI5MmMwLDIuOTgzLTIuMTM3LDQuODg2LTUuNDA2LDQuODg2Yy0zLjI1MywwLTUuMzg5LTEuOTIxLTUuMzg5LTQuODVjMC0zLjA3MywyLjA2Ni00Ljk1OCw1LjQ0My00Ljk1OA0KCQkJCUM1NC43MTYsNy4zNyw1Ni44MTgsOS4yOTIsNTYuODE4LDEyLjI5MnogTTQ5LjM0NCwxMi4yMzljMCwxLjYzNCwwLjg2NCwyLjcyOSwyLjA4NSwyLjcyOWMxLjIyMSwwLDIuMDY2LTEuMDc2LDIuMDY2LTIuNjU4DQoJCQkJYzAtMS42MzUtMC44NDUtMi43My0yLjA4NC0yLjczQzUwLjIyNiw5LjU4LDQ5LjM0NCwxMC43MSw0OS4zNDQsMTIuMjM5eiIvPg0KCQk8L2c+DQoJCTxnPg0KCQkJPHBhdGggZD0iTTU4LjQ4NSw3LjRoMy42OTJ2LTQuMTlsNi4wNzEtMS45ODdWNy40aDQuNDM3djQuMzY1aC00LjQzN3Y3LjI0MmMwLDEuNDIsMC4zNTUsMi44MDYsMi40ODQsMi44MDYNCgkJCQljMC42NzUsMCwxLjM4Ni0wLjA3MSwxLjk5LTAuMjEzbDAuMjE0LDQuMTUyYy0xLjI0NCwwLjI1LTIuODA2LDAuMzkxLTMuOTA2LDAuMzkxYy00LjkzNiwwLTcuMTM2LTIuMDkzLTcuMTM2LTYuNjcydi03LjcwNQ0KCQkJCWgtMy40MDhWNy40eiIvPg0KCQk8L2c+DQoJCTxnPg0KCQkJPHBhdGggZD0iTTEwMi45ODgsOC44NzhjMS43NzQtMi4zNTMsMy40NzMtMy40MzksNi40MDYtMy40MzljNC45MjQsMCw4LjExLDMuODAyLDguMTEsOS43MDNjMCw1Ljk3MS0zLjQwMywxMC4wNjItOC40MzcsMTAuMDYyDQoJCQkJYy0yLjcxNCwwLTQuNjY3LTEuMDEyLTUuODYyLTMuMDM5aC0wLjA3NGMwLjA3NCwwLjcyNSwwLjEwOSwzLjI5MywwLjEwOSw0LjM3OXY1Ljg2NGgtNi41ODlWMTEuNzM4DQoJCQkJYzAtMS45NTQtMC4wMzUtNC4yNzEtMC4xODEtNS44MjdoNi4yOThjMC4wNzIsMC43NjEsMC4xNDYsMi4wMjYsMC4xNDYsMi45NjhIMTAyLjk4OHogTTEwMi45ODgsMTUuMjg2DQoJCQkJYzAsMy4wNzcsMS41NTYsNS4wMzMsNC4wMTcsNS4wMzNjMi4zODksMCwzLjgzOS0xLjkyLDMuODM5LTUuMjEzYzAtMi45NjgtMS40ODUtNC44MTQtMy44MDMtNC44MTQNCgkJCQlDMTA0LjYxNSwxMC4yOTEsMTAyLjk4OCwxMi4zMTgsMTAyLjk4OCwxNS4yODZ6Ii8+DQoJCTwvZz4NCgkJPGc+DQoJCQk8cGF0aCBkPSJNMTM3LjczMyw1LjczOHY0LjgwNWgtMTAuOTE3djUuOTk2aDEwLjE0N3Y0Ljc2NmgtMTAuMTQ3djYuNDJIMTM4djQuODQyaC0xNy40MTFWNS43MzhIMTM3LjczM3oiLz4NCgkJPC9nPg0KCTwvZz4NCgk8cG9seWdvbiBmaWxsPSIjRTIwMDFBIiBwb2ludHM9IjAsMTUuNzQ5IDAsMzYuMTk1IDIwLjQwMiwzNi4xOTUgMjAuNDAyLDI1Ljk3MyAxMC4yMjMsMjUuOTczIDEwLjIyMywxNS43NDkgCSIvPg0KCTxnPg0KCQk8Zz4NCgkJCTxwYXRoIGQ9Ik04MC4wMiwwbDIuNjI4LDUuMjk0YzAuODY0LDEuNzY0LDEuOTE2LDQuMTMxLDIuNDgsNS41MmgwLjA3NGMwLjU2My0xLjM1MiwxLjYxNC0zLjc1NSwyLjQ0LTUuNTJMOTAuMTIsMGg3LjczNQ0KCQkJCUw4OC40NywxNi42MzR2OS41NzVoLTcuMTM1di05Ljc2NEw3MS43NTgsMEg4MC4wMnoiLz4NCgkJPC9nPg0KCTwvZz4NCjwvZz4NCjwvc3ZnPg0K"></a>
+    </header>
+    <div class="container">
+        <div class="entry-content">
+            <h1 class="light-font">Web Font Kit &amp; Implementation Guide</h1>
+            <p align="alignCenter">Thank you for buying webfonts on Linotype.com. </p>
+            <p align="alignCenter">You find below an overview of the fonts contained in this kit. To use these webfonts on your website please follow the implementation guidelines below.</p>
+        </div>
+        <div class="font-contained">
+            <h2 class="heavy-font">Web Fonts contained in this kit</h2>
+            <div class="accordion">
+                <div class="accordionButton"><span class="plusMinus">+</span><span style="font-family:'Helvetica Now Text W05 Medium';">Helvetica® Now W05 Text Medium </span><span class="font-label"> Monotype</span></div><div class="accordionContent">
+	<ul>
+		<li>Open the End User License Agreements for this font: <span><a href="Eulas/Webfonts%20Pay-As-You-Go%20End%20User%20License%20Agreement.pdf">Open EULA PDF</a></span></li>
+	</ul>
+</div>
+<div class="accordionButton"><span class="plusMinus">+</span><span style="font-family:'Helvetica Now Text W05 Bold';">Helvetica® Now W05 Text Bold </span><span class="font-label"> Monotype</span></div><div class="accordionContent">
+	<ul>
+		<li>Open the End User License Agreements for this font: <span><a href="Eulas/Webfonts%20Pay-As-You-Go%20End%20User%20License%20Agreement.pdf">Open EULA PDF</a></span></li>
+	</ul>
+</div>
+<div class="accordionButton"><span class="plusMinus">+</span><span style="font-family:'Helvetica Now Text W05 Regular';">Helvetica® Now W05 Text Regular </span><span class="font-label"> Monotype</span></div><div class="accordionContent">
+	<ul>
+		<li>Open the End User License Agreements for this font: <span><a href="Eulas/Webfonts%20Pay-As-You-Go%20End%20User%20License%20Agreement.pdf">Open EULA PDF</a></span></li>
+	</ul>
+</div>
+
+            </div>
+        </div>
+        <div class="guidelines">
+            <h2 class="heavy-font">CSS Implementation Guidelines</h2>
+            <p>You need one file for each font style you want to use in your site. Use the CSS code example below to reference your webfonts. Make sure that the font file URL is appropriate with the path on your server</p>
+            <p>The value of the font-family property is used internally in your style definitions, so you could set it to any name you like. Make sure to keep it shorter than 32 characters though, or Internet Explorer will not display your webfonts</p>
+            <p>Font file names have been obfuscated to protect the font software. You can identify font format based on file ending:</p>
+            <ul>
+                
+				
+				<li><b>woff -</b> Web Open Font Format (woff)</ li>
+                <li><b>woff -</b> Web Open Font Format version 2 (woff2)</li>
+                
+            </ul>
+            <p class="uc"><b>Copy and paste the following code into the head section of the page</b></p>
+            <ul class="tabs" name="tabbox">
+                <li>
+                  <!--[if lt IE 9]>
+                    <a href="#tabbox" tabindex="1">tab 1</a>
+                  <![endif]-->
+                  <![if (!IE)|(gte IE 9)]>
+                    <input type="radio" checked name="tabs" id="tab1">
+                    <label for="tab1">CSS-only</label>
+                  <![endif]>
+                    <div id="tab-content1" class="tab-content">
+            <div id="examples" class="textarea-example">
+               <div id="content-1" class="content">
+                    <p>The CSS-only implementation does not require Javascript but can slightly delay loading of other page elements
+					</p>
+
+                     <div class="code-wrapper" contenteditable="true">
+					<code>
+&#x3C;style type=&#x22;text/css&#x22;&#x3E;
+    @import url("https://fast.fonts.net/lt/1.css?apiType=css&c=34d0ed45-13cf-4b2f-943e-8755179f4ac9&fontids=5760871,5761054,5761068");
+    @font-face{
+        font-family:"Helvetica Now Text W05 Medium";
+        src:url("Fonts/5760871/2fd3ef81-07ed-45b4-a344-7a0defbdadcf.woff2") format("woff2"),url("Fonts/5760871/52492279-0374-4238-ba8b-751b50089cf0.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Bold";
+        src:url("Fonts/5761054/2a13627f-dba8-48e1-935c-a404f5293139.woff2") format("woff2"),url("Fonts/5761054/ce7a1fe7-2605-427a-b064-a01ebce69295.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Regular";
+        src:url("Fonts/5761068/5eec4451-e90c-42e7-b4d8-9b8654a65568.woff2") format("woff2"),url("Fonts/5761068/f7cf763b-e79b-4c28-af92-803e0c3f16d4.woff") format("woff");
+    }
+&#x3C;/style&#x3E;  			
+                    </code>          
+                    </div>
+					
+                   
+                </div>
+            </div>			
+	  
+	    </div>
+                </li>
+                <li style="display:block">
+				
+                  <!--[if lt IE 9]>
+                    <a href="#tabbox" tabindex="2">tab 2</a>
+                  <![endif]-->
+                  <![if (!IE)|(gte IE 9)]>
+                    <input type="radio" name="tabs" id="tab2">
+                    <label for="tab2">Javascript</label>
+                  <![endif]>
+                    <div id="tab-content2" class="tab-content">
+                        <div id="examples-2" class="textarea-example">
+                            <div id="content-2" class="content">
+                                <p>The asynchronous script loads in the background allowing the other elements of your website to load first and undeterred.</p>
+
+								<div class="code-wrapper" contenteditable="true">
+								<code>
+&#x3C;script type=&#x22;text/javascript&#x22;&#x3E;
+    var MTUserId='34d0ed45-13cf-4b2f-943e-8755179f4ac9';
+    var MTFontIds = new Array();
+
+    MTFontIds.push("5760871"); // Helvetica® Now W05 Text Medium 
+    MTFontIds.push("5761054"); // Helvetica® Now W05 Text Bold 
+    MTFontIds.push("5761068"); // Helvetica® Now W05 Text Regular 
+    (function() {
+        var mtTracking = document.createElement('script');
+        mtTracking.type='text/javascript';
+        mtTracking.async='true';
+        mtTracking.src='mtiFontTrackingCode.js';
+
+        (document.getElementsByTagName('head')[0]||document.getElementsByTagName('body')[0]).appendChild(mtTracking);
+    })();
+&#x3C;/script&#x3E;
+
+&#x3C;style type=&#x22;text/css&#x22;&#x3E;
+    @font-face{
+        font-family:"Helvetica Now Text W05 Medium";
+        src:url("Fonts/5760871/2fd3ef81-07ed-45b4-a344-7a0defbdadcf.woff2") format("woff2"),url("Fonts/5760871/52492279-0374-4238-ba8b-751b50089cf0.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Bold";
+        src:url("Fonts/5761054/2a13627f-dba8-48e1-935c-a404f5293139.woff2") format("woff2"),url("Fonts/5761054/ce7a1fe7-2605-427a-b064-a01ebce69295.woff") format("woff");
+    }
+    @font-face{
+        font-family:"Helvetica Now Text W05 Regular";
+        src:url("Fonts/5761068/5eec4451-e90c-42e7-b4d8-9b8654a65568.woff2") format("woff2"),url("Fonts/5761068/f7cf763b-e79b-4c28-af92-803e0c3f16d4.woff") format("woff");
+    }
+
+&#x3C;/style&#x3E;                               
+								</code>
+                                </div>    
+                 
+                            </div>
+                        </div>
+                    </div>
+                </li>
+            </ul>            
+            <br style="clear:both;">                        
+            <h2 class="heavy-font">Legal Information</h2>
+            <p>You and any third party web font hosting service are responsible for ensuring that the font software in the self-hosting kit, in its orginal format, can <b>only be used on the websites for which the self hosting kit was downloaded</b> and cannot be used or referenced by any other websites.</p>
+            <p>This includes, but is not limited to <b>installing adequate technical protection measures</b> that restrict the user and/or access to the font software, for instance by utilizing JavaScript or access control mechanism for cross-origin resource sharing and protection against use on websites other than the websites for which the self-hosting kit was downloaded by restricting domain access only to such websites.</p>
+            <p>You must also <b>retain the page view tracking code </b>on any website that you self-host.In the event this agreement terminates for any reason, the font software included with the self-hosting kit must be deleted from the server and all copies must be destroyed or returned to Monotype.</p>
+            <p>Licensing information should be included within the CSS:</p>
+            <p>
+                <div class="note-bg">
+                    <pre>/*
+        This CSS resource incorporates links to font software which is the valuable copyrighted property of Monotype and/or its suppliers. You may not attempt to copy, install, redistribute, convert, modify or reverse engineer this font software. Please contact Monotype with any questions regarding Web Fonts:  https://www.linotype.com
+        */</pre>
+                </div>
+            </p>
+        </div>
+                
+                    <div class="clear"></div>
+                          
+  
+			</ul>
+	<footer class="wrapper">
+        &copy; Monotype | <a href="https://www.linotype.com/53/contact.html">Contact</a> | <a href="https://www.linotype.com/2061/imprint-legal.html">Legal</a> | <a href="http://www.linotype.com">Linotype.com</a>
+    </footer>
+    <!-- Google CDN jQuery with fallback to local -->
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script>
+    </script>
+    <!-- custom scrollbar plugin -->
+   
+    <script>
+    (function($) {
+        // For Accordion
+        $('.accordionButton').click(function() {
+            $('.accordionButton').removeClass('on');
+            $('.accordionContent').slideUp('normal');
+            $('.plusMinus').text('+');
+            if ($(this).next().is(':hidden') == true) {
+                $(this).addClass('on');
+                $(this).next().slideDown('normal');
+                $(this).children('.plusMinus').text('-');
+            }
+        });
+        $('.accordionButton').mouseover(function() {
+            $(this).addClass('over');
+        }).mouseout(function() {
+            $(this).removeClass('over');
+        });
+        $('.accordionContent').hide();
+
+        // For Textarea
+        var textareaLineHeight = parseInt($(".textarea-wrapper textarea").css("line-height"));
+
+
+        var enterTypetester = function() {
+            //var $cursor = $('.b-typetester__cursor', this);
+            $(this).removeClass('initial');
+            $(this).find('.text-data__cursor').hide();
+        };
+
+        $('.textarea-wrapper ').on('click', '.text-data__write', enterTypetester);
+
+    })(jQuery);
+    </script>
+</body>
+
+</html>

@@ -1,4 +1,8 @@
 import type { ChatMessage } from "./store";
+import type { InfographicContent } from "./types/infographic";
+import type { ProductVisualContent } from "./types/product-visual";
+import { getAvatarForName } from "./avatar";
+import { WORK_DATA_SCHEMA_VERSION } from "./work-data-schema";
 
 /** Wrap an external image URL through our same-origin proxy */
 function p(url: string) {
@@ -8,20 +12,27 @@ function p(url: string) {
 // ── Types ─────────────────────────────────────────────────
 
 export type ExportSize = {
-  id: "desktop" | "mobile";
+  /** "desktop" | "mobile" for chat; "product" | "blog" for infographic, etc. */
+  id: string;
   label: string;
   width: number;
+  /** 0 = variable height (content-driven) */
   height: number;
 };
 
 export type TemplateLayout = "center" | "split";
 
-export type Template = {
+/** Fields shared by every template variant. */
+type TemplateBase = {
   id: string;
   name: string;
   description: string;
   layouts: TemplateLayout[];
   exportSizes: ExportSize[];
+};
+
+export type ChatTemplate = TemplateBase & {
+  kind: "chat";
   defaultLayout: TemplateLayout;
   defaultContent: {
     appName: string;
@@ -30,32 +41,46 @@ export type Template = {
   };
 };
 
+export type InfographicTemplate = TemplateBase & {
+  kind: "infographic";
+  defaultContent: InfographicContent;
+};
+
+export type ProductVisualTemplate = TemplateBase & {
+  kind: "product-visual";
+  defaultContent: ProductVisualContent;
+};
+
+/** Discriminated by `kind` — narrow before accessing variant-specific fields. */
+export type Template = ChatTemplate | InfographicTemplate | ProductVisualTemplate;
+
 // ── Export Sizes ──────────────────────────────────────────
 
 export const EXPORT_SIZES: Record<"desktop" | "mobile", ExportSize> = {
   desktop: { id: "desktop", label: "Desktop", width: 866, height: 660 },
-  mobile:  { id: "mobile",  label: "Mobile",  width: 344, height: 385 },
+  mobile:  { id: "mobile",  label: "Mobile",  width: 343, height: 385 },
 };
 
 // ── Templates ─────────────────────────────────────────────
 
 export const TEMPLATES: Template[] = [
   {
+    kind: "chat",
     id: "feature-mockup",
-    name: "Feature Mockup",
+    name: "Chat UI",
     description: "Glassmorphism chat UI over a lifestyle background",
     layouts: ["center", "split"],
     exportSizes: [EXPORT_SIZES.desktop, EXPORT_SIZES.mobile],
     defaultLayout: "center",
     defaultContent: {
       appName: "delight.ai",
-      backgroundId: "bg-100",
+      backgroundId: "bg-200",
       messages: [
         {
           id: "m1",
           role: "user",
           sender: "Taylor",
-          avatar: p("https://i.pravatar.cc/48?img=47"),
+          avatar: getAvatarForName("Taylor"),
           block: {
             type: "text",
             text: "I need something for a summer wedding",
@@ -93,6 +118,69 @@ export const TEMPLATES: Template[] = [
           },
         },
       ],
+    },
+  },
+  {
+    kind: "infographic",
+    id: "infographic",
+    name: "Infographic",
+    description: "Stats, charts, and diagrams for marketing posts",
+    layouts: [], // infographic has no layout options
+    exportSizes: [
+      { id: "product", label: "Product (866×660)", width: 866, height: 660 },
+      { id: "blog", label: "Blog (664×var)", width: 664, height: 0 }, // height 0 = variable
+    ],
+    defaultContent: {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
+      format: "product",
+      bg: "warmgray",
+      accent: "lime",
+      title: "",
+      footnote: "",
+      showTitle: false,
+      blocks: [
+        {
+          id: "b1",
+          type: "orbit",
+          variant: "cycle",
+          center: "delight",
+          nodes: [
+            { label: "Detect" },
+            { label: "Prioritize", highlight: true },
+            { label: "Suggest", highlight: true },
+            { label: "Resolve" },
+            { label: "Learn" },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    kind: "product-visual",
+    id: "product-visual",
+    name: "Product Visual",
+    description: "Polish product screenshots for releases and blogs",
+    layouts: [], // format-specific; resolved from FORMAT_LAYOUTS on format select
+    // NOTE: the spec listed { id, w, h, label }; adapted to the shared
+    // ExportSize shape ({ id, label, width, height }, height 0 = variable).
+    // Canonical per-format sizing lives in FORMAT_SIZES (types/product-visual).
+    exportSizes: [
+      { id: "feature-desktop",   label: "Product Feature — Desktop (866×660)", width: 866, height: 660 },
+      { id: "feature-mobile",    label: "Product Feature — Mobile (343×var)",  width: 343, height: 0 },
+      { id: "release-thumbnail", label: "Product Release — Thumbnail (667×316)", width: 667, height: 316 },
+      { id: "release-insert",    label: "Product Release — Insert (840×var)",  width: 840, height: 0 },
+      { id: "blog",              label: "Blog (664×var)",                      width: 664, height: 0 },
+    ],
+    // Initial seed = blog's per-format default (kept in sync with
+    // FORMAT_DEFAULTS in types/product-visual so first-entry == switch-back).
+    defaultContent: {
+      schemaVersion: WORK_DATA_SCHEMA_VERSION,
+      format: "blog",
+      layout: "center",
+      bg: "stone",
+      sourceMode: "concept",
+      title: "Product UI mock",
+      subtitle: "Describe a feature to generate a polished product visual.",
     },
   },
 ];

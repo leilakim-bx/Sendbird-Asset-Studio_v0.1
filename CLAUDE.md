@@ -16,21 +16,21 @@
 - Zustand (persist로 localStorage 캐싱)
 - html-to-image (PNG export)
 - Pexels API (제품 이미지)
-- Anthropic API (시나리오 생성)
+- 외부 LLM 호출 없음: 시나리오/추천은 로컬 프리셋·규칙 기반
 
 ## 아키텍처 원칙
 1. 비즈니스 로직은 /lib에, UI 로직은 /components에 분리
 2. API routes는 얇게, 실제 로직은 /lib에서
 3. 새 템플릿 추가는 template-registry에 등록만 하면 되게
-4. 모든 외부 API 호출은 mock 모드 지원
+4. 외부 네트워크 호출은 Pexels 검색/이미지 CDN으로 제한
 
 ## 데이터 저장 (현재)
-- 배경 이미지: /public/background (⚠️ Vercel 배포 시 R2로 이전 예정)
+- 배경 이미지: /public/background
 - 에셋: localStorage (Zustand persist) (⚠️ DB로 이전 예정)
-- 인증: 없음 (⚠️ 배포 전 추가 필요)
+- 인증: Vercel Password Protection (Enterprise) — production 보호. 로컬 dev는 게이트 없음. 자체 비번 게이트(proxy.ts/SITE_PASSWORD)는 제거됨.
 
 ## 마이그레이션 로드맵
-Phase 1: R2 이전, Vercel Password Protection
+Phase 1: Vercel Password Protection (✅ 완료)
 Phase 2: Supabase 도입, 에셋/배경 메타데이터 저장
 Phase 3: Clerk 인증, 사용자별 자산 관리
 
@@ -45,4 +45,5 @@ Phase 3: Clerk 인증, 사용자별 자산 관리
 - 신규 의존성 추가 전 반드시 확인 요청
 - DB 스키마 변경 시 마이그레이션 파일 분리
 - localStorage 데이터 구조 변경 시 마이그레이션 함수 작성
-- IT 방화벽 환경 고려 (mock 모드 항상 동작해야 함)
+- IT 방화벽 환경 고려 (Pexels 외 외부 호출 없이 동작해야 함)
+- 블록 타입 추가/삭제 시 tests/guards/block-conformance.test.ts 의 EXPECTED 목록도 갱신.
