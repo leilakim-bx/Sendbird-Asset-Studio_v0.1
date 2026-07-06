@@ -43,6 +43,7 @@ import {
   type TableSceneSpec,
 } from "@/lib/concept-ui/scene-spec";
 import { useOnceFlag } from "@/lib/use-once-flag";
+import { logBriefEvent } from "@/lib/brief-log";
 
 const DISPLAY_MODES: { id: "crop" | "highlight"; label: string }[] = [
   { id: "crop", label: "Crop" },
@@ -232,6 +233,14 @@ function responseCardShowReviewer(draft: ProductMomentDraft): boolean {
   return draft.showReviewer !== "false";
 }
 
+function responseCardShowSources(draft: ProductMomentDraft): boolean {
+  return draft.showSources !== "false";
+}
+
+function responseCardShowButtons(draft: ProductMomentDraft): boolean {
+  return draft.showButtons !== "false";
+}
+
 function isResponseMomentSpec(spec: SceneSpec | null): boolean {
   return spec?.archetype === "modal" && spec.content.modal.slotId === "moment-ai-response";
 }
@@ -323,29 +332,45 @@ function approvalMomentDefaults(spec: ModalSceneSpec): ProductMomentDraft {
   };
 }
 
+/** Activity values never resurrect defaults for cleared ("") drafts — only a
+ *  missing key falls back, so clearing both inputs removes the row. */
+function detailsPanelActivityValue(draft: ProductMomentDraft, key: string, defaults: ProductMomentDraft): string {
+  const raw = draft[key] === undefined ? (defaults[key] ?? "") : draft[key];
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const max = detailsPanelLimit(key) ?? 64;
+  return cleaned.length <= max ? cleaned : `${cleaned.slice(0, max - 3).trimEnd()}...`;
+}
+
 function detailsPanelFields(draft: ProductMomentDraft, defaults: ProductMomentDraft): ModalSceneSpec["content"]["modal"]["fields"] {
+  const activityFields = DETAILS_PANEL_ACTIVITY_ROWS.flatMap((index) => {
+    const tag = detailsPanelActivityValue(draft, `activity${index}Tag`, defaults);
+    const text = detailsPanelActivityValue(draft, `activity${index}Text`, defaults);
+    // A fully cleared row is omitted from the spec, so the rendered image
+    // drops it (zod also rejects empty field values).
+    if (!tag && !text) return [];
+    return [
+      ...(tag ? [{ slotId: `moment-activity-${index}-tag`, label: `Activity ${index} tag`, value: tag }] : []),
+      ...(text ? [{ slotId: `moment-activity-${index}-text`, label: `Activity ${index} text`, value: text }] : []),
+    ];
+  });
+
   return [
     {
       slotId: "moment-show-information",
       label: "Show information",
       value: detailsPanelShowInformation(draft) ? "true" : "false",
     },
+    // When every activity row is cleared, this sentinel keeps the renderer
+    // from falling back to the default trail (which is reserved for older
+    // specs that never carried activity slots).
+    ...(activityFields.length === 0
+      ? [{ slotId: "moment-show-activity", label: "Show activity", value: "false" }]
+      : []),
     { slotId: "moment-detail-type", label: "Detail type", value: detailsPanelDraftText(draft, "detailType", defaults.detailType ?? "") },
     { slotId: "moment-detail-name", label: "Detail name", value: detailsPanelDraftText(draft, "detailName", defaults.detailName ?? "") },
     { slotId: "moment-detail-status", label: "Detail status", value: detailsPanelDraftText(draft, "detailStatus", defaults.detailStatus ?? "") },
     { slotId: "moment-detail-time", label: "Detail time", value: detailsPanelDraftText(draft, "detailTime", defaults.detailTime ?? "") },
-    ...DETAILS_PANEL_ACTIVITY_ROWS.flatMap((index) => [
-      {
-        slotId: `moment-activity-${index}-tag`,
-        label: `Activity ${index} tag`,
-        value: detailsPanelDraftText(draft, `activity${index}Tag`, defaults[`activity${index}Tag`] ?? ""),
-      },
-      {
-        slotId: `moment-activity-${index}-text`,
-        label: `Activity ${index} text`,
-        value: detailsPanelDraftText(draft, `activity${index}Text`, defaults[`activity${index}Text`] ?? ""),
-      },
-    ]),
+    ...activityFields,
   ];
 }
 
@@ -367,6 +392,8 @@ function buildProductMomentDraft(spec: SceneSpec | null): ProductMomentDraft {
     return {
       title: spec.content.modal.title,
       showReviewer: modalSlotValue(spec, "moment-show-reviewer") === "false" ? "false" : "true",
+      showSources: modalSlotValue(spec, "moment-show-sources") === "false" ? "false" : "true",
+      showButtons: modalSlotValue(spec, "moment-show-buttons") === "false" ? "false" : "true",
       reviewer: modalFieldValue(spec, "Reviewer"),
       response: modalFieldValue(spec, "Response"),
       source1: sources[0]?.label ?? "",
@@ -402,12 +429,15 @@ function buildProductMomentDraft(spec: SceneSpec | null): ProductMomentDraft {
       detailName: modalSlotValue(spec, "moment-detail-name") || defaults.detailName,
       detailStatus: modalSlotValue(spec, "moment-detail-status") || defaults.detailStatus,
       detailTime: modalSlotValue(spec, "moment-detail-time") || defaults.detailTime,
-      activity1Tag: modalSlotValue(spec, "moment-activity-1-tag") || defaults.activity1Tag,
-      activity1Text: modalSlotValue(spec, "moment-activity-1-text") || defaults.activity1Text,
-      activity2Tag: modalSlotValue(spec, "moment-activity-2-tag") || defaults.activity2Tag,
-      activity2Text: modalSlotValue(spec, "moment-activity-2-text") || defaults.activity2Text,
-      activity3Tag: modalSlotValue(spec, "moment-activity-3-tag") || defaults.activity3Tag,
-      activity3Text: modalSlotValue(spec, "moment-activity-3-text") || defaults.activity3Text,
+      // Activity rows read raw slot values so a cleared row stays cleared
+      // (and disappears from the rendered image) instead of resurrecting
+      // the default copy.
+      activity1Tag: modalSlotValue(spec, "moment-activity-1-tag"),
+      activity1Text: modalSlotValue(spec, "moment-activity-1-text"),
+      activity2Tag: modalSlotValue(spec, "moment-activity-2-tag"),
+      activity2Text: modalSlotValue(spec, "moment-activity-2-text"),
+      activity3Tag: modalSlotValue(spec, "moment-activity-3-tag"),
+      activity3Text: modalSlotValue(spec, "moment-activity-3-text"),
     };
   }
 
@@ -685,6 +715,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
     setConceptBlockPickerOpen(true);
     setConceptError(null);
     setSpecNotice(null);
+    logBriefEvent({ template: "product-visual", event: "brief_submitted", text: prompt });
   }
 
   function startConceptSpec(spec: SceneSpec, notice?: string) {
@@ -717,6 +748,12 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
         recipeId: recipe.id,
       });
       startConceptSpec(result.spec, `Rendered ${recipe.label.toLowerCase()} recipe.`);
+      logBriefEvent({
+        template: "product-visual",
+        event: "recipe_selected",
+        text: prompt,
+        meta: { recipeId: recipe.id },
+      });
     } catch (err) {
       setConceptGenerating(false);
       setConceptError(err instanceof Error ? err.message : "Could not generate Concept UI.");
@@ -898,7 +935,11 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
     if (kind === "response" && next.archetype === "modal" && isResponseMomentSpec(next)) {
       const title = responseCardDraftText(draft, "title", next.content.modal.title);
       const showReviewer = responseCardShowReviewer(draft);
+      const showSources = responseCardShowSources(draft);
+      const showButtons = responseCardShowButtons(draft);
       let hasShowReviewerField = false;
+      let hasShowSourcesField = false;
+      let hasShowButtonsField = false;
       let hasSource1IconField = false;
       let hasSource2IconField = false;
       next.content.title = title;
@@ -911,6 +952,24 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
             slotId: "moment-show-reviewer",
             label: "Show reviewer",
             value: showReviewer ? "true" : "false",
+          };
+        }
+        if (field.slotId === "moment-show-sources" || field.label === "Show sources") {
+          hasShowSourcesField = true;
+          return {
+            ...field,
+            slotId: "moment-show-sources",
+            label: "Show sources",
+            value: showSources ? "true" : "false",
+          };
+        }
+        if (field.slotId === "moment-show-buttons" || field.label === "Show buttons") {
+          hasShowButtonsField = true;
+          return {
+            ...field,
+            slotId: "moment-show-buttons",
+            label: "Show buttons",
+            value: showButtons ? "true" : "false",
           };
         }
         if (field.label === "Reviewer") {
@@ -950,6 +1009,18 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
       if (!hasShowReviewerField) {
         next.content.modal.fields = [
           { slotId: "moment-show-reviewer", label: "Show reviewer", value: showReviewer ? "true" : "false" },
+          ...next.content.modal.fields,
+        ];
+      }
+      if (!hasShowSourcesField) {
+        next.content.modal.fields = [
+          { slotId: "moment-show-sources", label: "Show sources", value: showSources ? "true" : "false" },
+          ...next.content.modal.fields,
+        ];
+      }
+      if (!hasShowButtonsField) {
+        next.content.modal.fields = [
+          { slotId: "moment-show-buttons", label: "Show buttons", value: showButtons ? "true" : "false" },
           ...next.content.modal.fields,
         ];
       }
@@ -1602,6 +1673,28 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                         />
                         <span className="text-xs font-medium text-studio-text">Show reviewer</span>
                       </label>
+                      <label className="flex cursor-pointer items-center gap-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={responseCardShowSources(blockCopyDraft)}
+                          onChange={(e) =>
+                            updateBlockDraft("showSources", e.currentTarget.checked ? "true" : "false", { immediate: true })
+                          }
+                          className="sb-checkbox"
+                        />
+                        <span className="text-xs font-medium text-studio-text">Show sources</span>
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={responseCardShowButtons(blockCopyDraft)}
+                          onChange={(e) =>
+                            updateBlockDraft("showButtons", e.currentTarget.checked ? "true" : "false", { immediate: true })
+                          }
+                          className="sb-checkbox"
+                        />
+                        <span className="text-xs font-medium text-studio-text">Show buttons</span>
+                      </label>
                       {responseCardShowReviewer(blockCopyDraft) ? (
                         <label className="block">
                           <span className={BLOCK_COPY_LABEL_CLASS}>Reviewer</span>
@@ -1623,7 +1716,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                           className={BLOCK_COPY_TEXTAREA_CLASS}
                         />
                       </label>
-                      {[1, 2].map((index) => (
+                      {responseCardShowSources(blockCopyDraft) ? [1, 2].map((index) => (
                         <div key={index} className="space-y-1.5">
                           <div className="grid grid-cols-[minmax(0,1fr)_76px] gap-1.5">
                             <label className="block">
@@ -1660,7 +1753,8 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                             </select>
                           </label>
                         </div>
-                      ))}
+                      )) : null}
+                      {responseCardShowButtons(blockCopyDraft) ? (
                       <div className="grid grid-cols-2 gap-1.5">
                         <label className="block">
                           <span className={BLOCK_COPY_LABEL_CLASS}>Secondary CTA</span>
@@ -1681,6 +1775,7 @@ export function ProductVisualSidebar({ content: fallbackContent }: { content: Pr
                           />
                         </label>
                       </div>
+                      ) : null}
                     </>
                   ) : null}
 

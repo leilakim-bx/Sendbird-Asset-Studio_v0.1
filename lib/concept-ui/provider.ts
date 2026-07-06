@@ -1479,6 +1479,12 @@ function responseCardTitle(description: string): string {
   return "AI-prepared response";
 }
 
+/** Structured brief toggles ("Show sources: false") default to visible. */
+function parseBriefToggle(value: string | null): boolean {
+  if (!value) return true;
+  return !/^(false|no|off|hide|hidden|0)$/i.test(value.trim());
+}
+
 function aiResponseCardSpec(description: string): SceneSpec {
   const title = responseCardTitle(description);
   const responseText = responseCardBody(description);
@@ -1486,6 +1492,8 @@ function aiResponseCardSpec(description: string): SceneSpec {
   const reviewer = extractBriefField(description, ["Reviewer", "Owner"]) ?? "Emily Choi";
   const primaryCta = extractBriefField(description, ["Primary CTA", "Primary action"]) ?? "Send as-is";
   const secondaryCta = extractBriefField(description, ["Secondary CTA", "Secondary action"]) ?? "Edit first";
+  const showSources = parseBriefToggle(extractBriefField(description, ["Show sources"]));
+  const showButtons = parseBriefToggle(extractBriefField(description, ["Show buttons", "Show CTA", "Show actions"]));
 
   return parseSceneSpec({
     archetype: "modal",
@@ -1512,6 +1520,8 @@ function aiResponseCardSpec(description: string): SceneSpec {
         description: "Review the generated response and source evidence before sending.",
         fields: [
           { slotId: "moment-show-reviewer", label: "Show reviewer", value: "true" },
+          { slotId: "moment-show-sources", label: "Show sources", value: showSources ? "true" : "false" },
+          { slotId: "moment-show-buttons", label: "Show buttons", value: showButtons ? "true" : "false" },
           { slotId: "moment-reviewer", label: "Reviewer", value: clampText(reviewer, RESPONSE_CARD_COPY_LIMITS.reviewer) },
           { slotId: "moment-response", label: "Response", value: clampText(responseText, RESPONSE_CARD_COPY_LIMITS.response) },
           { slotId: "moment-source-1", label: "Source", value: sourceValue(sources[0] ?? "Knowledge base article", 0) },

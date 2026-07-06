@@ -360,4 +360,34 @@ describe("ruleBasedSpecProvider", () => {
     expect(sourceMatch.length).toBeLessThanOrEqual(10);
     expect(result.spec.content.modal.actions.every((action) => action.label.length <= 12)).toBe(true);
   });
+
+  it("seeds Card visibility toggles as visible by default", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description: "AI-prepared response with refund policy sources",
+      uiTextLanguage: "en",
+      recipeId: "response-card",
+    });
+
+    expect(result.spec.archetype).toBe("modal");
+    if (result.spec.archetype !== "modal") throw new Error("Expected modal spec");
+
+    const fields = result.spec.content.modal.fields;
+    expect(fields.find((field) => field.slotId === "moment-show-sources")?.value).toBe("true");
+    expect(fields.find((field) => field.slotId === "moment-show-buttons")?.value).toBe("true");
+  });
+
+  it("honors structured Show sources / Show buttons brief toggles", async () => {
+    const result = await ruleBasedSpecProvider.generate({
+      description: "AI-prepared response card\nShow sources: false\nShow buttons: no",
+      uiTextLanguage: "en",
+      recipeId: "response-card",
+    });
+
+    expect(result.spec.archetype).toBe("modal");
+    if (result.spec.archetype !== "modal") throw new Error("Expected modal spec");
+
+    const fields = result.spec.content.modal.fields;
+    expect(fields.find((field) => field.slotId === "moment-show-sources")?.value).toBe("false");
+    expect(fields.find((field) => field.slotId === "moment-show-buttons")?.value).toBe("false");
+  });
 });

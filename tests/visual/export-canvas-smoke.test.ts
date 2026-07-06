@@ -298,8 +298,9 @@ describe("export canvas visual smoke", () => {
 
     expectStableMarkup(html);
     expect(html).toContain("Show information");
-    expect(html).toContain("role=\"switch\"");
-    expect(html).toContain("aria-checked=\"true\"");
+    // "Show information" renders as a native checked checkbox (sb-checkbox).
+    expect(html).toContain("class=\"sb-checkbox\"");
+    expect(html).toContain("checked=\"\"");
     expect(html).toContain("Information");
     expect(html).toContain("Activity");
     expect(html).toContain("Tag 1");
@@ -694,6 +695,126 @@ describe("export canvas visual smoke", () => {
     expect(html).toContain(brand.color.concept.evidenceSurface);
     expect(html).not.toContain("margin-top:16px;height:1px");
     expect(html).not.toContain(brand.color.concept.surface);
+  });
+
+  it("hides Card sources and buttons when their toggles are off", () => {
+    const spec = {
+      archetype: "modal",
+      theme: "light",
+      content: {
+        productName: "delight.ai",
+        title: "AI-prepared response",
+        subtitle: "A compact review card.",
+        background: {
+          type: "inbox",
+          title: "Conversation",
+          items: ["Customer request", "AI draft", "Source check"],
+        },
+        modal: {
+          slotId: "moment-ai-response",
+          kind: "ai-result",
+          eyebrow: "Generated draft",
+          title: "AI-prepared response",
+          description: "Review before sending.",
+          fields: [
+            { slotId: "moment-show-sources", label: "Show sources", value: "false" },
+            { slotId: "moment-show-buttons", label: "Show buttons", value: "false" },
+            { slotId: "moment-reviewer", label: "Reviewer", value: "Emily Choi" },
+            { slotId: "moment-response", label: "Response", value: "Prepared reply ready for review." },
+            { slotId: "moment-source-1", label: "Source", value: "Refund policy|98% match" },
+            { slotId: "moment-source-2", label: "Source", value: "Billing history|95% match" },
+          ],
+          actions: [
+            { label: "Edit first", tone: "secondary" },
+            { label: "Send as-is", tone: "primary" },
+          ],
+        },
+      },
+      modifiers: {},
+    } satisfies ModalSceneSpec;
+
+    const html = renderToStaticMarkup(React.createElement(ModalScene, { spec }));
+
+    expectStableMarkup(html);
+    expect(html).toContain("Prepared reply ready for review.");
+    expect(html).not.toContain("Knowledge sources used");
+    expect(html).not.toContain("Refund policy");
+    expect(html).not.toContain("Send as-is");
+    expect(html).not.toContain("Edit first");
+    // The card hugs its content instead of keeping the fixed frame height.
+    expect(html).not.toContain("min-height:920px");
+  });
+
+  it("drops cleared Details panel activity rows without resurrecting defaults", () => {
+    const baseContent = {
+      productName: "delight.ai Actions",
+      title: "Steward details",
+      subtitle: "A compact details panel.",
+      background: {
+        type: "inbox",
+        title: "Case context",
+        items: ["Customer request", "Tool lookup", "Policy check"],
+      },
+      modal: {
+        slotId: "moment-approval",
+        kind: "confirmation",
+        eyebrow: "Steward details",
+        title: "Steward details",
+        description: "Review each AI step before approving.",
+        fields: [
+          { slotId: "moment-show-information", label: "Show information", value: "true" },
+          { slotId: "moment-detail-type", label: "Detail type", value: "Customer request — multi-step" },
+          { slotId: "moment-detail-name", label: "Detail name", value: "Resolution Review Request" },
+          { slotId: "moment-detail-status", label: "Detail status", value: "RESOLUTION" },
+          { slotId: "moment-detail-time", label: "Detail time", value: "8 minutes" },
+          { slotId: "moment-activity-1-tag", label: "Activity 1 tag", value: "Steward triggered" },
+          { slotId: "moment-activity-1-text", label: "Activity 1 text", value: "Customer resolution workflow initiated" },
+        ],
+        actions: [
+          { label: "Approve", tone: "primary" },
+        ],
+      },
+      actionTrails: [],
+    };
+
+    const oneRowHtml = renderToStaticMarkup(React.createElement(ModalScene, {
+      spec: { archetype: "modal", theme: "light", content: baseContent, modifiers: {} } satisfies ModalSceneSpec,
+    }));
+
+    expectStableMarkup(oneRowHtml);
+    expect(oneRowHtml).toContain("Activity");
+    expect(oneRowHtml).toContain("Steward triggered");
+    // Cleared rows 2 and 3 stay cleared instead of showing default copy.
+    expect(oneRowHtml).not.toContain("Policy check</span>");
+    expect(oneRowHtml).not.toContain("AI prepared");
+    // The fixed tail row still follows the remaining edited row.
+    expect(oneRowHtml).toContain("Agent review");
+
+    const clearedHtml = renderToStaticMarkup(React.createElement(ModalScene, {
+      spec: {
+        archetype: "modal",
+        theme: "light",
+        content: {
+          ...baseContent,
+          modal: {
+            ...baseContent.modal,
+            fields: [
+              { slotId: "moment-show-information", label: "Show information", value: "true" },
+              { slotId: "moment-show-activity", label: "Show activity", value: "false" },
+              { slotId: "moment-detail-type", label: "Detail type", value: "Customer request — multi-step" },
+              { slotId: "moment-detail-name", label: "Detail name", value: "Resolution Review Request" },
+            ],
+          },
+        },
+        modifiers: {},
+      } satisfies ModalSceneSpec,
+    }));
+
+    expectStableMarkup(clearedHtml);
+    // All rows cleared → the Activity section (heading + tail row) disappears.
+    expect(clearedHtml).not.toContain("Activity");
+    expect(clearedHtml).not.toContain("Steward triggered");
+    expect(clearedHtml).not.toContain("Agent review");
   });
 
   it("does not render a screenshot source in product feature format", () => {

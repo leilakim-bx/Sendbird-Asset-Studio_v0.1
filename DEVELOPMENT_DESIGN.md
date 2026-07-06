@@ -48,6 +48,7 @@ lib/
 | `/api/upload-background` | 커스텀 배경 이미지 업로드. Blob 연결 시 Blob URL, 미연결 개발 환경에서는 로컬 filesystem |
 | `/api/upload-asset-image` | Product Visual 스크린샷 등 에셋 이미지 Blob 업로드 |
 | `/api/work-backups` | Settings 복원을 위한 Vercel Blob 작업 스냅샷 저장/조회 |
+| `/api/brief-log` | brief/source 사용 이벤트 저장/조회. Blob 미연결 시 조용히 skip |
 
 ## 3. 템플릿 분기
 
@@ -136,6 +137,11 @@ Settings 메뉴
 | `/api/generate-scenario` | `{ prompt }` | `{ messages }` | `validateScenario` |
 | `/api/analyze-article` | `{ article }` | `{ suggestions }` | `validateSuggestions` |
 | `/api/work-backups` | `{ clientId, snapshot }` or query | `{ saved }` / `{ snapshots }` | `schemaVersion` migration |
+| `/api/brief-log` | `{ event }` or `?limit=` | `{ saved }` / `{ events }` | `validateBriefLogEvent` |
+
+### Brief 사용 로깅 (telemetry)
+
+`lib/brief-log.ts`의 `logBriefEvent`는 Create from brief/source 제출, 추천 블록/후보 선택, export 완료를 invisible하게 기록한다. 이벤트는 브라우저 localStorage 링버퍼(최근 200개)에 남고, Blob credential이 있으면 `telemetry/brief-log/{date}/` private object로도 best-effort 저장한다. Chat UI brief는 `/api/generate-scenario` route에서 서버 측으로 기록한다. 로깅 실패는 항상 조용히 무시하며 메인 편집 흐름을 방해하지 않는다. 수집 데이터는 `/dev/brief-log` 내부 페이지에서 확인한다 (로컬 + 원격 병합 표시). 이 데이터는 "어떤 블록/템플릿이 부족한가"를 판단하는 수요 근거로 사용한다.
 
 공통 규칙:
 
@@ -221,6 +227,8 @@ Pexels와 승인된 Vercel Blob 외부 호출만 허용한다. 임의 URL import
 - Product Visual Create from brief는 외부 AI를 기본 경로로 두지 않고, 첫 진입부터 `Card`, `Details panel` 2개의 Feature Moment block 추천을 보여준다. Brief composer의 arrow submit은 추천 영역을 여는 unlock 동작이 아니라 입력한 brief로 추천/생성 흐름을 갱신하는 보조 액션이다. 추천 카드는 `lib/concept-ui/provider.ts`의 `recommendProductVisualRecipes`가 만들며, 선택 시 rule-based `SceneSpec` provider에 recipe id와 forced archetype을 전달한다.
 - Product Visual block 추천 thumbnail은 CSS placeholder가 아니라 `/preview/productvisual_card.png`, `/preview/productvisual_floatingmodal.png`의 실제 기본 렌더 기반 이미지를 사용한다.
 - Product Visual의 rule-based 출력은 전체 대시보드 재현보다 compact card/modal을 우선한다. Conversation Search, keyword search, customer attribute filtering 같은 검색/필터 brief도 별도 Search block으로 노출하지 않고 `Card`의 response/source copy variation으로 흡수한다. `Card`는 brief의 검색/환불/예약/해지/one-interaction 단서를 읽어 response/source copy를 다르게 만들고, `Title:`, `Show reviewer:`, `Reviewer:`, `Response:`, `Source 1:`, `Primary CTA:` 같은 structured line도 직접 반영한다. `Show reviewer=false`는 `moment-show-reviewer` field로 저장하며 reviewer label/avatar/name row만 숨긴다. 생성 provider와 `Edit block copy`는 동일한 Card copy limit을 적용해 긴 marketer 입력이 final rendered image를 깨지 않게 한다.
+- Product Visual `Card`는 `Show reviewer` 외에 `Show sources`, `Show buttons` 토글을 제공한다 (`moment-show-sources`, `moment-show-buttons` field, 기본 표시). 슬롯이 없는 구버전 스펙은 모두 표시로 렌더하므로 work data schema migration은 필요 없다. 섹션이 하나라도 숨겨지면 카드 프레임은 고정 높이 대신 내용 높이에 맞춘다. Structured brief line `Show sources:`, `Show buttons:`도 파싱한다.
+- `Details panel`의 Activity 행은 tag/text 입력을 모두 비우면 스펙에서 해당 행 field가 생략되고 렌더에서도 그 줄이 사라진다 (기본 카피 부활 없음). 편집 가능한 행이 0개면 Activity 헤딩과 고정 tail 행도 숨긴다. Activity slot이 아예 없는 구버전/import 스펙은 기존 기본 trail을 그대로 렌더한다.
 - 생성된 compact block은 `ProductVisualSidebar`의 `Edit block copy`에서 기존 SceneSpec slot 값만 수정한다. `Details panel`은 기존 `approval-modal` recipe id와 `moment-approval` slot을 재사용하지만, 사용자-facing output은 white dashboard detail panel과 cropped activity history로 고정한다. 편집은 title, `Show information` checkbox, Information 값 4개, Activity tag/text 3줄까지만 노출하고 layout/row count/body variant는 고정한다. `Show information=false`는 `moment-show-information` field로 저장하며 Information 섹션과 Activity heading을 숨겨 timeline-only detail panel을 만든다. Copy edit은 별도 update 버튼 없이 debounce된 `content.conceptScene` 갱신과 recapture로 프리뷰에 반영하고, `Show information` checkbox는 즉시 recapture한다. 새 저장 필드를 만들지 않고 `content.conceptScene`과 rendered screenshot을 갱신하므로 work data schema migration은 필요 없다.
 - Concept UI screenshot export는 primary panel DOM을 SVG로 직렬화하기 전에 same-origin `<img>` 자산을 data URL로 inline한다. Product Visual `Card` reviewer avatar처럼 `/public` preview 이미지를 쓰는 block도 캡처 결과에서 누락되면 안 된다.
 - `reference` 모드는 archived 상태다. 기존 저장본이 `reference`를 가지고 있어도 런타임에서는 Concept UI scene처럼 렌더한다.

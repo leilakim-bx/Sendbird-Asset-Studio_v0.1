@@ -76,6 +76,9 @@ function MomentResponseCard({ spec }: Props) {
   const reviewer = fieldValue(content, "Reviewer") || "Reviewer";
   const response = fieldValue(content, "Response") || content.modal.description;
   const showReviewer = fieldSlotValue(content, "moment-show-reviewer") !== "false";
+  // Missing toggle slots (older saved specs) default to visible.
+  const showSources = fieldSlotValue(content, "moment-show-sources") !== "false";
+  const showButtons = fieldSlotValue(content, "moment-show-buttons") !== "false";
   const sources = responseSourceRows(content);
   const cardType = t.momentResponse;
   const study = cardType.study;
@@ -85,7 +88,11 @@ function MomentResponseCard({ spec }: Props) {
       primaryPanel
       style={{
         width: study.frame.width,
-        minHeight: showReviewer ? study.frame.height : study.frame.heightWithoutReviewer,
+        // With a section hidden the card hugs its content instead of keeping
+        // the full-frame height (which would leave a blank band at the bottom).
+        ...(showSources && showButtons
+          ? { minHeight: showReviewer ? study.frame.height : study.frame.heightWithoutReviewer }
+          : {}),
         boxSizing: "border-box",
         border: 0,
         borderRadius: study.card.radius,
@@ -164,6 +171,7 @@ function MomentResponseCard({ spec }: Props) {
           </EllipsisText>
         </Slot>
 
+        {showSources ? (
         <div
           style={{
             marginTop: study.evidence.top,
@@ -196,7 +204,9 @@ function MomentResponseCard({ spec }: Props) {
             ))}
           </div>
         </div>
+        ) : null}
 
+        {showButtons ? (
         <div style={{ marginTop: study.actions.top, display: "flex", justifyContent: "flex-end", gap: study.actions.gap }}>
           {content.modal.actions.map((action) => (
             <button
@@ -218,6 +228,7 @@ function MomentResponseCard({ spec }: Props) {
             </button>
           ))}
         </div>
+        ) : null}
       </div>
     </Card>
   );
@@ -278,14 +289,24 @@ function MomentApprovalCard({ spec }: Props) {
         { tag: "AI prepared", text: actionTrail?.steps[1]?.label ?? "Next action prepared for review" },
         { tag: "Agent review", text: "Final decision queued for a teammate", muted: true },
       ];
-  const activityRows = defaultActivityRows.map((row, index) => {
+  // Editor-managed specs carry activity rows as slots; a fully cleared row is
+  // omitted from the spec and dropped here. The fixed tail row only follows
+  // when at least one edited row remains. Specs without any activity slots
+  // (older/imported) keep the full default trail.
+  const hasActivityFields = content.modal.fields.some((field) => field.slotId?.startsWith("moment-activity-"));
+  const editedActivityRows = defaultActivityRows.slice(0, 3).flatMap((row, index) => {
     const slotIndex = index + 1;
-    return {
-      ...row,
-      tag: fieldSlotValue(content, `moment-activity-${slotIndex}-tag`) || row.tag,
-      text: fieldSlotValue(content, `moment-activity-${slotIndex}-text`) || row.text,
-    };
+    const tag = fieldSlotValue(content, `moment-activity-${slotIndex}-tag`);
+    const text = fieldSlotValue(content, `moment-activity-${slotIndex}-text`);
+    if (!tag && !text) return [];
+    return [{ ...row, tag, text }];
   });
+  const showActivity = fieldSlotValue(content, "moment-show-activity") !== "false";
+  const activityRows = !showActivity
+    ? []
+    : hasActivityFields
+      ? (editedActivityRows.length > 0 ? [...editedActivityRows, ...defaultActivityRows.slice(3)] : [])
+      : defaultActivityRows;
   const showInformation = fieldSlotValue(content, "moment-show-information") !== "false";
   const activityMetrics = showInformation
     ? details.activity
@@ -370,6 +391,7 @@ function MomentApprovalCard({ spec }: Props) {
           </section>
         ) : null}
 
+        {activityRows.length > 0 ? (
         <section style={{ marginTop: activityMetrics.sectionTop }}>
           {showInformation ? (
             <EllipsisText style={{ ...details.sectionTitle, color: t.color.text }}>
@@ -421,6 +443,7 @@ function MomentApprovalCard({ spec }: Props) {
                   ) : null}
                 </div>
                 <div style={{ minWidth: 0 }}>
+                  {row.tag ? (
                   <span
                     style={{
                       display: "inline-flex",
@@ -437,10 +460,12 @@ function MomentApprovalCard({ spec }: Props) {
                   >
                     {row.tag}
                   </span>
+                  ) : null}
+                  {row.text ? (
                   <EllipsisText
                     lines={2}
                     style={{
-                      marginTop: activityMetrics.textTop,
+                      marginTop: row.tag ? activityMetrics.textTop : 0,
                       fontSize: activityMetrics.textFontSize,
                       fontWeight: activityMetrics.textWeight,
                       lineHeight: activityMetrics.textLineHeight,
@@ -449,11 +474,13 @@ function MomentApprovalCard({ spec }: Props) {
                   >
                     {row.text}
                   </EllipsisText>
+                  ) : null}
                 </div>
               </div>
             ))}
           </Slot>
         </section>
+        ) : null}
       </div>
     </div>
   );
