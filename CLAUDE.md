@@ -46,3 +46,4 @@ Phase 3: Clerk 인증, 사용자별 자산 관리
 - DB 스키마 변경 시 마이그레이션 파일 분리
 - localStorage 데이터 구조 변경 시 마이그레이션 함수 작성
 - IT 방화벽 환경 고려 (Pexels 외 외부 호출 없이 동작해야 함)
+- 블록 타입 추가/삭제 시 tests/guards/block-conformance.test.ts 의 EXPECTED 목록도 갱신.

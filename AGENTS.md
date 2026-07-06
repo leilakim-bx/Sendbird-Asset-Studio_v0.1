@@ -38,3 +38,4 @@ task.
   spacing, or shadows inside components. Add or reuse a role-based token first.
 - Dev-only screens under `app/dev/**` and `components/concept-ui/dev/**` are not
   token-enforced, but they must not be imported by asset render paths.
+- 이 경계는 ESLint no-restricted-imports와 tests/guards/* 로 자동 검증된다.
