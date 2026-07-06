@@ -153,7 +153,7 @@ Codex skill은 웹앱 내부 생성 API가 아니라 사용자가 로컬 Codex�
 
 ## 13. 관련 문서
 
-- 개발 설계: `DEVELOPMENT_DESIGN.md`
-- 에디터 UI 디자인 규칙: `STUDIO_DESIGN.md`
-- 생성 에셋 디자인 규칙: `ASSET_DESIGN.md`
-- 보호된 URL import 가이드: `docs/source-import-access.md`
+- 개발 설계: `../engineering/DEVELOPMENT_DESIGN.md`
+- 에디터 UI 디자인 규칙: `../design/STUDIO_DESIGN.md`
+- 생성 에셋 디자인 규칙: `../design/ASSET_DESIGN.md`
+- 보호된 URL import 가이드: `../engineering/source-import-access.md`

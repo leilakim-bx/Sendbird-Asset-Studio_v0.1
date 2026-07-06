@@ -9,11 +9,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 Before making product, UX, architecture, or implementation changes, use these
 repo docs as the project source of truth:
 
-- `PRD.md` — product goals, template scope, priorities, risks, and non-goals.
-- `DEVELOPMENT_DESIGN.md` — app architecture, routing, state, API, export, and storage design.
-- `STUDIO_DESIGN.md` — editor/studio UI rules.
-- `ASSET_DESIGN.md` — generated asset visual rules.
-- `docs/source-import-access.md` — protected URL/source import guidance.
+- `docs/product/PRD.md` — product goals, template scope, priorities, risks, and non-goals.
+- `docs/engineering/DEVELOPMENT_DESIGN.md` — app architecture, routing, state, API, export, and storage design.
+- `docs/design/STUDIO_DESIGN.md` — editor/studio UI rules.
+- `docs/design/ASSET_DESIGN.md` — generated asset visual rules.
+- `docs/engineering/source-import-access.md` — protected URL/source import guidance.
 
 Keep implementation and documentation aligned. If a change alters product scope,
 data flow, export behavior, storage, AI routes, or visual rules, update the

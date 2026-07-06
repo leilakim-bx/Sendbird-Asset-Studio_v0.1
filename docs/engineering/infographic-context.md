@@ -102,4 +102,4 @@ Background → Layout → Scenario → Messages → User Profile → App Name
 
 ### 사용법
 1. 내부 설계 리뷰나 구현 전 맥락 확인에 사용한다.
-2. 실제 작업 기준은 `PRD.md`, `DEVELOPMENT_DESIGN.md`, `STUDIO_DESIGN.md`, `ASSET_DESIGN.md`를 우선한다.
+2. 실제 작업 기준은 `../product/PRD.md`, `DEVELOPMENT_DESIGN.md`, `../design/STUDIO_DESIGN.md`, `../design/ASSET_DESIGN.md`를 우선한다.
