@@ -92,6 +92,7 @@ Delight.ai Asset Studio는 마케터가 디자이너 의존 없이 제품 마케
 | Export | `html-to-image` 기반 @2x PNG 다운로드 |
 | 이미지 업로드 | Product Visual 스크린샷과 커스텀 배경은 Vercel Blob 연결 시 Blob URL로 저장한다. Blob 미연결 로컬 개발에서는 작은 Product Visual 스크린샷만 data URL로 fallback하고, 커스텀 배경은 로컬 filesystem에 저장한다. |
 | 이탈 방지 | 저장하지 않은 변경사항이 있으면 홈 이동 전 확인 |
+| 사용 로깅 | brief/source 입력, 블록/후보 선택, export 완료를 invisible하게 기록해 템플릿 수요 판단에 사용. localStorage + Vercel Blob best-effort, `/dev/brief-log`에서 확인 |
 
 ## 8. 생성/추천 요구사항
 

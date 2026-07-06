@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 import { generateChatScenarioMessages } from "@/lib/ai/chat-scenario-generator";
 import { validateScenario } from "@/lib/ai/validate-scenario";
+import { saveBriefLogEvent } from "@/lib/server/brief-log-storage";
 
 /**
  * POST /api/generate-scenario
@@ -23,6 +24,17 @@ export async function POST(request: NextRequest) {
   if (!prompt) {
     return Response.json({ error: "prompt is required" }, { status: 400 });
   }
+
+  // Best-effort usage logging (Vercel Blob when connected) — never blocks the
+  // response and never fails the request.
+  void saveBriefLogEvent({
+    v: 1,
+    ts: Date.now(),
+    clientId: null,
+    template: "chat",
+    event: "brief_submitted",
+    text: prompt.slice(0, 600),
+  }).catch(() => {});
 
   const messages = validateScenario(generateChatScenarioMessages(prompt));
   if (messages.length === 0) {

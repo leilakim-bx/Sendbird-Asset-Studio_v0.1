@@ -12,6 +12,7 @@ import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { useWorkAutosnapshot } from "@/lib/use-work-autosnapshot";
 import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { exportImage, exportSvgImage, captureThumbnail, type ExportedImage } from "@/lib/export";
+import { logBriefEvent } from "@/lib/brief-log";
 import { InfographicCanvas } from "./InfographicCanvas";
 import { InfographicSidebar } from "./InfographicSidebar";
 import { WorkPreservationMenu } from "@/components/editor/WorkPreservationMenu";
@@ -246,6 +247,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       if (!download) return;
       downloads.push(download);
       replaceExportDownloads(downloads);
+      logBriefEvent({
+        template: "infographic",
+        event: "export_completed",
+        meta: { format: fmt, kind: "png", count: 1 },
+      });
     } catch (err) {
       downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
@@ -265,6 +271,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
       const download = await exportOneSvg(fmt);
       downloads.push(download);
       replaceExportDownloads(downloads);
+      logBriefEvent({
+        template: "infographic",
+        event: "export_completed",
+        meta: { format: fmt, kind: "svg", count: 1 },
+      });
     } catch (err) {
       downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
@@ -319,6 +330,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       replaceExportDownloads(downloads);
+      logBriefEvent({
+        template: "infographic",
+        event: "export_completed",
+        meta: { format, kind: "png", count: downloads.length },
+      });
     } catch (err) {
       downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
@@ -346,6 +362,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       replaceExportDownloads(downloads);
+      logBriefEvent({
+        template: "infographic",
+        event: "export_completed",
+        meta: { format, kind: "svg", count: downloads.length },
+      });
     } catch (err) {
       downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
@@ -449,6 +470,12 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
 
     const count = applySourceText(data.text);
+    logBriefEvent({
+      template: "infographic",
+      event: "brief_submitted",
+      text: source,
+      meta: { candidateCount: count },
+    });
 
     return {
       count,
@@ -478,6 +505,11 @@ export function InfographicShell({ template }: { template: InfographicTemplate }
     }
     setActiveArticleImageId(id);
     setInfographicContent(candidate.content);
+    logBriefEvent({
+      template: "infographic",
+      event: "candidate_selected",
+      meta: { blockType: candidate.blockType },
+    });
   }
 
   function handleToggleArticleImage(id: string) {

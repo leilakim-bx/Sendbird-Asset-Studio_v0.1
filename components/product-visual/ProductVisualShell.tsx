@@ -8,6 +8,7 @@ import { useEditorStore, type SavedAsset } from "@/lib/store";
 import { ConfirmLeaveDialog } from "@/components/layout/ConfirmLeaveDialog";
 import { GuideModal } from "@/components/layout/Sidebar";
 import { captureThumbnail, type ExportedImage } from "@/lib/export";
+import { logBriefEvent } from "@/lib/brief-log";
 import { useWorkAutosnapshot } from "@/lib/use-work-autosnapshot";
 import { WORK_DATA_SCHEMA_VERSION } from "@/lib/work-data-schema";
 import { exportProductVisual, productVisualFilename } from "@/lib/product-visual/export";
@@ -127,6 +128,11 @@ export function ProductVisualShell({ template }: { template: ProductVisualTempla
       replaceExportDownloads(downloads);
       setExportNote(`${download.method === "save-picker" ? "Saved" : "Downloaded"} as ${productVisualFilename(format, ts)}`);
       setTimeout(() => setExportNote(null), 4000);
+      logBriefEvent({
+        template: "product-visual",
+        event: "export_completed",
+        meta: { format },
+      });
     } catch (err) {
       downloads.forEach((download) => download.revoke());
       const msg = err instanceof Error ? err.message : String(err);
